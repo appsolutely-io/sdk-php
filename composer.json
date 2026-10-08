@@ -64,8 +64,8 @@
     "scripts-descriptions": {
         "test": "Run the PHPUnit suite.",
         "analyse": "Run PHPStan at level max with strict rules.",
-        "cs": "Check coding style (PER-CS) without changing files.",
-        "cs:fix": "Fix coding style (PER-CS) in place.",
+        "cs": "Check coding style (PER-CS 3.0) without changing files.",
+        "cs:fix": "Fix coding style (PER-CS 3.0) in place.",
         "check": "Validate composer.json, then run cs, analyse and test."
     },
     "minimum-stability": "stable"
