@@ -154,7 +154,7 @@ if (!$deliveries->wasHandled($event->id)) {
 http_response_code(204);
 ```
 
-A PSR-7 server request can be passed to `$verifier->verifyRequest($request)` instead. A retried or redelivered event keeps its id, so mark an id only after your handler has succeeded and answer 2xx for one already handled.
+A PSR-7 server request can be passed to `$verifier->verifyRequest($request)` instead. When several endpoints share one cache (two apps subscribed to the same events, say), give each its own namespace, `new Deliveries($psr16Cache, namespace: 'orders')`, or one would skip a delivery the other handled. A retried or redelivered event keeps its id, so mark an id only after your handler has succeeded and answer 2xx for one already handled.
 
 Answer with a 2xx within a few seconds and queue slow work: an attempt that times out counts as failed and is retried. Never redirect the endpoint: redirects are not followed, so a 3xx is a failed attempt. Answering `410 Gone` switches the endpoint off.
 
