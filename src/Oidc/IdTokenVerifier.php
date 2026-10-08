@@ -177,6 +177,13 @@ final readonly class IdTokenVerifier
             throw new IdTokenException('The ID token\'s iat is in the future, beyond the clock leeway.');
         }
 
+        // auth_time is a NumericDate whenever it is present (section 2); in any
+        // other form it could not be compared with the original authentication
+        // on a refresh (section 12.2), so it is refused rather than read as absent.
+        if (array_key_exists('auth_time', $claims) && !is_int($claims['auth_time']) && !is_float($claims['auth_time'])) {
+            throw new IdTokenException('The ID token\'s auth_time is not a NumericDate.');
+        }
+
         // Section 3.1.3.7 rule 11: when max_age was requested, auth_time is
         // required (section 2) and the authentication it records must be no
         // older than max_age, give or take the clock leeway.

@@ -181,6 +181,22 @@ final class IdTokenVerificationTest extends TestCase
         $provider->oidc(leeway: 60)->verifyIdToken($refused, 'the-nonce', maxAge: 600);
     }
 
+    /**
+     * auth_time is a NumericDate (section 2) whenever it is present. A token
+     * that carries it in another form cannot be compared with the original
+     * authentication on a refresh, so it is refused rather than read as absent.
+     */
+    public function testAnAuthTimeThatIsNotANumberIsRefused(): void
+    {
+        $provider = new FakeProvider();
+        $jwt = $provider->rsa->sign($provider->claims(['auth_time' => 'garbage']));
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('auth_time');
+
+        $provider->oidc()->verifyIdToken($jwt, 'the-nonce');
+    }
+
     public function testWithMaxAgeAnIdTokenWithoutAuthTimeIsRefused(): void
     {
         $provider = new FakeProvider();
