@@ -8,6 +8,7 @@ use Appsolutely\Sdk\Exception\DiscoveryException;
 use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Oidc\Pkce;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class AuthorizationUrlTest extends TestCase
@@ -75,6 +76,33 @@ final class AuthorizationUrlTest extends TestCase
         $this->expectExceptionMessage('state');
 
         (new FakeProvider())->oidc()->authorizationUrl(self::REDIRECT, ['openid'], ['state' => 'chosen-by-caller']);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function reservedParameters(): iterable
+    {
+        foreach (['response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'nonce', 'code_challenge', 'code_challenge_method', 'max_age'] as $name) {
+            yield $name => [$name];
+        }
+        // Not supported, and each could take the flow out of the client's
+        // hands: a request object (OpenID Connect Core section 6) or a
+        // reference to one carries its own copies of the parameters above,
+        // a response_mode changes how the code comes back, and claims asks
+        // for what the ID token carries.
+        foreach (['request', 'request_uri', 'response_mode', 'claims'] as $name) {
+            yield $name => [$name];
+        }
+    }
+
+    #[DataProvider('reservedParameters')]
+    public function testAReservedParameterCannotBePassedIn(string $name): void
+    {
+        $this->expectException(InvalidArgumentValueException::class);
+        $this->expectExceptionMessage('"' . $name . '"');
+
+        (new FakeProvider())->oidc()->authorizationUrl(self::REDIRECT, ['openid'], [$name => 'x']);
     }
 
     public function testMaxAgeIsSentAndKeptWithTheRequest(): void

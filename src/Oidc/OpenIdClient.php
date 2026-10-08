@@ -29,9 +29,17 @@ use Psr\SimpleCache\CacheInterface;
  */
 final readonly class OpenIdClient
 {
-    /** Parameters the flow's security rests on; a caller cannot override them. */
+    /**
+     * Parameters a caller cannot pass in: the ones the flow's security rests
+     * on, which the client sets itself, and ones it does not support that
+     * would take the flow out of its hands. A request object or a reference
+     * to one (OpenID Connect Core section 6) carries its own copies of the
+     * first kind; response_mode changes how the code comes back; claims asks
+     * for what the ID token carries.
+     */
     private const array RESERVED_PARAMETERS = [
         'response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'nonce', 'code_challenge', 'code_challenge_method', 'max_age',
+        'request', 'request_uri', 'response_mode', 'claims',
     ];
 
     /**
@@ -80,7 +88,9 @@ final readonly class OpenIdClient
 
     /**
      * @param list<string> $scopes `openid` is added when missing
-     * @param array<string, string> $parameters further authorization parameters, such as `prompt` or `login_hint`
+     * @param array<string, string> $parameters further authorization parameters, such as `prompt` or `login_hint`;
+     *                                          the ones the client sets, and `request`, `request_uri`,
+     *                                          `response_mode` and `claims`, are refused
      * @param int|null $maxAge seconds since the member last authenticated beyond which the provider must ask
      *                         again (OpenID Connect Core section 3.1.2.1); the ID token's auth_time is then checked
      */
