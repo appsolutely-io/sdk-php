@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Testing;
 
 use Appsolutely\Sdk\Clock\SystemClock;
-use Appsolutely\Sdk\Exception\InvalidSecretException;
 use Appsolutely\Sdk\Webhooks\Secret;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -34,11 +33,7 @@ final readonly class WebhookFactory
         array $secrets,
         private ClockInterface $clock = new SystemClock(),
     ) {
-        $parsed = array_map(Secret::fromString(...), $secrets);
-        if ($parsed === []) {
-            throw new InvalidSecretException('At least one webhook signing secret is needed.');
-        }
-        $this->secrets = $parsed;
+        $this->secrets = Secret::list($secrets);
     }
 
     /**

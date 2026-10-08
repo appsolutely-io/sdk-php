@@ -85,7 +85,7 @@ final readonly class KeySet
     {
         $response = $this->http->get($this->jwksUri);
         $status = $response->getStatusCode();
-        if ($status < 200 || $status >= 300) {
+        if (!HttpTransport::isSuccessful($response)) {
             throw new DiscoveryException(sprintf('GET %s answered %d.', $this->jwksUri, $status));
         }
 
@@ -115,11 +115,7 @@ final readonly class KeySet
         $objects = [];
         foreach ($keys as $key) {
             if (is_array($key)) {
-                $object = [];
-                foreach ($key as $name => $value) {
-                    $object[(string) $name] = $value;
-                }
-                $objects[] = $object;
+                $objects[] = Json::stringKeys($key);
             }
         }
 

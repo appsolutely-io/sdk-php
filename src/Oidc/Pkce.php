@@ -18,13 +18,9 @@ final readonly class Pkce
         public string $challenge,
     ) {}
 
-    /**
-     * 32 random bytes give a 43-character verifier, the minimum length and
-     * 256 bits of entropy, as section 4.1 recommends.
-     */
     public static function generate(): self
     {
-        $verifier = JWT::urlsafeB64Encode(random_bytes(32));
+        $verifier = RandomToken::generate();
 
         return new self($verifier, self::challengeFor($verifier));
     }

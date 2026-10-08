@@ -24,6 +24,13 @@ final readonly class HttpTransport
         private StreamFactoryInterface $streams,
     ) {}
 
+    public static function isSuccessful(ResponseInterface $response): bool
+    {
+        $status = $response->getStatusCode();
+
+        return $status >= 200 && $status < 300;
+    }
+
     /**
      * @param array<string, string> $headers
      */

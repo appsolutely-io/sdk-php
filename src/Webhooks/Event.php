@@ -59,11 +59,6 @@ final readonly class Event
             throw new WebhookVerificationException('The event envelope\'s timestamp is not an ISO 8601 date-time.');
         }
 
-        $fields = [];
-        foreach ($data as $name => $value) {
-            $fields[(string) $name] = $value;
-        }
-
-        return new self($id, $type, $occurredAt, $version, $mode, $fields);
+        return new self($id, $type, $occurredAt, $version, $mode, Json::stringKeys($data));
     }
 }

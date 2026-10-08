@@ -28,11 +28,24 @@ final class Json
             return null;
         }
 
-        $object = [];
-        foreach ($value as $key => $member) {
-            $object[(string) $key] = $member;
+        return self::stringKeys($value);
+    }
+
+    /**
+     * A decoded JSON object with its keys as strings: json_decode() turns a
+     * key such as "1" into an integer, which the array<string, mixed> type
+     * of every object this client reads does not allow.
+     *
+     * @param array<mixed> $object
+     * @return array<string, mixed>
+     */
+    public static function stringKeys(array $object): array
+    {
+        $strings = [];
+        foreach ($object as $key => $member) {
+            $strings[(string) $key] = $member;
         }
 
-        return $object;
+        return $strings;
     }
 }

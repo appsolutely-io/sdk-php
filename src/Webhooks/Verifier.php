@@ -6,7 +6,6 @@ namespace Appsolutely\Sdk\Webhooks;
 
 use Appsolutely\Sdk\Clock\SystemClock;
 use Appsolutely\Sdk\Exception\InvalidConfigException;
-use Appsolutely\Sdk\Exception\InvalidSecretException;
 use Appsolutely\Sdk\Exception\WebhookVerificationException;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -50,11 +49,7 @@ final readonly class Verifier
             throw new InvalidConfigException(sprintf('The webhook timestamp tolerance must be between 1 and %d seconds, got %d.', self::MAX_TOLERANCE, $tolerance));
         }
 
-        $parsed = array_map(Secret::fromString(...), $secrets);
-        if ($parsed === []) {
-            throw new InvalidSecretException('At least one webhook signing secret is needed.');
-        }
-        $this->secrets = $parsed;
+        $this->secrets = Secret::list($secrets);
     }
 
     /**

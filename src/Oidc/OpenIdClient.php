@@ -14,7 +14,6 @@ use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Http\Json;
-use Firebase\JWT\JWT;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -106,8 +105,8 @@ final readonly class OpenIdClient
             array_unshift($scopes, 'openid');
         }
 
-        $state = self::randomToken();
-        $nonce = self::randomToken();
+        $state = RandomToken::generate();
+        $nonce = RandomToken::generate();
         $pkce = Pkce::generate();
 
         $query = http_build_query([
@@ -286,7 +285,7 @@ final readonly class OpenIdClient
         $response = $this->http->postForm($endpoint, $fields, $headers);
         $status = $response->getStatusCode();
 
-        if ($status < 200 || $status >= 300) {
+        if (!HttpTransport::isSuccessful($response)) {
             throw OAuthException::fromResponse($response)
                 ?? new UnexpectedResponseException(sprintf('POST %s answered %d.', $endpoint, $status), $status);
         }
@@ -382,7 +381,7 @@ final readonly class OpenIdClient
     private function successfulJson(ResponseInterface $response, string $endpoint): array
     {
         $status = $response->getStatusCode();
-        if ($status < 200 || $status >= 300) {
+        if (!HttpTransport::isSuccessful($response)) {
             throw OAuthException::fromResponse($response)
                 ?? new UnexpectedResponseException(sprintf('%s answered %d without an OAuth error.', $endpoint, $status), $status);
         }
@@ -462,14 +461,5 @@ final readonly class OpenIdClient
     private static function sameNumber(mixed $a, mixed $b): bool
     {
         return (is_int($a) || is_float($a)) && (is_int($b) || is_float($b)) && (float) $a === (float) $b;
-    }
-
-    /**
-     * 32 bytes from the CSPRNG, base64url-encoded: 256 bits, well past the
-     * 128 that RFC 6749 section 10.10 asks of a value an attacker must guess.
-     */
-    private static function randomToken(): string
-    {
-        return JWT::urlsafeB64Encode(random_bytes(32));
     }
 }

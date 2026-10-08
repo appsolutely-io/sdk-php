@@ -52,6 +52,23 @@ final readonly class Secret
     }
 
     /**
+     * Every secret currently valid, at least one: during a rotation, the new
+     * one and the old one.
+     *
+     * @param list<string> $secrets
+     * @return non-empty-list<self>
+     */
+    public static function list(#[\SensitiveParameter] array $secrets): array
+    {
+        $parsed = array_map(self::fromString(...), $secrets);
+        if ($parsed === []) {
+            throw new InvalidSecretException('At least one webhook signing secret is needed.');
+        }
+
+        return $parsed;
+    }
+
+    /**
      * The `v1` signature: HMAC-SHA256 over `{id}.{timestamp}.{body}`.
      */
     public function sign(string $id, int $timestamp, string $body): string

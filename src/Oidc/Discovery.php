@@ -38,7 +38,7 @@ final readonly class Discovery
         $url = rtrim($this->issuer, '/') . '/.well-known/openid-configuration';
         $response = $this->http->get($url);
         $status = $response->getStatusCode();
-        if ($status < 200 || $status >= 300) {
+        if (!HttpTransport::isSuccessful($response)) {
             throw new DiscoveryException(sprintf('GET %s answered %d.', $url, $status));
         }
 
