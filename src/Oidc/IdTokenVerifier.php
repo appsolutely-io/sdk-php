@@ -60,10 +60,11 @@ final readonly class IdTokenVerifier
 
         $this->verifySignature($jwt, $kid, $alg);
 
-        $claims = Json::decodeObject(JWT::urlsafeB64Decode($segments[1]))
+        $payload = JWT::urlsafeB64Decode($segments[1]);
+        $claims = Json::decodeObject($payload)
             ?? throw new IdTokenException('The ID token payload is not a JSON object.');
 
-        $this->verifyClaims($claims, $nonce, $accessToken, $maxAge);
+        $this->verifyClaims($claims, self::audiences($payload), $nonce, $accessToken, $maxAge);
 
         $subject = $claims['sub'];
         assert(is_string($subject));
@@ -98,9 +99,37 @@ final readonly class IdTokenVerifier
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * RFC 7519 section 4.1.3: aud is one string or an array of strings. The
+     * payload is decoded again with objects kept as objects, because in the
+     * associative arrays of the claims {"0": "x"} and ["x"] look alike.
+     *
+     * @return list<string>
      */
-    private function verifyClaims(array $claims, ?string $nonce, ?string $accessToken, ?int $maxAge): void
+    private static function audiences(string $payload): array
+    {
+        $decoded = json_decode($payload, false, 64);
+        $aud = $decoded instanceof \stdClass && property_exists($decoded, 'aud') ? $decoded->aud : null;
+
+        if (is_string($aud)) {
+            return [$aud];
+        }
+
+        $audiences = [];
+        foreach (is_array($aud) ? $aud : [null] as $audience) {
+            if (!is_string($audience)) {
+                throw new IdTokenException('The ID token\'s aud must be a string or a list of strings.');
+            }
+            $audiences[] = $audience;
+        }
+
+        return $audiences;
+    }
+
+    /**
+     * @param array<string, mixed> $claims
+     * @param list<string> $audiences
+     */
+    private function verifyClaims(array $claims, array $audiences, ?string $nonce, ?string $accessToken, ?int $maxAge): void
     {
         if (($claims['iss'] ?? null) !== $this->issuer) {
             throw new IdTokenException(sprintf('The ID token\'s iss is not "%s".', $this->issuer));
@@ -111,8 +140,6 @@ final readonly class IdTokenVerifier
             throw new IdTokenException('The ID token has no sub.');
         }
 
-        $aud = $claims['aud'] ?? null;
-        $audiences = is_string($aud) ? [$aud] : (is_array($aud) ? $aud : []);
         if (!in_array($this->clientId, $audiences, true)) {
             throw new IdTokenException(sprintf('The ID token\'s aud does not contain this client, "%s".', $this->clientId));
         }
