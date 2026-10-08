@@ -35,11 +35,14 @@ final class FrameworkIndependenceTest extends TestCase
     }
 
     #[DataProvider('sourceFiles')]
-    public function testASourceFileNamesNoIlluminateSymbolAndNoTenant(string $path): void
+    public function testASourceFileNamesNoIlluminateSymbol(string $path): void
     {
-        $source = (string) file_get_contents($path);
+        self::assertStringNotContainsString('Illuminate\\', (string) file_get_contents($path));
+    }
 
-        self::assertStringNotContainsString('Illuminate\\', $source);
-        self::assertDoesNotMatchRegularExpression('/tenant/i', $source);
+    #[DataProvider('sourceFiles')]
+    public function testASourceFileNamesNoTenant(string $path): void
+    {
+        self::assertDoesNotMatchRegularExpression('/tenant/i', (string) file_get_contents($path));
     }
 }
