@@ -9,7 +9,7 @@ use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Http\CacheControl;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Http\Json;
-use Appsolutely\Sdk\Http\Untrusted;
+use Appsolutely\Sdk\Support\Untrusted;
 use Firebase\JWT\JWK;
 use Firebase\JWT\Key;
 use Psr\Clock\ClockInterface;

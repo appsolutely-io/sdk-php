@@ -8,7 +8,7 @@ use Appsolutely\Sdk\Exception\DiscoveryException;
 use Appsolutely\Sdk\Http\CacheControl;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Http\Json;
-use Appsolutely\Sdk\Http\Untrusted;
+use Appsolutely\Sdk\Support\Untrusted;
 use Psr\SimpleCache\CacheInterface;
 
 /**
