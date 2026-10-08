@@ -90,7 +90,7 @@ final readonly class IdTokenVerifier
         } catch (BeforeValidException $exception) {
             throw new IdTokenException('The ID token is not valid yet: its iat or nbf is in the future, beyond the clock leeway.', 0, $exception);
         } catch (\UnexpectedValueException|\DomainException|\InvalidArgumentException $exception) {
-            throw new IdTokenException('The ID token signature does not verify: ' . $exception->getMessage(), 0, $exception);
+            throw new IdTokenException('The ID token signature does not verify: ' . Untrusted::text($exception->getMessage(), Untrusted::MAX_LONG_LENGTH), 0, $exception);
         } finally {
             JWT::$timestamp = $previousTimestamp;
             JWT::$leeway = $previousLeeway;

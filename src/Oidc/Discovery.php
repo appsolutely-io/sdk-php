@@ -70,7 +70,7 @@ final readonly class Discovery
         if ($metadata->issuer !== $this->issuer) {
             throw new DiscoveryException(sprintf(
                 'The discovery document names issuer "%s", but the client is configured for "%s".',
-                Untrusted::text($metadata->issuer, 200),
+                Untrusted::text($metadata->issuer, Untrusted::MAX_LONG_LENGTH),
                 $this->issuer,
             ));
         }

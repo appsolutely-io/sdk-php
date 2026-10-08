@@ -53,7 +53,7 @@ final readonly class KeySet
         }
 
         if ($this->now() - $set['fetched_at'] >= self::REFETCH_INTERVAL) {
-            $this->logger->info('An ID token names an unknown signing key; fetching the key set again.', ['kid' => Untrusted::text($kid), 'jwks_uri' => $this->jwksUri]);
+            $this->logger->info('An ID token names an unknown signing key; fetching the key set again.', ['kid' => Untrusted::text($kid), 'jwks_uri' => $this->printableUri()]);
             $key = self::find($this->fetch()['keys'], $kid, $algorithms);
             if ($key !== null) {
                 return $key;
@@ -86,11 +86,11 @@ final readonly class KeySet
         $response = $this->http->get($this->jwksUri);
         $status = $response->getStatusCode();
         if (!HttpTransport::isSuccessful($response)) {
-            throw new DiscoveryException(sprintf('GET %s answered %d.', $this->jwksUri, $status));
+            throw new DiscoveryException(sprintf('GET %s answered %d.', $this->printableUri(), $status));
         }
 
         $body = (string) $response->getBody();
-        $keys = self::keys($body) ?? throw new DiscoveryException(sprintf('GET %s did not answer a JWK set.', $this->jwksUri));
+        $keys = self::keys($body) ?? throw new DiscoveryException(sprintf('GET %s did not answer a JWK set.', $this->printableUri()));
         $now = $this->now();
 
         $ttl = CacheControl::ttl($response, Discovery::FALLBACK_TTL);
@@ -161,6 +161,14 @@ final readonly class KeySet
         }
 
         return null;
+    }
+
+    /**
+     * The discovery document named the URL, so it is text from outside.
+     */
+    private function printableUri(): string
+    {
+        return Untrusted::text($this->jwksUri, Untrusted::MAX_LONG_LENGTH);
     }
 
     private function cacheKey(): string

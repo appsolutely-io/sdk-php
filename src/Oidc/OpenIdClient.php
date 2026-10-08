@@ -14,6 +14,7 @@ use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Http\Json;
+use Appsolutely\Sdk\Support\Untrusted;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -287,7 +288,7 @@ final readonly class OpenIdClient
 
         if (!HttpTransport::isSuccessful($response)) {
             throw OAuthException::fromResponse($response)
-                ?? new UnexpectedResponseException(sprintf('POST %s answered %d.', $endpoint, $status), $status);
+                ?? new UnexpectedResponseException(sprintf('POST %s answered %d.', Untrusted::text($endpoint, Untrusted::MAX_LONG_LENGTH), $status), $status);
         }
     }
 
@@ -383,11 +384,11 @@ final readonly class OpenIdClient
         $status = $response->getStatusCode();
         if (!HttpTransport::isSuccessful($response)) {
             throw OAuthException::fromResponse($response)
-                ?? new UnexpectedResponseException(sprintf('%s answered %d without an OAuth error.', $endpoint, $status), $status);
+                ?? new UnexpectedResponseException(sprintf('%s answered %d without an OAuth error.', Untrusted::text($endpoint, Untrusted::MAX_LONG_LENGTH), $status), $status);
         }
 
         return Json::decodeObject((string) $response->getBody())
-            ?? throw new UnexpectedResponseException(sprintf('%s did not answer a JSON object.', $endpoint), $status);
+            ?? throw new UnexpectedResponseException(sprintf('%s did not answer a JSON object.', Untrusted::text($endpoint, Untrusted::MAX_LONG_LENGTH)), $status);
     }
 
     /**
