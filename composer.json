@@ -24,6 +24,8 @@
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.95",
         "nyholm/psr7": "^1.8.2",
+        "php-http/client-common": "^2.7",
+        "php-http/message": "^1.16",
         "php-http/mock-client": "^1.6.1",
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-strict-rules": "^2.0",
