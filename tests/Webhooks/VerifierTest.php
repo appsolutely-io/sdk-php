@@ -115,8 +115,29 @@ final class VerifierTest extends TestCase
         $headers['webhook-id'] = 'msg_other';
 
         $this->expectException(WebhookVerificationException::class);
+        $this->expectExceptionMessage('signature');
 
         $this->verifier(self::SECRET)->verify(self::BODY, $headers);
+    }
+
+    /**
+     * The server writes one occurrence id into both; a delivery signed under
+     * one id with a body naming another cannot be deduplicated on either.
+     */
+    public function testABodyIdOtherThanTheWebhookIdIsRefusedEvenWhenSigned(): void
+    {
+        $timestamp = $this->clock->timestamp();
+        $signature = (new Webhook(self::SECRET))->sign('msg_other', $timestamp, self::BODY);
+        self::assertIsString($signature);
+
+        $this->expectException(WebhookVerificationException::class);
+        $this->expectExceptionMessage('webhook-id');
+
+        $this->verifier(self::SECRET)->verify(self::BODY, [
+            'webhook-id' => 'msg_other',
+            'webhook-timestamp' => (string) $timestamp,
+            'webhook-signature' => $signature,
+        ]);
     }
 
     public function testATimestampJustInsideFiveMinutesIsAccepted(): void

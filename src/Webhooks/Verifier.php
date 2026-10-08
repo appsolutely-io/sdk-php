@@ -85,7 +85,15 @@ final readonly class Verifier
             throw new WebhookVerificationException('No v1 signature in webhook-signature matches the body under any configured secret.');
         }
 
-        return Event::fromBody($body);
+        $event = Event::fromBody($body);
+        // The server writes one occurrence id into both. A signed delivery
+        // whose body names another id cannot be deduplicated on either, so
+        // it is refused rather than handed to Deliveries under the wrong id.
+        if ($event->id !== $id) {
+            throw new WebhookVerificationException('The event id in the body is not the webhook-id header.');
+        }
+
+        return $event;
     }
 
     /**
