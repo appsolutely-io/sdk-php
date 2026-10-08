@@ -6,7 +6,7 @@ namespace Appsolutely\Sdk\Oidc;
 
 use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Http\Json;
-use Appsolutely\Sdk\Http\Untrusted;
+use Appsolutely\Sdk\Support\Untrusted;
 use Firebase\JWT\BeforeValidException;
 use Firebase\JWT\ExpiredException;
 use Firebase\JWT\JWT;

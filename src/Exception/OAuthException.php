@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Exception;
 
 use Appsolutely\Sdk\Http\Json;
-use Appsolutely\Sdk\Http\Untrusted;
+use Appsolutely\Sdk\Support\Untrusted;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Appsolutely\Sdk\Http;
+namespace Appsolutely\Sdk\Support;
 
 /**
  * A value from outside (an unverified token header, an error a redirect or a
