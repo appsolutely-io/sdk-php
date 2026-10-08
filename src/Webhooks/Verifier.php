@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Webhooks;
 
 use Appsolutely\Sdk\Clock\SystemClock;
+use Appsolutely\Sdk\Exception\InvalidConfigException;
 use Appsolutely\Sdk\Exception\InvalidSecretException;
 use Appsolutely\Sdk\Exception\WebhookVerificationException;
 use Psr\Clock\ClockInterface;
@@ -25,6 +26,13 @@ final readonly class Verifier
     /** The window the Standard Webhooks specification recommends. */
     public const int DEFAULT_TOLERANCE = 300;
 
+    /**
+     * A wider window than an hour no longer protects against a replay, and
+     * the signature already binds the timestamp, so clock drift is the only
+     * reason to widen it at all.
+     */
+    public const int MAX_TOLERANCE = 3600;
+
     /** @var non-empty-list<Secret> */
     private array $secrets;
 
@@ -38,6 +46,10 @@ final readonly class Verifier
         private ClockInterface $clock = new SystemClock(),
         private int $tolerance = self::DEFAULT_TOLERANCE,
     ) {
+        if ($tolerance < 1 || $tolerance > self::MAX_TOLERANCE) {
+            throw new InvalidConfigException(sprintf('The webhook timestamp tolerance must be between 1 and %d seconds, got %d.', self::MAX_TOLERANCE, $tolerance));
+        }
+
         $parsed = array_map(Secret::fromString(...), $secrets);
         if ($parsed === []) {
             throw new InvalidSecretException('At least one webhook signing secret is needed.');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Webhooks;
 
 use Appsolutely\Sdk\Exception\AppsolutelyException;
+use Appsolutely\Sdk\Exception\InvalidConfigException;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
 use Appsolutely\Sdk\Exception\InvalidSecretException;
 use Appsolutely\Sdk\Webhooks\Verifier;
@@ -270,6 +271,36 @@ final class VerifierTest extends TestCase
         $headers = $this->headers([$long]);
 
         self::assertSame(self::ID, (new Verifier([$short, $long], $this->clock))->verify(self::BODY, $headers)->id);
+    }
+
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function invalidTolerances(): iterable
+    {
+        yield 'zero' => [0];
+        yield 'negative' => [-300];
+        yield 'beyond an hour' => [3601];
+    }
+
+    /**
+     * A tolerance of zero refuses every real delivery; a negative one refuses
+     * all; one of hours stops being a replay window at all.
+     */
+    #[DataProvider('invalidTolerances')]
+    public function testATimestampToleranceOutsideOneSecondToAnHourIsRefused(int $tolerance): void
+    {
+        $this->expectException(InvalidConfigException::class);
+
+        new Verifier([self::SECRET], $this->clock, $tolerance);
+    }
+
+    public function testATimestampToleranceOfOneSecondToAnHourIsAccepted(): void
+    {
+        $headers = $this->headers([self::SECRET], $this->clock->timestamp() - 3600);
+
+        self::assertSame(self::ID, (new Verifier([self::SECRET], $this->clock, 3600))->verify(self::BODY, $headers)->id);
+        self::assertSame(self::ID, (new Verifier([self::SECRET], $this->clock, 1))->verify(self::BODY, $this->headers([self::SECRET]))->id);
     }
 
     public function testAnInvalidSecretIsNotEchoedInTheMessage(): void
