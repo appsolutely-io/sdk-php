@@ -83,7 +83,6 @@ final class FakeProvider
     {
         return new Config(
             issuer: self::ISSUER,
-            apiBaseUrl: 'https://api.example.com/api/relying-party/v1',
             clientId: self::CLIENT_ID,
             clientSecret: self::CLIENT_SECRET,
             httpClient: $this->http,

@@ -45,7 +45,6 @@ use Appsolutely\Sdk\Config;
 
 $client = new Client(new Config(
     issuer: 'https://login.example.com',          // the party's sign-in host, exactly as discovery names it
-    apiBaseUrl: 'https://api.appsolutely.io/api/relying-party/v1',
     clientId: getenv('APPSOLUTELY_CLIENT_ID'),
     clientSecret: getenv('APPSOLUTELY_CLIENT_SECRET'),
     cache: $psr16Cache,                            // strongly recommended: discovery, keys and machine tokens live here

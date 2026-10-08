@@ -38,7 +38,6 @@ final readonly class Config
 
     public function __construct(
         public string $issuer,
-        public string $apiBaseUrl,
         public string $clientId,
         #[\SensitiveParameter]
         public string $clientSecret,
@@ -52,7 +51,6 @@ final readonly class Config
         public int $clockLeeway = self::DEFAULT_CLOCK_LEEWAY,
     ) {
         self::assertBaseUrl('issuer', $issuer);
-        self::assertBaseUrl('apiBaseUrl', $apiBaseUrl);
 
         if ($clientId === '') {
             throw new InvalidConfigException('The client id must not be empty.');
