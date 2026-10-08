@@ -102,6 +102,41 @@ final class ConfigTest extends TestCase
     }
 
     /**
+     * URLs that parsers read differently: PHP's parse_url() takes the host of
+     * `http://evil.com\@localhost` to be `localhost`, while a browser or
+     * another HTTP client takes it to be `evil.com`. None of them is a URL a
+     * provider has a reason to publish, so they are refused outright.
+     *
+     * @return iterable<string, array{string}>
+     */
+    public static function ambiguousIssuers(): iterable
+    {
+        yield 'backslash before user info on the loopback' => ['http://evil.com\\@localhost'];
+        yield 'backslash before user info' => ['https://evil.com\\@login.example.com'];
+        yield 'backslash in the path' => ['https://login.example.com\\path'];
+        yield 'user info' => ['https://a@login.example.com'];
+        yield 'user info with a password' => ['https://a:b@login.example.com'];
+        yield 'an empty user info' => ['https://@login.example.com'];
+        yield 'a line break' => ["https://login.example.com/\nFORGED"];
+        yield 'a NUL byte' => ["https://login.example.com/\0"];
+        yield 'a tab' => ["https://login.example.com/\tx"];
+        yield 'DEL' => ["https://login.example.com/\x7F"];
+        yield 'a space' => ['https://login.example.com/a b'];
+    }
+
+    #[DataProvider('ambiguousIssuers')]
+    public function testAnIssuerThatParsersReadDifferentlyIsRefused(string $issuer): void
+    {
+        try {
+            new Config($issuer, 'id', 'secret');
+            self::fail('Config accepted an ambiguous issuer.');
+        } catch (InvalidConfigException $exception) {
+            self::assertStringContainsString('user info', $exception->getMessage());
+            self::assertDoesNotMatchRegularExpression('/[^\x20-\x7E]/', $exception->getMessage());
+        }
+    }
+
+    /**
      * @return iterable<string, array{int}>
      */
     public static function acceptedLeeways(): iterable

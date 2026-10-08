@@ -61,8 +61,9 @@ final readonly class ProviderMetadata
     }
 
     /**
-     * Every endpoint is held to the issuer's rule (see SecureUrl): the client
-     * sends its secret, codes and tokens to them and takes its keys from one.
+     * Every endpoint is held to the issuer's rule (see SecureUrl), including
+     * the refusal of what parsers read differently: the client sends its
+     * secret, codes and tokens to them and takes its keys from one.
      *
      * @param array<string, mixed> $document
      */
@@ -70,7 +71,7 @@ final readonly class ProviderMetadata
     {
         $url = self::optionalString($document, $name);
         if ($url !== null && !SecureUrl::isSecure($url)) {
-            throw new DiscoveryException(sprintf('The discovery document\'s %s must be an absolute https URL (plain http is accepted for localhost, 127.0.0.1 and [::1] only).', $name));
+            throw new DiscoveryException(sprintf('The discovery document\'s %s must be an absolute https URL (plain http is accepted for localhost, 127.0.0.1 and [::1] only) with %s.', $name, SecureUrl::UNAMBIGUOUS_RULE));
         }
 
         return $url;
