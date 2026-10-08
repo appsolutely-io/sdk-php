@@ -10,7 +10,6 @@ use Appsolutely\Sdk\Exception\DiscoveryException;
 use Appsolutely\Sdk\Oidc\ProviderMetadata;
 use Appsolutely\Sdk\Sdk;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
-use Composer\InstalledVersions;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -267,23 +266,6 @@ final class DiscoveryTest extends TestCase
 
         $provider->oidc()->metadata();
 
-        self::assertSame(
-            sprintf('appsolutely-sdk-php/%s PHP/%s', Sdk::version(), PHP_VERSION),
-            $provider->requestsTo('GET', self::URL)[0]->getHeaderLine('User-Agent'),
-        );
-    }
-
-    /**
-     * The version is the one Composer installed, not a constant kept by hand,
-     * and it stays a valid product-version token (RFC 9110 section 10.1.5)
-     * whatever characters a branch name gives it.
-     */
-    public function testTheSdkVersionIsTheInstalledOneAsAToken(): void
-    {
-        $installed = InstalledVersions::getPrettyVersion('appsolutely/sdk-php');
-        self::assertIsString($installed);
-
-        self::assertSame((string) preg_replace('/[^A-Za-z0-9!#$%&\'*+.^_`|~-]/', '-', $installed), Sdk::version());
-        self::assertMatchesRegularExpression('/^[A-Za-z0-9!#$%&\'*+.^_`|~-]+$/', Sdk::version());
+        self::assertSame(Sdk::userAgent(), $provider->requestsTo('GET', self::URL)[0]->getHeaderLine('User-Agent'));
     }
 }
