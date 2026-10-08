@@ -59,6 +59,45 @@ final class DeliveriesTest extends TestCase
         self::assertTrue($deliveries->wasHandled('msg:{weird}/id@x'));
     }
 
+    /**
+     * Two endpoints (two apps) sharing one cache can receive the same id;
+     * a namespace each keeps one from skipping a delivery the other handled.
+     */
+    public function testDeliveriesInDifferentNamespacesDoNotShareHandledIds(): void
+    {
+        $cache = new InMemoryCache(new FrozenClock());
+        $orders = new Deliveries($cache, namespace: 'orders-app');
+        $billing = new Deliveries($cache, namespace: 'billing-app');
+
+        $orders->markHandled('msg_1');
+
+        self::assertTrue($orders->wasHandled('msg_1'));
+        self::assertFalse($billing->wasHandled('msg_1'));
+        self::assertFalse((new Deliveries($cache))->wasHandled('msg_1'));
+    }
+
+    public function testANamespaceAndAnIdDoNotRunTogether(): void
+    {
+        $cache = new InMemoryCache(new FrozenClock());
+
+        (new Deliveries($cache, namespace: 'a'))->markHandled('bc');
+
+        self::assertFalse((new Deliveries($cache, namespace: 'ab'))->wasHandled('c'));
+    }
+
+    /**
+     * Ids handled before namespaces existed stay handled under the default.
+     */
+    public function testTheDefaultNamespaceKeepsTheKeysOfIdsAlreadyHandled(): void
+    {
+        $cache = new InMemoryCache(new FrozenClock());
+
+        (new Deliveries($cache))->markHandled('msg_1');
+
+        self::assertTrue($cache->has('appsolutely.webhooks.handled.' . hash('sha256', 'msg_1')));
+        self::assertTrue((new Deliveries($cache, namespace: ''))->wasHandled('msg_1'));
+    }
+
     public function testANonPositiveRetentionIsRefused(): void
     {
         $this->expectException(InvalidArgumentValueException::class);
