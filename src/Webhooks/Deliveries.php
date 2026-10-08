@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Webhooks;
 
-use Appsolutely\Sdk\Exception\InvalidConfigException;
+use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Psr\SimpleCache\CacheInterface;
 
 /**
@@ -37,7 +37,7 @@ final readonly class Deliveries
         private int $ttl = self::DEFAULT_TTL,
     ) {
         if ($ttl <= 0) {
-            throw new InvalidConfigException('The retention of handled delivery ids must be a positive number of seconds.');
+            throw new InvalidArgumentValueException('The retention of handled delivery ids must be a positive number of seconds.');
         }
     }
 

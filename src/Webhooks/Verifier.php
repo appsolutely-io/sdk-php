@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Webhooks;
 
 use Appsolutely\Sdk\Clock\SystemClock;
-use Appsolutely\Sdk\Exception\InvalidConfigException;
+use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Exception\WebhookVerificationException;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -46,7 +46,7 @@ final readonly class Verifier
         private int $tolerance = self::DEFAULT_TOLERANCE,
     ) {
         if ($tolerance < 1 || $tolerance > self::MAX_TOLERANCE) {
-            throw new InvalidConfigException(sprintf('The webhook timestamp tolerance must be between 1 and %d seconds, got %d.', self::MAX_TOLERANCE, $tolerance));
+            throw new InvalidArgumentValueException(sprintf('The webhook timestamp tolerance must be between 1 and %d seconds, got %d.', self::MAX_TOLERANCE, $tolerance));
         }
 
         $this->secrets = Secret::list($secrets);

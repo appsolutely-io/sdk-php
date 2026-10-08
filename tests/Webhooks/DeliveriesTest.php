@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Webhooks;
 
 use Appsolutely\Sdk\Cache\InMemoryCache;
-use Appsolutely\Sdk\Exception\InvalidConfigException;
+use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
 use Appsolutely\Sdk\Webhooks\Deliveries;
 use PHPUnit\Framework\TestCase;
@@ -61,7 +61,7 @@ final class DeliveriesTest extends TestCase
 
     public function testANonPositiveRetentionIsRefused(): void
     {
-        $this->expectException(InvalidConfigException::class);
+        $this->expectException(InvalidArgumentValueException::class);
 
         new Deliveries(new InMemoryCache(new FrozenClock()), 0);
     }

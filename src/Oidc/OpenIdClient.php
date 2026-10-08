@@ -8,7 +8,7 @@ use Appsolutely\Sdk\Config;
 use Appsolutely\Sdk\Exception\AuthorizationResponseException;
 use Appsolutely\Sdk\Exception\DiscoveryException;
 use Appsolutely\Sdk\Exception\IdTokenException;
-use Appsolutely\Sdk\Exception\InvalidArgumentException;
+use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
@@ -87,12 +87,12 @@ final readonly class OpenIdClient
     public function authorizationUrl(string $redirectUri, array $scopes = ['openid'], array $parameters = [], ?int $maxAge = null): AuthorizationRequest
     {
         if ($maxAge !== null && $maxAge < 0) {
-            throw new InvalidArgumentException('The max_age must be zero or a positive number of seconds.');
+            throw new InvalidArgumentValueException('The max_age must be zero or a positive number of seconds.');
         }
 
         foreach (array_keys($parameters) as $name) {
             if (in_array($name, self::RESERVED_PARAMETERS, true)) {
-                throw new InvalidArgumentException(sprintf('The authorization parameter "%s" is set by the client and cannot be passed in.', $name));
+                throw new InvalidArgumentValueException(sprintf('The authorization parameter "%s" is set by the client and cannot be passed in.', $name));
             }
         }
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Webhooks;
 
 use Appsolutely\Sdk\Exception\AppsolutelyException;
-use Appsolutely\Sdk\Exception\InvalidConfigException;
+use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Exception\InvalidSecretException;
 use Appsolutely\Sdk\Exception\WebhookVerificationException;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
@@ -311,7 +311,7 @@ final class VerifierTest extends TestCase
     #[DataProvider('invalidTolerances')]
     public function testATimestampToleranceOutsideOneSecondToAnHourIsRefused(int $tolerance): void
     {
-        $this->expectException(InvalidConfigException::class);
+        $this->expectException(InvalidArgumentValueException::class);
 
         new Verifier([self::SECRET], $this->clock, $tolerance);
     }
