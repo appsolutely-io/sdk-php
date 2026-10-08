@@ -182,6 +182,38 @@ final class IdTokenVerificationTest extends TestCase
     }
 
     /**
+     * The JWT library's own exception keeps the raw token among its frame
+     * arguments, so a refusal it raised is not chained: an error tracker that
+     * records arguments would otherwise store the member's ID token.
+     */
+    #[DataProvider('refusalsTheLibraryRaises')]
+    public function testARefusalTheJwtLibraryRaisedDoesNotChainItsException(string $which): void
+    {
+        $provider = new FakeProvider();
+        $jwt = match ($which) {
+            'signature' => SigningKey::rsa('rsa-1')->sign($provider->claims()),
+            'expired' => $provider->rsa->sign($provider->claims(['exp' => $provider->clock->timestamp() - 3600])),
+            default => throw new \LogicException('No token is built for ' . $which . '.'),
+        };
+
+        try {
+            $provider->oidc()->verifyIdToken($jwt, 'the-nonce');
+            self::fail('The token was accepted.');
+        } catch (IdTokenException $refusal) {
+            self::assertNull($refusal->getPrevious());
+        }
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function refusalsTheLibraryRaises(): iterable
+    {
+        yield 'a signature that does not verify' => ['signature'];
+        yield 'an expired token' => ['expired'];
+    }
+
+    /**
      * auth_time is a NumericDate (section 2) whenever it is present. A token
      * that carries it in another form cannot be compared with the original
      * authentication on a refresh, so it is refused rather than read as absent.
