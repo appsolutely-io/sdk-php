@@ -1,6 +1,6 @@
 # Appsolutely PHP SDK
 
-A framework-free PHP client for relying parties of Appsolutely: OpenID Connect sign-in, the party's own API calls, and verified Standard Webhooks deliveries.
+A framework-free PHP client for relying parties of Appsolutely: OpenID Connect sign-in, the machine token for the party's own API calls (the calls themselves are not wrapped yet), and verified Standard Webhooks deliveries.
 
 Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://github.com/appsolutely-io/sdk-laravel), which wires this client into the container, Socialite and the router.
 
@@ -119,7 +119,7 @@ $_SESSION['appsolutely_tokens'] = [
 
 ### Other calls
 
-The same client reads the member's UserInfo claims (`userInfo($accessToken, $memberId)`), revokes a token (`revoke()`) and obtains a cached `client_credentials` token for the party's own API calls (`machineToken()`). OAuth errors become `Exception\OAuthException` with the error code in `$exception->error`. Every exception an integrator may catch lives in the `Appsolutely\Sdk\Exception` namespace and implements `Exception\AppsolutelyException`.
+The same client reads the member's UserInfo claims (`userInfo($accessToken, $memberId)`), revokes a token (`revoke()`) and obtains a cached `client_credentials` token for the party's own API calls (`machineToken()`). OAuth errors become `Exception\OAuthException` with the error code in `$exception->error`. Every exception an integrator may catch lives in the `Appsolutely\Sdk\Exception` namespace and implements `Exception\AppsolutelyException`. A refused argument is an `Exception\InvalidArgumentValueException`, or a subclass naming what was refused (`InvalidConfigException` for a `Config` value, `InvalidSecretException` for a webhook signing secret).
 
 ## Verifying webhook deliveries
 
