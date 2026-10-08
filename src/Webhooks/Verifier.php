@@ -55,7 +55,7 @@ final readonly class Verifier
     /**
      * @param array<string, string|array<string>> $headers header names in any case
      */
-    public function verify(string $body, array $headers): Event
+    public function verify(string $body, #[\SensitiveParameter] array $headers): Event
     {
         $normalised = [];
         foreach ($headers as $name => $value) {
@@ -96,7 +96,7 @@ final readonly class Verifier
      * signature header uses, rather than the comma PSR-7 joins with, which
      * would run into the `v1,` prefix.
      */
-    public function verifyRequest(ServerRequestInterface $request): Event
+    public function verifyRequest(#[\SensitiveParameter] ServerRequestInterface $request): Event
     {
         $body = $request->getBody();
         if ($body->isSeekable()) {
@@ -113,7 +113,7 @@ final readonly class Verifier
     /**
      * @param array<string, string> $headers
      */
-    private function header(array $headers, string $name): string
+    private function header(#[\SensitiveParameter] array $headers, string $name): string
     {
         $value = trim($headers[$name] ?? '');
         if ($value === '') {

@@ -28,6 +28,7 @@ final readonly class IdToken
      * @param int|float|null $originalAuthTime the auth_time to keep when the claims carry none
      */
     public function __construct(
+        #[\SensitiveParameter]
         public string $raw,
         public string $subject,
         public array $claims,

@@ -38,7 +38,7 @@ final class InMemoryCache implements CacheInterface
         return $this->items[$key]['value'];
     }
 
-    public function set(string $key, mixed $value, int|DateInterval|null $ttl = null): bool
+    public function set(string $key, #[\SensitiveParameter] mixed $value, int|DateInterval|null $ttl = null): bool
     {
         self::assertKey($key);
 
@@ -90,7 +90,7 @@ final class InMemoryCache implements CacheInterface
     /**
      * @param iterable<mixed, mixed> $values
      */
-    public function setMultiple(iterable $values, int|DateInterval|null $ttl = null): bool
+    public function setMultiple(#[\SensitiveParameter] iterable $values, int|DateInterval|null $ttl = null): bool
     {
         foreach ($values as $key => $value) {
             $this->set(self::stringKey($key), $value, $ttl);
