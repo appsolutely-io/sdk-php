@@ -139,6 +139,43 @@ final class IdTokenVerificationTest extends TestCase
         $provider->oidc(leeway: 60)->verifyIdToken($jwt, 'the-nonce');
     }
 
+    /**
+     * Section 3.1.3.7 rule 11 with the clock leeway: the member must have
+     * authenticated within max_age seconds of now.
+     */
+    public function testWithMaxAgeTheAuthenticationMustBeRecentEnough(): void
+    {
+        $provider = new FakeProvider();
+        $oldest = $provider->clock->timestamp() - 600 - 60;
+
+        $accepted = $provider->rsa->sign($provider->claims(['auth_time' => $oldest]));
+        self::assertSame('member-42', $provider->oidc(leeway: 60)->verifyIdToken($accepted, 'the-nonce', maxAge: 600)->subject);
+
+        $refused = $provider->rsa->sign($provider->claims(['auth_time' => $oldest - 1]));
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('max_age');
+
+        $provider->oidc(leeway: 60)->verifyIdToken($refused, 'the-nonce', maxAge: 600);
+    }
+
+    public function testWithMaxAgeAnIdTokenWithoutAuthTimeIsRefused(): void
+    {
+        $provider = new FakeProvider();
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('auth_time');
+
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce', maxAge: 600);
+    }
+
+    public function testWithoutMaxAgeAnOldAuthTimeIsAccepted(): void
+    {
+        $provider = new FakeProvider();
+        $jwt = $provider->rsa->sign($provider->claims(['auth_time' => $provider->clock->timestamp() - 86400 * 30]));
+
+        self::assertSame('member-42', $provider->oidc()->verifyIdToken($jwt, 'the-nonce')->subject);
+    }
+
     public function testAnAccessTokenHashThatDoesNotMatchIsRefused(): void
     {
         $provider = new FakeProvider();

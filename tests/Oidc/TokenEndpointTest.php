@@ -89,6 +89,26 @@ final class TokenEndpointTest extends TestCase
         $oidc->exchangeCode('the-code', $request);
     }
 
+    public function testTheCodeExchangeChecksAuthTimeAgainstTheRequestsMaxAge(): void
+    {
+        $provider = new FakeProvider();
+        $oidc = $provider->oidc();
+        $request = $oidc->authorizationUrl('https://app.example.com/callback', maxAge: 300);
+        $provider->token = fn(): ResponseInterface => $provider->json([
+            'access_token' => 'at-1',
+            'token_type' => 'Bearer',
+            'id_token' => $provider->rsa->sign($provider->claims([
+                'nonce' => $request->nonce,
+                'auth_time' => $provider->clock->timestamp() - 3600,
+            ])),
+        ]);
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('max_age');
+
+        $oidc->exchangeCode('the-code', $request);
+    }
+
     public function testTheCodeExchangeRequiresAnIdToken(): void
     {
         $provider = new FakeProvider();

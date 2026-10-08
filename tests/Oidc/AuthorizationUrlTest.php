@@ -77,6 +77,44 @@ final class AuthorizationUrlTest extends TestCase
         (new FakeProvider())->oidc()->authorizationUrl(self::REDIRECT, ['openid'], ['state' => 'chosen-by-caller']);
     }
 
+    public function testMaxAgeIsSentAndKeptWithTheRequest(): void
+    {
+        $request = (new FakeProvider())->oidc()->authorizationUrl(self::REDIRECT, maxAge: 600);
+
+        parse_str((string) parse_url($request->url, PHP_URL_QUERY), $query);
+        self::assertSame('600', $query['max_age']);
+        self::assertSame(600, $request->maxAge);
+    }
+
+    public function testWithoutMaxAgeNoneIsSentOrKept(): void
+    {
+        $request = (new FakeProvider())->oidc()->authorizationUrl(self::REDIRECT);
+
+        parse_str((string) parse_url($request->url, PHP_URL_QUERY), $query);
+        self::assertArrayNotHasKey('max_age', $query);
+        self::assertNull($request->maxAge);
+    }
+
+    /**
+     * Passed raw, max_age would reach the provider without the client ever
+     * checking the auth_time it asks for.
+     */
+    public function testMaxAgeCannotBePassedAsARawParameter(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('max_age');
+
+        (new FakeProvider())->oidc()->authorizationUrl(self::REDIRECT, ['openid'], ['max_age' => '600']);
+    }
+
+    public function testANegativeMaxAgeIsRefused(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('max_age');
+
+        (new FakeProvider())->oidc()->authorizationUrl(self::REDIRECT, maxAge: -1);
+    }
+
     public function testAProviderThatDoesNotOfferS256IsRefused(): void
     {
         $provider = new FakeProvider();

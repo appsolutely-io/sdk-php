@@ -30,7 +30,7 @@ final readonly class OpenIdClient
 {
     /** Parameters the flow's security rests on; a caller cannot override them. */
     private const array RESERVED_PARAMETERS = [
-        'response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'nonce', 'code_challenge', 'code_challenge_method',
+        'response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'nonce', 'code_challenge', 'code_challenge_method', 'max_age',
     ];
 
     /**
@@ -59,9 +59,15 @@ final readonly class OpenIdClient
     /**
      * @param list<string> $scopes `openid` is added when missing
      * @param array<string, string> $parameters further authorization parameters, such as `prompt` or `login_hint`
+     * @param int|null $maxAge seconds since the member last authenticated beyond which the provider must ask
+     *                         again (OpenID Connect Core section 3.1.2.1); the ID token's auth_time is then checked
      */
-    public function authorizationUrl(string $redirectUri, array $scopes = ['openid'], array $parameters = []): AuthorizationRequest
+    public function authorizationUrl(string $redirectUri, array $scopes = ['openid'], array $parameters = [], ?int $maxAge = null): AuthorizationRequest
     {
+        if ($maxAge !== null && $maxAge < 0) {
+            throw new InvalidArgumentException('The max_age must be zero or a positive number of seconds.');
+        }
+
         foreach (array_keys($parameters) as $name) {
             if (in_array($name, self::RESERVED_PARAMETERS, true)) {
                 throw new InvalidArgumentException(sprintf('The authorization parameter "%s" is set by the client and cannot be passed in.', $name));
@@ -91,13 +97,14 @@ final readonly class OpenIdClient
             'nonce' => $nonce,
             'code_challenge' => $pkce->challenge,
             'code_challenge_method' => 'S256',
+            ...($maxAge === null ? [] : ['max_age' => (string) $maxAge]),
             ...$parameters,
         ], '', '&', PHP_QUERY_RFC3986);
 
         $endpoint = $metadata->authorizationEndpoint;
         $url = $endpoint . (str_contains($endpoint, '?') ? '&' : '?') . $query;
 
-        return new AuthorizationRequest($url, $redirectUri, $state, $nonce, $pkce->verifier);
+        return new AuthorizationRequest($url, $redirectUri, $state, $nonce, $pkce->verifier, $maxAge);
     }
 
     /**
@@ -153,7 +160,7 @@ final readonly class OpenIdClient
             'code_verifier' => $request->codeVerifier,
         ]);
 
-        return $this->tokenSet($fields, $request->nonce, idTokenRequired: true);
+        return $this->tokenSet($fields, $request->nonce, idTokenRequired: true, maxAge: $request->maxAge);
     }
 
     /**
@@ -181,7 +188,10 @@ final readonly class OpenIdClient
         return $this->tokenSet($this->tokenRequest($request), null, idTokenRequired: false);
     }
 
-    public function verifyIdToken(string $idToken, ?string $nonce, ?string $accessToken = null): IdToken
+    /**
+     * @param int|null $maxAge the max_age the authorization request was sent with, if any
+     */
+    public function verifyIdToken(string $idToken, ?string $nonce, ?string $accessToken = null, ?int $maxAge = null): IdToken
     {
         $metadata = $this->metadata();
 
@@ -192,7 +202,7 @@ final readonly class OpenIdClient
             $this->config->clientId,
             $metadata->idTokenSigningAlgValuesSupported,
             $this->config->clockLeeway,
-        ))->verify($idToken, $nonce, $accessToken);
+        ))->verify($idToken, $nonce, $accessToken, $maxAge);
     }
 
     /**
@@ -352,7 +362,7 @@ final readonly class OpenIdClient
      *
      * @param array<string, mixed> $fields
      */
-    private function tokenSet(array $fields, ?string $nonce, bool $idTokenRequired): TokenSet
+    private function tokenSet(array $fields, ?string $nonce, bool $idTokenRequired, ?int $maxAge = null): TokenSet
     {
         $accessToken = $fields['access_token'] ?? null;
         $tokenType = $fields['token_type'] ?? null;
@@ -373,7 +383,7 @@ final readonly class OpenIdClient
         $idToken = $fields['id_token'] ?? null;
         $verified = null;
         if (is_string($idToken)) {
-            $verified = $this->verifyIdToken($idToken, $nonce, $accessToken);
+            $verified = $this->verifyIdToken($idToken, $nonce, $accessToken, $maxAge);
         } elseif ($idTokenRequired) {
             throw new IdTokenException('The token response carries no id_token.');
         }

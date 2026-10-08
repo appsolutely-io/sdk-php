@@ -19,5 +19,6 @@ final readonly class AuthorizationRequest
         public string $nonce,
         #[\SensitiveParameter]
         public string $codeVerifier,
+        public ?int $maxAge = null,
     ) {}
 }

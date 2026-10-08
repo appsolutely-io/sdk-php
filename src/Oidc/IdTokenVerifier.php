@@ -37,7 +37,7 @@ final readonly class IdTokenVerifier
         private int $leeway,
     ) {}
 
-    public function verify(string $jwt, ?string $nonce, ?string $accessToken = null): IdToken
+    public function verify(string $jwt, ?string $nonce, ?string $accessToken = null, ?int $maxAge = null): IdToken
     {
         $segments = explode('.', $jwt);
         if (count($segments) !== 3) {
@@ -62,7 +62,7 @@ final readonly class IdTokenVerifier
         $claims = Json::decodeObject(JWT::urlsafeB64Decode($segments[1]))
             ?? throw new IdTokenException('The ID token payload is not a JSON object.');
 
-        $this->verifyClaims($claims, $nonce, $accessToken);
+        $this->verifyClaims($claims, $nonce, $accessToken, $maxAge);
 
         $subject = $claims['sub'];
         assert(is_string($subject));
@@ -99,7 +99,7 @@ final readonly class IdTokenVerifier
     /**
      * @param array<string, mixed> $claims
      */
-    private function verifyClaims(array $claims, ?string $nonce, ?string $accessToken): void
+    private function verifyClaims(array $claims, ?string $nonce, ?string $accessToken, ?int $maxAge): void
     {
         if (($claims['iss'] ?? null) !== $this->issuer) {
             throw new IdTokenException(sprintf('The ID token\'s iss is not "%s".', $this->issuer));
@@ -147,6 +147,19 @@ final readonly class IdTokenVerifier
         }
         if ($iat > $now + $this->leeway) {
             throw new IdTokenException('The ID token\'s iat is in the future, beyond the clock leeway.');
+        }
+
+        // Section 3.1.3.7 rule 11: when max_age was requested, auth_time is
+        // required (section 2) and the authentication it records must be no
+        // older than max_age, give or take the clock leeway.
+        if ($maxAge !== null) {
+            $authTime = $claims['auth_time'] ?? null;
+            if (!is_int($authTime) && !is_float($authTime)) {
+                throw new IdTokenException('The ID token has no numeric auth_time, which a max_age request requires.');
+            }
+            if ($authTime + $maxAge + $this->leeway < $now) {
+                throw new IdTokenException('The member authenticated longer ago than the requested max_age allows.');
+            }
         }
 
         if ($nonce !== null) {
