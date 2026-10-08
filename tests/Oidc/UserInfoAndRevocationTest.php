@@ -15,7 +15,7 @@ final class UserInfoAndRevocationTest extends TestCase
     public function testUserInfoIsReadWithTheAccessTokenAsABearer(): void
     {
         $provider = new FakeProvider();
-        $provider->userinfo = fn(): ResponseInterface => $provider->json(['sub' => 'member-42', 'email' => 'm@example.com']);
+        $provider->userInfo = fn(): ResponseInterface => $provider->json(['sub' => 'member-42', 'email' => 'm@example.com']);
 
         $claims = $provider->oidc()->userInfo('at-1', 'member-42');
 
@@ -27,7 +27,7 @@ final class UserInfoAndRevocationTest extends TestCase
     public function testUserInfoForAnotherSubjectThanTheIdTokensIsRefused(): void
     {
         $provider = new FakeProvider();
-        $provider->userinfo = fn(): ResponseInterface => $provider->json(['sub' => 'member-7']);
+        $provider->userInfo = fn(): ResponseInterface => $provider->json(['sub' => 'member-7']);
 
         $this->expectException(UnexpectedResponseException::class);
         $this->expectExceptionMessage('sub');
@@ -38,7 +38,7 @@ final class UserInfoAndRevocationTest extends TestCase
     public function testUserInfoRefusedForAnInvalidTokenIsAnOAuthException(): void
     {
         $provider = new FakeProvider();
-        $provider->userinfo = fn(): ResponseInterface => $provider->json(['error' => 'invalid_token'], 401);
+        $provider->userInfo = fn(): ResponseInterface => $provider->json(['error' => 'invalid_token'], 401);
 
         try {
             $provider->oidc()->userInfo('expired');

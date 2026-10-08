@@ -51,7 +51,7 @@ final class FakeProvider
     public $token = null;
 
     /** @var (callable(RequestInterface): ResponseInterface)|null */
-    public $userinfo = null;
+    public $userInfo = null;
 
     /** @var (callable(RequestInterface): ResponseInterface)|null */
     public $revoke = null;
@@ -178,8 +178,8 @@ final class FakeProvider
         if ($method === 'POST' && $url === $this->discovery['token_endpoint'] && $this->token !== null) {
             return ($this->token)($request);
         }
-        if ($method === 'GET' && $url === self::ISSUER . '/oauth/userinfo' && $this->userinfo !== null) {
-            return ($this->userinfo)($request);
+        if ($method === 'GET' && $url === self::ISSUER . '/oauth/userinfo' && $this->userInfo !== null) {
+            return ($this->userInfo)($request);
         }
         if ($method === 'POST' && $url === self::ISSUER . '/oauth/revoke' && $this->revoke !== null) {
             return ($this->revoke)($request);

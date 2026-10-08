@@ -249,7 +249,7 @@ final readonly class OpenIdClient
     }
 
     /**
-     * The member's claims from the userinfo endpoint.
+     * The member's claims from the UserInfo endpoint (OpenID Connect Core section 5.3).
      *
      * Pass the ID token's subject as $expectedSubject: OpenID Connect Core
      * section 5.3.2 requires the client to check that both describe the same
@@ -259,7 +259,7 @@ final readonly class OpenIdClient
      */
     public function userInfo(#[\SensitiveParameter] string $accessToken, ?string $expectedSubject = null): array
     {
-        $endpoint = $this->metadata()->userinfoEndpoint
+        $endpoint = $this->metadata()->userInfoEndpoint
             ?? throw new DiscoveryException('The provider publishes no userinfo_endpoint.');
 
         $response = $this->http->get($endpoint, ['Authorization' => 'Bearer ' . $accessToken]);
@@ -267,10 +267,10 @@ final readonly class OpenIdClient
 
         $subject = $claims['sub'] ?? null;
         if (!is_string($subject) || $subject === '') {
-            throw new UnexpectedResponseException('The userinfo response has no sub.', $response->getStatusCode());
+            throw new UnexpectedResponseException('The UserInfo response has no sub.', $response->getStatusCode());
         }
         if ($expectedSubject !== null && !hash_equals($expectedSubject, $subject)) {
-            throw new UnexpectedResponseException('The userinfo response\'s sub is not the ID token\'s.', $response->getStatusCode());
+            throw new UnexpectedResponseException('The UserInfo response\'s sub is not the ID token\'s.', $response->getStatusCode());
         }
 
         return $claims;

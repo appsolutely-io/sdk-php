@@ -26,6 +26,7 @@ final class DiscoveryTest extends TestCase
         self::assertSame(FakeProvider::ISSUER, $metadata->issuer);
         self::assertSame(FakeProvider::ISSUER . '/oauth/token', $metadata->tokenEndpoint);
         self::assertSame(FakeProvider::ISSUER . '/oauth/jwks.json', $metadata->jwksUri);
+        self::assertSame(FakeProvider::ISSUER . '/oauth/userinfo', $metadata->userInfoEndpoint);
         self::assertSame(['RS256', 'ES256'], $metadata->idTokenSigningAlgValuesSupported);
         self::assertTrue($metadata->authorizationResponseIssParameterSupported);
         self::assertCount(1, $provider->requestsTo('GET', self::URL));
