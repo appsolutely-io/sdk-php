@@ -6,9 +6,11 @@ namespace Appsolutely\Sdk\Tests\Oidc;
 
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Oidc\ClientAuthentication;
+use Appsolutely\Sdk\Oidc\IdToken;
 use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -192,12 +194,62 @@ final class TokenEndpointTest extends TestCase
             'id_token' => $provider->ec->sign(array_diff_key($provider->claims(), ['nonce' => true])),
         ]);
 
-        $tokens = $provider->oidc()->refresh('rt-1', ['openid', 'email']);
+        $tokens = $provider->oidc()->refresh('rt-1', $this->originalIdToken($provider), ['openid', 'email']);
 
         $form = FakeProvider::form($provider->requestsTo('POST', self::TOKEN_URL)[0]);
         self::assertSame(['grant_type' => 'refresh_token', 'refresh_token' => 'rt-1', 'scope' => 'openid email'], $form);
         self::assertSame('at-2', $tokens->accessToken);
         self::assertSame('member-42', $tokens->idToken?->subject);
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>, array<string, mixed>, string}>
+     */
+    public static function refreshedIdTokensForAnotherAuthentication(): iterable
+    {
+        yield 'another subject' => [[], ['sub' => 'member-7'], 'sub'];
+        yield 'another auth_time' => [['auth_time' => 1_000], ['auth_time' => 2_000], 'auth_time'];
+        yield 'an azp the original did not have' => [[], ['azp' => FakeProvider::CLIENT_ID], 'azp'];
+        yield 'no azp where the original had one' => [['azp' => FakeProvider::CLIENT_ID], [], 'azp'];
+    }
+
+    /**
+     * OpenID Connect Core section 12.2: a refreshed ID token keeps the
+     * original's sub, azp and, when it carries one, auth_time.
+     *
+     * @param array<string, mixed> $original
+     * @param array<string, mixed> $refreshed
+     */
+    #[DataProvider('refreshedIdTokensForAnotherAuthentication')]
+    public function testRefreshRefusesAnIdTokenForAnotherAuthentication(array $original, array $refreshed, string $mentioned): void
+    {
+        $provider = new FakeProvider();
+        $provider->token = fn(): ResponseInterface => $provider->json([
+            'access_token' => 'at-2',
+            'token_type' => 'Bearer',
+            'id_token' => $provider->rsa->sign(array_diff_key($provider->claims($refreshed), ['nonce' => true])),
+        ]);
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage($mentioned);
+
+        $provider->oidc()->refresh('rt-1', $this->originalIdToken($provider, $original));
+    }
+
+    public function testRefreshAcceptsANewIatButTheSameAuthTime(): void
+    {
+        $provider = new FakeProvider();
+        $original = $this->originalIdToken($provider, ['auth_time' => $provider->clock->timestamp() - 10]);
+        $provider->clock->advance(3600);
+        $provider->token = fn(): ResponseInterface => $provider->json([
+            'access_token' => 'at-2',
+            'token_type' => 'Bearer',
+            'id_token' => $provider->rsa->sign(array_diff_key($provider->claims(['auth_time' => $original->claims['auth_time']]), ['nonce' => true])),
+        ]);
+
+        $tokens = $provider->oidc()->refresh('rt-1', $original);
+
+        self::assertSame($provider->clock->timestamp(), $tokens->idToken?->claims['iat']);
     }
 
     public function testTheMachineTokenUsesClientCredentialsAndIsCachedUntilShortlyBeforeItExpires(): void
@@ -239,5 +291,13 @@ final class TokenEndpointTest extends TestCase
         $b = $provider->oidc()->machineToken(['b']);
 
         self::assertNotSame($a->accessToken, $b->accessToken);
+    }
+
+    /**
+     * @param array<string, mixed> $claims
+     */
+    private function originalIdToken(FakeProvider $provider, array $claims = []): IdToken
+    {
+        return $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims($claims)), 'the-nonce');
     }
 }

@@ -172,20 +172,32 @@ final readonly class OpenIdClient
     }
 
     /**
-     * A refreshed ID token carries no nonce to compare (OpenID Connect Core
-     * section 12.2); its signature, issuer, audience and times are still
-     * verified.
+     * A refreshed ID token carries no nonce to compare; its signature,
+     * issuer, audience and times are verified, and it must describe the same
+     * authentication as the original. OpenID Connect Core section 12.2: its
+     * sub and azp "MUST be the same as in the ID Token issued when the
+     * original authentication occurred" (no azp if the original had none),
+     * and an auth_time "MUST represent the time of the original
+     * authentication"; only iat changes.
      *
+     * @param IdToken|null $originalIdToken the ID token of the sign-in this refresh token belongs to; pass null
+     *                                      only when it was not kept, which leaves a refreshed ID token unchecked
+     *                                      against it
      * @param list<string> $scopes a narrower scope than the original grant, or none to keep it
      */
-    public function refresh(#[\SensitiveParameter] string $refreshToken, array $scopes = []): TokenSet
+    public function refresh(#[\SensitiveParameter] string $refreshToken, ?IdToken $originalIdToken, array $scopes = []): TokenSet
     {
         $request = ['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken];
         if ($scopes !== []) {
             $request['scope'] = implode(' ', $scopes);
         }
 
-        return $this->tokenSet($this->tokenRequest($request), null, idTokenRequired: false);
+        $tokens = $this->tokenSet($this->tokenRequest($request), null, idTokenRequired: false);
+        if ($tokens->idToken !== null && $originalIdToken !== null) {
+            self::assertSameAuthentication($originalIdToken, $tokens->idToken);
+        }
+
+        return $tokens;
     }
 
     /**
@@ -399,6 +411,35 @@ final readonly class OpenIdClient
             is_string($scope) ? $scope : null,
             $verified,
         );
+    }
+
+    /**
+     * iss and aud need no comparison here: both tokens were verified against
+     * the configured issuer and this client id alone.
+     */
+    private static function assertSameAuthentication(IdToken $original, IdToken $refreshed): void
+    {
+        if ($refreshed->subject !== $original->subject) {
+            throw new IdTokenException('The refreshed ID token\'s sub is not the original ID token\'s.');
+        }
+
+        if (($refreshed->claims['azp'] ?? null) !== ($original->claims['azp'] ?? null)) {
+            throw new IdTokenException('The refreshed ID token\'s azp is not the original ID token\'s.');
+        }
+
+        $originalAuthTime = $original->claims['auth_time'] ?? null;
+        $refreshedAuthTime = $refreshed->claims['auth_time'] ?? null;
+        if ($originalAuthTime !== null && $refreshedAuthTime !== null && !self::sameNumber($originalAuthTime, $refreshedAuthTime)) {
+            throw new IdTokenException('The refreshed ID token\'s auth_time is not the original authentication\'s.');
+        }
+    }
+
+    /**
+     * JSON writes one instant as 1700000000 or 1700000000.0 alike.
+     */
+    private static function sameNumber(mixed $a, mixed $b): bool
+    {
+        return (is_int($a) || is_float($a)) && (is_int($b) || is_float($b)) && (float) $a === (float) $b;
     }
 
     /**
