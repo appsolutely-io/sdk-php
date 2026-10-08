@@ -97,7 +97,12 @@ final class IdTokenVerificationTest extends TestCase
         // Section 3.1.3.7 rule 3: an audience the client does not trust is a
         // refusal even when azp names this client.
         yield 'another audience beside this client and azp' => [['aud' => [FakeProvider::CLIENT_ID, 'other'], 'azp' => FakeProvider::CLIENT_ID], 'other than this client'];
-        yield 'an audience that is not a string' => [['aud' => [FakeProvider::CLIENT_ID, 7]], 'other than this client'];
+        // RFC 7519 section 4.1.3: aud is a string or an array of strings.
+        yield 'an audience list with a member that is not a string' => [['aud' => [FakeProvider::CLIENT_ID, 7]], 'aud must be a string or a list of strings'];
+        yield 'an audience that is a number' => [['aud' => 7], 'aud must be a string or a list of strings'];
+        yield 'an audience that is an object' => [['aud' => (object) ['client' => FakeProvider::CLIENT_ID]], 'aud must be a string or a list of strings'];
+        yield 'an audience that is an object with a numeric key' => [['aud' => (object) ['0' => FakeProvider::CLIENT_ID]], 'aud must be a string or a list of strings'];
+        yield 'no audience' => [['aud' => null], 'aud must be a string or a list of strings'];
         yield 'an empty audience list' => [['aud' => []], 'aud does not contain this client'];
         yield 'one audience repeated without azp' => [['aud' => [FakeProvider::CLIENT_ID, FakeProvider::CLIENT_ID]], 'has no azp'];
         yield 'azp naming another client' => [['azp' => 'someone-else'], 'azp'];
