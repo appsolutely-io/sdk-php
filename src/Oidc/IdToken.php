@@ -10,6 +10,8 @@ namespace Appsolutely\Sdk\Oidc;
 final readonly class IdToken
 {
     /**
+     * @internal only the verifier creates one, so holding an IdToken means its checks passed
+     *
      * @param array<string, mixed> $claims
      */
     public function __construct(

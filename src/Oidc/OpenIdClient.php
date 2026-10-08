@@ -42,6 +42,9 @@ final readonly class OpenIdClient
 
     private Discovery $discovery;
 
+    /**
+     * @internal obtain it from Client::oidc(), which supplies the transport, cache and clock
+     */
     public function __construct(
         private Config $config,
         private HttpTransport $http,

@@ -8,6 +8,8 @@ use Firebase\JWT\JWT;
 
 /**
  * Proof Key for Code Exchange with the S256 method (RFC 7636).
+ *
+ * @internal OpenIdClient::authorizationUrl() generates the verifier and keeps it in the AuthorizationRequest
  */
 final readonly class Pkce
 {

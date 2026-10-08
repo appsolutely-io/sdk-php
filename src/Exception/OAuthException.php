@@ -30,6 +30,8 @@ final class OAuthException extends RuntimeException implements AppsolutelyExcept
     }
 
     /**
+     * @internal
+     *
      * @param array<mixed> $fields
      */
     public static function fromFields(array $fields, ?int $statusCode = null): ?self
@@ -48,6 +50,8 @@ final class OAuthException extends RuntimeException implements AppsolutelyExcept
     /**
      * The error in a JSON body, or failing that in a `WWW-Authenticate:
      * Bearer` challenge, where RFC 6750 puts it for a protected resource.
+     *
+     * @internal
      */
     public static function fromResponse(ResponseInterface $response): ?self
     {
