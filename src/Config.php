@@ -82,12 +82,19 @@ final readonly class Config
      */
     public function __debugInfo(): array
     {
-        $properties = [];
-        foreach (get_object_vars($this) as $name => $value) {
-            $properties[(string) $name] = $name === 'clientSecret' ? '[redacted]' : $value;
-        }
-
-        return $properties;
+        return [
+            'issuer' => $this->issuer,
+            'clientId' => $this->clientId,
+            'clientSecret' => '[redacted]',
+            'httpClient' => $this->httpClient,
+            'requestFactory' => $this->requestFactory,
+            'streamFactory' => $this->streamFactory,
+            'cache' => $this->cache,
+            'clock' => $this->clock,
+            'logger' => $this->logger,
+            'clientAuthentication' => $this->clientAuthentication,
+            'clockLeeway' => $this->clockLeeway,
+        ];
     }
 
     /**
