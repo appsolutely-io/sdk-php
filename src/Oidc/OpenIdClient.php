@@ -202,12 +202,17 @@ final readonly class OpenIdClient
      * and an auth_time "MUST represent the time of the original
      * authentication"; only iat changes.
      *
-     * @param IdToken|null $originalIdToken the ID token of the sign-in this refresh token belongs to; pass null
-     *                                      only when it was not kept, which leaves a refreshed ID token unchecked
-     *                                      against it
+     * The returned token set always holds the ID token to pass to the next
+     * refresh: the refreshed one, or the original when the answer carried
+     * none. A refreshed one without auth_time keeps the original's in its
+     * authTime, so one refresh cannot loosen the check on the next.
+     *
+     * @param IdToken $originalIdToken the ID token of the sign-in this refresh token belongs to, or the one the
+     *                                 previous refresh returned; keep it with IdToken::toArray() and restore it with
+     *                                 IdToken::fromTrustedStorage() when the session is stored as plain values
      * @param list<string> $scopes a narrower scope than the original grant, or none to keep it
      */
-    public function refresh(#[\SensitiveParameter] string $refreshToken, ?IdToken $originalIdToken, array $scopes = []): TokenSet
+    public function refresh(#[\SensitiveParameter] string $refreshToken, IdToken $originalIdToken, array $scopes = []): TokenSet
     {
         $request = ['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken];
         if ($scopes !== []) {
@@ -215,11 +220,15 @@ final readonly class OpenIdClient
         }
 
         $tokens = $this->tokenSet($this->tokenRequest($request), null, idTokenRequired: false);
-        if ($tokens->idToken !== null && $originalIdToken !== null) {
-            self::assertSameAuthentication($originalIdToken, $tokens->idToken);
-        }
 
-        return $tokens;
+        return new TokenSet(
+            $tokens->accessToken,
+            $tokens->tokenType,
+            $tokens->expiresAt,
+            $tokens->refreshToken,
+            $tokens->scope,
+            $tokens->idToken === null ? $originalIdToken : self::sameAuthentication($originalIdToken, $tokens->idToken),
+        );
     }
 
     /**
@@ -436,10 +445,11 @@ final readonly class OpenIdClient
     }
 
     /**
-     * iss and aud need no comparison here: both tokens were verified against
-     * the configured issuer and this client id alone.
+     * The refreshed token, with the original's auth_time kept when it
+     * carries none. iss and aud need no comparison here: both tokens were
+     * verified against the configured issuer and this client id alone.
      */
-    private static function assertSameAuthentication(IdToken $original, IdToken $refreshed): void
+    private static function sameAuthentication(IdToken $original, IdToken $refreshed): IdToken
     {
         if ($refreshed->subject !== $original->subject) {
             throw new IdTokenException('The refreshed ID token\'s sub is not the original ID token\'s.');
@@ -449,18 +459,13 @@ final readonly class OpenIdClient
             throw new IdTokenException('The refreshed ID token\'s azp is not the original ID token\'s.');
         }
 
-        $originalAuthTime = $original->claims['auth_time'] ?? null;
-        $refreshedAuthTime = $refreshed->claims['auth_time'] ?? null;
-        if ($originalAuthTime !== null && $refreshedAuthTime !== null && !self::sameNumber($originalAuthTime, $refreshedAuthTime)) {
+        // Compared as numbers: JSON writes one instant as 1700000000 or 1700000000.0 alike.
+        if ($original->authTime !== null && $refreshed->authTime !== null && (float) $original->authTime !== (float) $refreshed->authTime) {
             throw new IdTokenException('The refreshed ID token\'s auth_time is not the original authentication\'s.');
         }
-    }
 
-    /**
-     * JSON writes one instant as 1700000000 or 1700000000.0 alike.
-     */
-    private static function sameNumber(mixed $a, mixed $b): bool
-    {
-        return (is_int($a) || is_float($a)) && (is_int($b) || is_float($b)) && (float) $a === (float) $b;
+        return $refreshed->authTime === null
+            ? new IdToken($refreshed->raw, $refreshed->subject, $refreshed->claims, $original->authTime)
+            : $refreshed;
     }
 }
