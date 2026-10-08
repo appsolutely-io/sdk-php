@@ -279,6 +279,58 @@ final class IdTokenVerificationTest extends TestCase
         self::assertCount(3, $provider->requestsTo('GET', self::JWKS_URL));
     }
 
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function keySetHeadersThatForbidKeeping(): iterable
+    {
+        yield 'no-store' => ['no-store'];
+        yield 'max-age=0' => ['public, max-age=0'];
+    }
+
+    /**
+     * Whatever the provider's Cache-Control says, the key set is kept for
+     * the refetch interval, or every verification would fetch it again.
+     */
+    #[DataProvider('keySetHeadersThatForbidKeeping')]
+    public function testTheKeySetIsKeptForTheRefetchIntervalWhateverItsCacheControl(string $cacheControl): void
+    {
+        $provider = new FakeProvider();
+        $provider->jwksHeaders = ['Cache-Control' => $cacheControl];
+
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+        $provider->clock->advance(59);
+        $provider->oidc()->verifyIdToken($provider->ec->sign($provider->claims()), 'the-nonce');
+        self::assertCount(1, $provider->requestsTo('GET', self::JWKS_URL));
+
+        $provider->clock->advance(1);
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+        self::assertCount(2, $provider->requestsTo('GET', self::JWKS_URL));
+    }
+
+    /**
+     * With a key set the provider forbids keeping, made-up key ids still
+     * reach the provider at most once a minute.
+     */
+    #[DataProvider('keySetHeadersThatForbidKeeping')]
+    public function testUnknownKidsFetchAtMostOncePerMinuteWhateverTheCacheControl(string $cacheControl): void
+    {
+        $provider = new FakeProvider();
+        $provider->jwksHeaders = ['Cache-Control' => $cacheControl];
+        $unknown = SigningKey::rsa('nobody-published-this');
+
+        foreach ([0, 10, 61, 10] as $advance) {
+            $provider->clock->advance($advance);
+            try {
+                $provider->oidc()->verifyIdToken($unknown->sign($provider->claims()), 'the-nonce');
+                self::fail('An unknown key was accepted.');
+            } catch (IdTokenException) {
+            }
+        }
+
+        self::assertCount(2, $provider->requestsTo('GET', self::JWKS_URL));
+    }
+
     private const string HOSTILE = "RS256\r\nFORGED log line \e[31m" . 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
 
     public function testAnUnverifiedAlgReachesTheMessageOnlyAsShortPrintableText(): void
