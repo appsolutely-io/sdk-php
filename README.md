@@ -21,9 +21,13 @@ The repository is private for now, so Composer installs it from GitHub with a to
 }
 ```
 
+There is no tagged release yet, so name the development line explicitly; an application at the default `minimum-stability: stable` refuses it otherwise:
+
 ```bash
-composer require appsolutely/sdk-php
+composer require "appsolutely/sdk-php:^0.1@dev"
 ```
+
+The constraint keeps working when `0.1.0` is tagged; drop `@dev` then.
 
 The client finds an installed PSR-18 HTTP client through `php-http/discovery`, which is a Composer plugin; allow it in your `composer.json`:
 
