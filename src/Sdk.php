@@ -13,21 +13,35 @@ final class Sdk
 {
     public const string PACKAGE = 'appsolutely/sdk-php';
 
+    /** What Composer reports for a root package with no version to guess from. */
+    private const string NO_VERSION_SET = '+no-version-set';
+
     /**
      * The version Composer installed, so it cannot fall behind a release the
-     * way a constant kept by hand does; `dev` when the package was loaded
-     * some other way. Characters a header token does not allow, such as the
-     * slash of a branch version, become hyphens.
+     * way a constant kept by hand does.
      */
     public static function version(): string
     {
-        $version = InstalledVersions::isInstalled(self::PACKAGE)
-            ? InstalledVersions::getPrettyVersion(self::PACKAGE)
-            : null;
+        return self::versionFrom(
+            InstalledVersions::isInstalled(self::PACKAGE) ? InstalledVersions::getPrettyVersion(self::PACKAGE) : null,
+            InstalledVersions::getRootPackage()['name'] === self::PACKAGE,
+        );
+    }
 
-        return $version === null || $version === ''
-            ? 'dev'
-            : (string) preg_replace('/[^A-Za-z0-9!#$%&\'*+.^_`|~-]/', '-', $version);
+    /**
+     * `dev` when there is no real version: the package was not installed by
+     * Composer, or it is the root package (this repository checked out),
+     * whose version is guessed from the checkout or is Composer's
+     * placeholder. Characters a header token does not allow (RFC 9110
+     * section 5.6.2), such as the slash of a branch version, become hyphens.
+     */
+    public static function versionFrom(?string $prettyVersion, bool $isRootPackage): string
+    {
+        if ($isRootPackage || $prettyVersion === null || $prettyVersion === '' || str_ends_with($prettyVersion, self::NO_VERSION_SET)) {
+            return 'dev';
+        }
+
+        return (string) preg_replace('/[^A-Za-z0-9!#$%&\'*+.^_`|~-]/', '-', $prettyVersion);
     }
 
     public static function userAgent(): string
