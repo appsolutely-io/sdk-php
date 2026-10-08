@@ -47,11 +47,17 @@ $client = new Client(new Config(
     issuer: 'https://login.example.com',          // the party's sign-in host, exactly as discovery names it
     clientId: getenv('APPSOLUTELY_CLIENT_ID'),
     clientSecret: getenv('APPSOLUTELY_CLIENT_SECRET'),
-    cache: $psr16Cache,                            // strongly recommended: discovery, keys and machine tokens live here
+    cache: $psr16Cache,                            // your application's shared cache; see below
 ));
 ```
 
-`Config` also takes a PSR-18 client and PSR-17 factories, a PSR-20 clock, a PSR-3 logger, the token-endpoint authentication (`client_secret_basic` by default, or `ClientAuthentication::ClientSecretPost`) and the clock leeway for ID tokens (60 seconds by default). Without a cache the client keeps one in memory for the life of the process, which under PHP-FPM is a single request.
+`Config` also takes a PSR-18 client and PSR-17 factories, a PSR-20 clock, a PSR-3 logger, the token-endpoint authentication (`client_secret_basic` by default, or `ClientAuthentication::ClientSecretPost`) and the clock leeway for ID tokens (60 seconds by default).
+
+### The cache
+
+In production, pass your application's shared PSR-16 cache (Redis, Memcached, APCu or your framework's cache). Without one, the client falls back to a cache in memory that lives as long as the PHP process; under PHP-FPM that is a single request, so every request fetches the discovery document and the signing keys again and asks for a new machine token. The fallback exists so the client works anywhere, not for production.
+
+The cache holds the machine tokens from `machineToken()` until shortly before they expire. They are live bearer credentials for your party's API calls: protect the cache like a credential store, and do not share it with applications that should not act as your party.
 
 ## Signing a member in with OpenID Connect
 
