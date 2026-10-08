@@ -245,6 +245,10 @@ final class VerifierTest extends TestCase
         yield 'no whsec_ prefix' => [['MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw']];
         yield 'not base64' => [['whsec_not*base64!']];
         yield 'empty after the prefix' => [['whsec_']];
+        // Standard Webhooks: "Between 24 bytes (192 bits) and 64 bytes (512 bits)".
+        yield '23 bytes' => [['whsec_' . base64_encode(str_repeat('k', 23))]];
+        yield '65 bytes' => [['whsec_' . base64_encode(str_repeat('k', 65))]];
+        yield 'a short one beside a valid one' => [[self::SECRET, 'whsec_' . base64_encode('short')]];
         yield 'no secret at all' => [[]];
     }
 
@@ -257,6 +261,15 @@ final class VerifierTest extends TestCase
         $this->expectException(InvalidSecretException::class);
 
         new Verifier($secrets, $this->clock);
+    }
+
+    public function testSecretsOf24And64BytesAreAccepted(): void
+    {
+        $short = 'whsec_' . base64_encode(str_repeat('a', 24));
+        $long = 'whsec_' . base64_encode(str_repeat('b', 64));
+        $headers = $this->headers([$long]);
+
+        self::assertSame(self::ID, (new Verifier([$short, $long], $this->clock))->verify(self::BODY, $headers)->id);
     }
 
     public function testAnInvalidSecretIsNotEchoedInTheMessage(): void
