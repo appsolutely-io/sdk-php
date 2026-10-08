@@ -86,13 +86,40 @@ unset($_SESSION['appsolutely_sign_in']);
 
 $tokens = $client->oidc()->exchangeCallback($_GET, $request);
 $memberId = $tokens->idToken->subject;
+
+// Keep what a later refresh needs; toArray() survives a session stored as JSON.
+$_SESSION['appsolutely_tokens'] = [
+    'refresh_token' => $tokens->refreshToken,
+    'id_token' => $tokens->idToken->toArray(),
+];
 ```
 
 `authorizationUrl()` generates `state`, `nonce` and a PKCE S256 verifier. `exchangeCallback()` checks the `iss` and `state` of the response, exchanges the code with the verifier and verifies the ID token: its signature against the provider's published keys (RS256 or ES256), `iss`, `aud`, `azp`, `exp`, `iat` and the `nonce`. Any failure throws; never sign the member in after an exception.
 
 To require a recent authentication, pass `maxAge:` (in seconds) to `authorizationUrl()`: the provider asks the member to sign in again when their last authentication is older, and the ID token's `auth_time` is checked against it. Pass `max_age` this way, not in `$parameters`, which refuses it.
 
-The same client refreshes tokens (`refresh($refreshToken, $tokens->idToken)`, which refuses a refreshed ID token for another member or another authentication), reads userinfo (`userInfo($accessToken, $memberId)`), revokes a token (`revoke()`) and obtains a cached `client_credentials` token for the party's own API calls (`machineToken()`). OAuth errors become `Exception\OAuthException` with the error code in `$exception->error`. Every exception an integrator may catch lives in the `Appsolutely\Sdk\Exception` namespace and implements `Exception\AppsolutelyException`.
+### Refreshing tokens
+
+```php
+use Appsolutely\Sdk\Oidc\IdToken;
+
+$stored = $_SESSION['appsolutely_tokens'];
+$tokens = $client->oidc()->refresh(
+    $stored['refresh_token'],
+    // Rebuilds what your own server stored; it verifies nothing, so never pass request data here.
+    IdToken::fromTrustedStorage($stored['id_token']),
+);
+$_SESSION['appsolutely_tokens'] = [
+    'refresh_token' => $tokens->refreshToken ?? $stored['refresh_token'],
+    'id_token' => $tokens->idToken->toArray(),
+];
+```
+
+`refresh()` requires the ID token of the sign-in, or the one the previous refresh returned, and refuses a refreshed ID token for another member or another authentication (OpenID Connect Core section 12.2). Its result always holds the ID token to keep for the next refresh: the refreshed one, or the original when the provider sent none. A refreshed ID token without `auth_time` keeps the original's in `$idToken->authTime`, so the next refresh is still compared against it. The stored array holds the raw ID token: keep it server-side with the refresh token, never in a cookie.
+
+### Other calls
+
+The same client reads userinfo (`userInfo($accessToken, $memberId)`), revokes a token (`revoke()`) and obtains a cached `client_credentials` token for the party's own API calls (`machineToken()`). OAuth errors become `Exception\OAuthException` with the error code in `$exception->error`. Every exception an integrator may catch lives in the `Appsolutely\Sdk\Exception` namespace and implements `Exception\AppsolutelyException`.
 
 ## Verifying webhook deliveries
 

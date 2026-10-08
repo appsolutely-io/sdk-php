@@ -9,6 +9,7 @@ use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Oidc\ClientAuthentication;
 use Appsolutely\Sdk\Oidc\IdToken;
+use Appsolutely\Sdk\Oidc\OpenIdClient;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -251,6 +252,84 @@ final class TokenEndpointTest extends TestCase
         $tokens = $provider->oidc()->refresh('rt-1', $original);
 
         self::assertSame($provider->clock->timestamp(), $tokens->idToken?->claims['iat']);
+    }
+
+    /**
+     * A refresh answer may leave the ID token out (OpenID Connect Core
+     * section 12.2); the original is carried forward, so the token set to
+     * keep for the next refresh always holds the one to compare against.
+     */
+    public function testARefreshWithoutAnIdTokenCarriesTheOriginalForward(): void
+    {
+        $provider = new FakeProvider();
+        $original = $this->originalIdToken($provider);
+        $provider->token = fn(): ResponseInterface => $provider->json(['access_token' => 'at-2', 'token_type' => 'Bearer', 'refresh_token' => 'rt-2']);
+
+        $tokens = $provider->oidc()->refresh('rt-1', $original);
+
+        self::assertSame($original, $tokens->idToken);
+        self::assertSame('at-2', $tokens->accessToken);
+        self::assertSame('rt-2', $tokens->refreshToken);
+    }
+
+    /**
+     * A refreshed ID token without auth_time cannot be compared on it; it
+     * keeps the original authentication's time, so the refresh after it is
+     * still held to that time rather than to none.
+     */
+    public function testARefreshedIdTokenWithoutAuthTimeKeepsTheOriginalOneForTheNextRefresh(): void
+    {
+        $provider = new FakeProvider();
+        $authTime = $provider->clock->timestamp() - 10;
+        $original = $this->originalIdToken($provider, ['auth_time' => $authTime]);
+        $provider->token = fn(): ResponseInterface => $provider->json([
+            'access_token' => 'at-2',
+            'token_type' => 'Bearer',
+            'id_token' => $provider->rsa->sign(array_diff_key($provider->claims(), ['nonce' => true])),
+        ]);
+
+        $refreshed = $provider->oidc()->refresh('rt-1', $original)->idToken;
+
+        self::assertNotNull($refreshed);
+        self::assertArrayNotHasKey('auth_time', $refreshed->claims);
+        self::assertSame($authTime, $refreshed->authTime);
+
+        $provider->token = fn(): ResponseInterface => $provider->json([
+            'access_token' => 'at-3',
+            'token_type' => 'Bearer',
+            'id_token' => $provider->rsa->sign(array_diff_key($provider->claims(['auth_time' => $authTime + 1000]), ['nonce' => true])),
+        ]);
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('auth_time');
+
+        $provider->oidc()->refresh('rt-2', $refreshed);
+    }
+
+    public function testARefreshedIdTokenMayAddAnAuthTimeTheOriginalLacked(): void
+    {
+        $provider = new FakeProvider();
+        $original = $this->originalIdToken($provider);
+        $authTime = $provider->clock->timestamp() - 10;
+        $provider->token = fn(): ResponseInterface => $provider->json([
+            'access_token' => 'at-2',
+            'token_type' => 'Bearer',
+            'id_token' => $provider->rsa->sign(array_diff_key($provider->claims(['auth_time' => $authTime]), ['nonce' => true])),
+        ]);
+
+        self::assertSame($authTime, $provider->oidc()->refresh('rt-1', $original)->idToken?->authTime);
+    }
+
+    /**
+     * Without the original, a refreshed ID token for another member would
+     * pass unchecked.
+     */
+    public function testRefreshRequiresTheOriginalIdToken(): void
+    {
+        $parameter = new \ReflectionParameter([OpenIdClient::class, 'refresh'], 'originalIdToken');
+
+        self::assertFalse($parameter->allowsNull());
+        self::assertFalse($parameter->isOptional());
     }
 
     public function testTheMachineTokenUsesClientCredentialsAndIsCachedUntilShortlyBeforeItExpires(): void
