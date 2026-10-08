@@ -200,6 +200,24 @@ final class IdTokenVerificationTest extends TestCase
         self::assertCount(1, $provider->requestsTo('GET', self::JWKS_URL));
     }
 
+    /**
+     * A key the provider withdraws stops being trusted within a day even if
+     * the key set was served with a far longer max-age.
+     */
+    public function testAWithdrawnKeyIsDroppedWithinADayWhateverTheMaxAge(): void
+    {
+        $provider = new FakeProvider();
+        $provider->jwksHeaders = ['Cache-Control' => 'public, max-age=31536000'];
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+        $provider->jwks = [$provider->ec->jwk];
+
+        $provider->clock->advance(86400);
+
+        $this->expectException(IdTokenException::class);
+
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+    }
+
     public function testAnUnknownKidRefetchesTheKeySetOnceAndFindsARotatedKey(): void
     {
         $provider = new FakeProvider();

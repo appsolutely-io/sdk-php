@@ -73,6 +73,21 @@ final class DiscoveryTest extends TestCase
         self::assertCount(2, $provider->requestsTo('GET', self::URL));
     }
 
+    public function testItKeepsTheDocumentForADayAtMostWhateverTheMaxAge(): void
+    {
+        $provider = new FakeProvider();
+        $provider->discoveryHeaders = ['Cache-Control' => 'public, max-age=31536000'];
+
+        $provider->oidc()->metadata();
+        $provider->clock->advance(86399);
+        $provider->oidc()->metadata();
+        self::assertCount(1, $provider->requestsTo('GET', self::URL));
+
+        $provider->clock->advance(1);
+        $provider->oidc()->metadata();
+        self::assertCount(2, $provider->requestsTo('GET', self::URL));
+    }
+
     public function testItFallsBackToAnHourWhenTheResponseNamesNoMaxAge(): void
     {
         $provider = new FakeProvider();
