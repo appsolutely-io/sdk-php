@@ -32,7 +32,9 @@ final readonly class Discovery
             return $this->validated($document);
         }
 
-        $url = $this->issuer . '/.well-known/openid-configuration';
+        // OpenID Connect Discovery 1.0 section 4: "any terminating / MUST be
+        // removed before appending /.well-known/openid-configuration".
+        $url = rtrim($this->issuer, '/') . '/.well-known/openid-configuration';
         $response = $this->http->get($url);
         $status = $response->getStatusCode();
         if ($status < 200 || $status >= 300) {

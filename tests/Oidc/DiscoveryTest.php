@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Oidc;
 
+use Appsolutely\Sdk\Client;
+use Appsolutely\Sdk\Config;
 use Appsolutely\Sdk\Exception\DiscoveryException;
 use Appsolutely\Sdk\Oidc\ProviderMetadata;
 use Appsolutely\Sdk\Sdk;
@@ -26,6 +28,33 @@ final class DiscoveryTest extends TestCase
         self::assertSame(FakeProvider::ISSUER . '/oauth/jwks.json', $metadata->jwksUri);
         self::assertSame(['RS256', 'ES256'], $metadata->idTokenSigningAlgValuesSupported);
         self::assertTrue($metadata->authorizationResponseIssParameterSupported);
+        self::assertCount(1, $provider->requestsTo('GET', self::URL));
+    }
+
+    /**
+     * OpenID Connect Discovery 1.0 section 4: a terminating slash is removed
+     * from the issuer before the well-known path is appended, while the
+     * issuer itself is still compared verbatim.
+     */
+    public function testAnIssuerWithATrailingSlashIsNotDoubledInTheWellKnownUrl(): void
+    {
+        $provider = new FakeProvider();
+        $provider->discovery['issuer'] = FakeProvider::ISSUER . '/';
+        $config = $provider->config();
+        $client = new Client(new Config(
+            issuer: FakeProvider::ISSUER . '/',
+            clientId: $config->clientId,
+            clientSecret: FakeProvider::CLIENT_SECRET,
+            httpClient: $config->httpClient,
+            requestFactory: $config->requestFactory,
+            streamFactory: $config->streamFactory,
+            cache: $config->cache,
+            clock: $config->clock,
+        ));
+
+        $metadata = $client->oidc()->metadata();
+
+        self::assertSame(FakeProvider::ISSUER . '/', $metadata->issuer);
         self::assertCount(1, $provider->requestsTo('GET', self::URL));
     }
 
