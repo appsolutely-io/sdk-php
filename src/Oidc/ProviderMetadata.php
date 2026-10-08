@@ -9,7 +9,11 @@ use Appsolutely\Sdk\Http\SecureUrl;
 
 /**
  * The parts of an OpenID Provider's discovery document this client relies on
- * (OpenID Connect Discovery 1.0 section 3, RFC 8414, RFC 9207).
+ * (OpenID Connect Discovery 1.0 section 3, RFC 8414, RFC 9207), as
+ * OpenIdClient::metadata() returns them.
+ *
+ * Only fromArray() builds one, so every instance has passed its checks,
+ * the HTTPS rule for the endpoints among them.
  */
 final readonly class ProviderMetadata
 {
@@ -17,7 +21,7 @@ final readonly class ProviderMetadata
      * @param list<string> $idTokenSigningAlgValuesSupported
      * @param list<string>|null $codeChallengeMethodsSupported
      */
-    public function __construct(
+    private function __construct(
         public string $issuer,
         public string $authorizationEndpoint,
         public string $tokenEndpoint,
@@ -30,6 +34,8 @@ final readonly class ProviderMetadata
     ) {}
 
     /**
+     * @internal the client builds it from the discovery document it fetched
+     *
      * @param array<string, mixed> $document
      */
     public static function fromArray(array $document): self

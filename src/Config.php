@@ -68,6 +68,9 @@ final readonly class Config
         }
     }
 
+    /**
+     * @internal read by the client to authenticate itself; not a way to get the secret back out
+     */
     public function clientSecret(): string
     {
         return $this->clientSecret;

@@ -241,6 +241,15 @@ final class DiscoveryTest extends TestCase
         self::assertSame('http://[::1]:8000/oauth/jwks.json', $metadata->jwksUri);
     }
 
+    /**
+     * A public constructor would build metadata with plain-http or
+     * ambiguous endpoints that fromArray() refuses.
+     */
+    public function testMetadataCanOnlyBeBuiltThroughTheValidatingFactory(): void
+    {
+        self::assertTrue((new \ReflectionMethod(ProviderMetadata::class, '__construct'))->isPrivate());
+    }
+
     public function testItRefusesAnAnswerThatIsNotADiscoveryDocument(): void
     {
         $provider = new FakeProvider();
