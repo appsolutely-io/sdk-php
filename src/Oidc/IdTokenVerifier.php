@@ -115,6 +115,14 @@ final readonly class IdTokenVerifier
         if (!in_array($this->clientId, $audiences, true)) {
             throw new IdTokenException(sprintf('The ID token\'s aud does not contain this client, "%s".', $this->clientId));
         }
+        // Section 3.1.3.7 rule 3: refuse a token that also names audiences
+        // the client does not trust. The issuer is first-party, so there is
+        // no list of trusted audiences beyond this client.
+        foreach ($audiences as $audience) {
+            if ($audience !== $this->clientId) {
+                throw new IdTokenException(sprintf('The ID token\'s aud names an audience other than this client, "%s".', $this->clientId));
+            }
+        }
 
         $azp = $claims['azp'] ?? null;
         if ($azp === null && count($audiences) > 1) {

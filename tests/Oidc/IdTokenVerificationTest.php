@@ -74,8 +74,14 @@ final class IdTokenVerificationTest extends TestCase
     {
         yield 'another issuer' => [['iss' => 'https://evil.example.com'], 'iss'];
         yield 'issuer with a trailing slash' => [['iss' => FakeProvider::ISSUER . '/'], 'iss'];
-        yield 'audience without this client' => [['aud' => 'someone-else'], 'aud'];
-        yield 'several audiences without azp' => [['aud' => [FakeProvider::CLIENT_ID, 'other']], 'azp'];
+        yield 'audience without this client' => [['aud' => 'someone-else'], 'aud does not contain this client'];
+        yield 'another audience beside this client' => [['aud' => [FakeProvider::CLIENT_ID, 'other']], 'other than this client'];
+        // Section 3.1.3.7 rule 3: an audience the client does not trust is a
+        // refusal even when azp names this client.
+        yield 'another audience beside this client and azp' => [['aud' => [FakeProvider::CLIENT_ID, 'other'], 'azp' => FakeProvider::CLIENT_ID], 'other than this client'];
+        yield 'an audience that is not a string' => [['aud' => [FakeProvider::CLIENT_ID, 7]], 'other than this client'];
+        yield 'an empty audience list' => [['aud' => []], 'aud does not contain this client'];
+        yield 'one audience repeated without azp' => [['aud' => [FakeProvider::CLIENT_ID, FakeProvider::CLIENT_ID]], 'has no azp'];
         yield 'azp naming another client' => [['azp' => 'someone-else'], 'azp'];
         yield 'missing subject' => [['sub' => ''], 'sub'];
         yield 'missing exp' => [['exp' => null], 'exp'];
@@ -99,10 +105,10 @@ final class IdTokenVerificationTest extends TestCase
         $provider->oidc()->verifyIdToken($provider->rsa->sign($claims), 'the-nonce');
     }
 
-    public function testSeveralAudiencesAreAcceptedWhenAzpNamesThisClient(): void
+    public function testAnAudienceListOfThisClientAloneIsAccepted(): void
     {
         $provider = new FakeProvider();
-        $claims = $provider->claims(['aud' => [FakeProvider::CLIENT_ID, 'other'], 'azp' => FakeProvider::CLIENT_ID]);
+        $claims = $provider->claims(['aud' => [FakeProvider::CLIENT_ID]]);
 
         $token = $provider->oidc()->verifyIdToken($provider->rsa->sign($claims), 'the-nonce');
 
