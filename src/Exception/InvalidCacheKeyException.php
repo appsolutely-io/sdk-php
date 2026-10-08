@@ -6,4 +6,7 @@ namespace Appsolutely\Sdk\Exception;
 
 use Psr\SimpleCache\InvalidArgumentException as CacheInvalidArgumentException;
 
-final class InvalidCacheKeyException extends \InvalidArgumentException implements CacheInvalidArgumentException, AppsolutelyException {}
+/**
+ * A key the PSR-16 cache this package ships refuses.
+ */
+final class InvalidCacheKeyException extends InvalidArgumentValueException implements CacheInvalidArgumentException {}

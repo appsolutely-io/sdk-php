@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Oidc;
 
 use Appsolutely\Sdk\Exception\DiscoveryException;
-use Appsolutely\Sdk\Exception\InvalidArgumentException;
+use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Oidc\Pkce;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
 use PHPUnit\Framework\TestCase;
@@ -71,7 +71,7 @@ final class AuthorizationUrlTest extends TestCase
 
     public function testExtraParametersCannotReplaceTheOnesTheFlowDependsOn(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentValueException::class);
         $this->expectExceptionMessage('state');
 
         (new FakeProvider())->oidc()->authorizationUrl(self::REDIRECT, ['openid'], ['state' => 'chosen-by-caller']);
@@ -101,7 +101,7 @@ final class AuthorizationUrlTest extends TestCase
      */
     public function testMaxAgeCannotBePassedAsARawParameter(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentValueException::class);
         $this->expectExceptionMessage('max_age');
 
         (new FakeProvider())->oidc()->authorizationUrl(self::REDIRECT, ['openid'], ['max_age' => '600']);
@@ -109,7 +109,7 @@ final class AuthorizationUrlTest extends TestCase
 
     public function testANegativeMaxAgeIsRefused(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentValueException::class);
         $this->expectExceptionMessage('max_age');
 
         (new FakeProvider())->oidc()->authorizationUrl(self::REDIRECT, maxAge: -1);
