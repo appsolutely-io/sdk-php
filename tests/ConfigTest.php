@@ -101,11 +101,37 @@ final class ConfigTest extends TestCase
         self::assertSame($issuer, (new Config($issuer, 'id', 'secret'))->issuer);
     }
 
-    public function testAClockLeewayBeyondFiveMinutesIsRefused(): void
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function acceptedLeeways(): iterable
+    {
+        yield 'none' => [0];
+        yield 'five minutes' => [300];
+    }
+
+    #[DataProvider('acceptedLeeways')]
+    public function testAClockLeewayFromZeroToFiveMinutesIsAccepted(int $leeway): void
+    {
+        self::assertSame($leeway, (new Config('https://login.example.com', 'id', 'secret', clockLeeway: $leeway))->clockLeeway);
+    }
+
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function refusedLeeways(): iterable
+    {
+        yield 'negative' => [-1];
+        yield 'beyond five minutes' => [301];
+    }
+
+    #[DataProvider('refusedLeeways')]
+    public function testAClockLeewayOutsideZeroToFiveMinutesIsRefused(int $leeway): void
     {
         $this->expectException(InvalidConfigException::class);
+        $this->expectExceptionMessage('clock leeway');
 
-        new Config('https://login.example.com', 'id', 'secret', clockLeeway: 301);
+        new Config('https://login.example.com', 'id', 'secret', clockLeeway: $leeway);
     }
 
     /**

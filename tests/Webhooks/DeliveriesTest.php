@@ -22,16 +22,21 @@ final class DeliveriesTest extends TestCase
         self::assertFalse($deliveries->wasHandled('msg_2'));
     }
 
-    public function testByDefaultAnIdIsRememberedLongerThanTheSendersRetrySpan(): void
+    /**
+     * Three days: past the sender's retry schedule of about 28 hours and a
+     * manual redelivery soon after it.
+     */
+    public function testByDefaultAnIdIsRememberedForThreeDays(): void
     {
         $clock = new FrozenClock();
         $deliveries = new Deliveries(new InMemoryCache($clock));
         $deliveries->markHandled('msg_1');
 
-        $clock->advance(48 * 3600);
-
+        $clock->advance(3 * 86400 - 1);
         self::assertTrue($deliveries->wasHandled('msg_1'));
-        self::assertGreaterThan(28 * 3600, Deliveries::DEFAULT_TTL);
+
+        $clock->advance(1);
+        self::assertFalse($deliveries->wasHandled('msg_1'));
     }
 
     public function testTheRetentionIsConfigurable(): void

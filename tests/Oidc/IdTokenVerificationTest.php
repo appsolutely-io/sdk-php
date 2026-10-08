@@ -45,6 +45,21 @@ final class IdTokenVerificationTest extends TestCase
         $provider->oidc()->verifyIdToken($impostor->sign($provider->claims()), 'the-nonce');
     }
 
+    /**
+     * RFC 7517 section 4.2: a key published for encryption is not a signing
+     * key, even under the right kid and algorithm.
+     */
+    public function testAKeyPublishedForEncryptionIsNotUsedToVerify(): void
+    {
+        $provider = new FakeProvider();
+        $provider->jwks = [['use' => 'enc'] + $provider->rsa->jwk];
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('does not publish');
+
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+    }
+
     public function testAnAlgorithmTheProviderDoesNotAdvertiseIsRefused(): void
     {
         $provider = new FakeProvider();
@@ -62,8 +77,10 @@ final class IdTokenVerificationTest extends TestCase
         $provider->discovery['id_token_signing_alg_values_supported'] = ['RS256', 'ES256', 'HS256'];
         $token = JWT::encode($provider->claims(), FakeProvider::CLIENT_SECRET . str_repeat('x', 32), 'HS256', 'rsa-1');
 
+        // The verifier's own refusal, before any key is looked up: KeySet's
+        // "not published for HS256" would also name the algorithm.
         $this->expectException(IdTokenException::class);
-        $this->expectExceptionMessage('HS256');
+        $this->expectExceptionMessage('The ID token is signed with HS256; only RS256 or ES256 is accepted.');
 
         $provider->oidc()->verifyIdToken($token, 'the-nonce');
     }
