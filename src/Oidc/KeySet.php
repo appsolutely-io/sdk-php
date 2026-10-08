@@ -23,9 +23,14 @@ use Psr\SimpleCache\CacheInterface;
  * pool, and one cache interface is enough for an integrator to supply.
  *
  * A token naming a key that is not in the cached set may have been signed by
- * a key rotated in since: the set is fetched again, but at most once a minute,
- * so a stream of tokens with made-up key ids cannot turn into a stream of
- * requests to the provider.
+ * a key rotated in since: the set is fetched again, but at most once a minute
+ * for one cache, so a stream of tokens with made-up key ids cannot turn into
+ * a stream of requests to the provider. That needs the set to be kept for a
+ * minute even when the provider answers `no-store` or `max-age=0`, so the
+ * refetch interval is also the shortest time it is kept, as JWKS clients
+ * commonly enforce. The limit holds per cache: the fallback memory cache
+ * starts empty in every PHP-FPM request, which is why integrators pass a
+ * shared one.
  *
  * @internal
  */
@@ -93,10 +98,8 @@ final readonly class KeySet
         $keys = self::keys($body) ?? throw new DiscoveryException(sprintf('GET %s did not answer a JWK set.', $this->printableUri()));
         $now = $this->now();
 
-        $ttl = CacheControl::ttl($response, Discovery::FALLBACK_TTL);
-        if ($ttl > 0) {
-            $this->cache->set($this->cacheKey(), ['body' => $body, 'fetched_at' => $now], $ttl);
-        }
+        $ttl = max(CacheControl::ttl($response, Discovery::FALLBACK_TTL), self::REFETCH_INTERVAL);
+        $this->cache->set($this->cacheKey(), ['body' => $body, 'fetched_at' => $now], $ttl);
 
         return ['keys' => $keys, 'fetched_at' => $now];
     }
