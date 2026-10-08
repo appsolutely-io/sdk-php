@@ -43,10 +43,18 @@ The client finds an installed PSR-18 HTTP client through `php-http/discovery`, w
 use Appsolutely\Sdk\Client;
 use Appsolutely\Sdk\Config;
 
+// getenv() returns false for an unset variable, which a string parameter
+// refuses under strict_types; casting it would turn a missing secret into ''.
+$clientId = getenv('APPSOLUTELY_CLIENT_ID');
+$clientSecret = getenv('APPSOLUTELY_CLIENT_SECRET');
+if ($clientId === false || $clientSecret === false) {
+    throw new RuntimeException('Set APPSOLUTELY_CLIENT_ID and APPSOLUTELY_CLIENT_SECRET.');
+}
+
 $client = new Client(new Config(
     issuer: 'https://login.example.com',          // the party's sign-in host, exactly as discovery names it
-    clientId: getenv('APPSOLUTELY_CLIENT_ID'),
-    clientSecret: getenv('APPSOLUTELY_CLIENT_SECRET'),
+    clientId: $clientId,
+    clientSecret: $clientSecret,
     cache: $psr16Cache,                            // your application's shared cache; see below
 ));
 ```
@@ -95,11 +103,18 @@ use Appsolutely\Sdk\Webhooks\Deliveries;
 use Appsolutely\Sdk\Webhooks\Verifier;
 use Appsolutely\Sdk\Exception\WebhookVerificationException;
 
-$verifier = new Verifier([getenv('APPSOLUTELY_WEBHOOK_SECRET')]); // add the old secret too while rotating
+$secret = getenv('APPSOLUTELY_WEBHOOK_SECRET');
+if ($secret === false) {
+    throw new RuntimeException('Set APPSOLUTELY_WEBHOOK_SECRET.');
+}
+$verifier = new Verifier([$secret]); // add the old secret too while rotating
 $deliveries = new Deliveries($psr16Cache);
 
+// An unreadable body becomes '', which fails verification like any other.
+$body = (string) file_get_contents('php://input');
+
 try {
-    $event = $verifier->verify(file_get_contents('php://input'), getallheaders());
+    $event = $verifier->verify($body, getallheaders());
 } catch (WebhookVerificationException) {
     http_response_code(400);
     exit;
@@ -118,7 +133,7 @@ Answer with a 2xx within a few seconds and queue slow work: an attempt that time
 
 ### Testing your endpoint
 
-`Testing\WebhookFactory` builds deliveries signed exactly as Appsolutely signs them:
+The classes in `Appsolutely\Sdk\Testing` are test helpers: use them in your test suite, not in production code. `Testing\WebhookFactory` builds deliveries signed exactly as Appsolutely signs them:
 
 ```php
 use Appsolutely\Sdk\Testing\WebhookFactory;

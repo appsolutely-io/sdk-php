@@ -6,7 +6,7 @@ namespace Appsolutely\Sdk\Testing;
 
 /**
  * A delivery as it reaches the integrator's endpoint: the raw body and the
- * three Standard Webhooks headers.
+ * three Standard Webhooks headers. A test helper: not for production code.
  */
 final readonly class SignedWebhook
 {

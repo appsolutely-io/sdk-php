@@ -13,7 +13,8 @@ use stdClass;
 
 /**
  * Builds deliveries signed exactly as the Appsolutely server signs them, for
- * an integrator's own tests of their webhook endpoint.
+ * an integrator's own tests of their webhook endpoint. A test helper: not for
+ * production code.
  */
 final readonly class WebhookFactory
 {
