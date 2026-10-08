@@ -45,6 +45,8 @@ final class FakeProvider
     /** @var array<string, string> */
     public array $jwksHeaders = ['Cache-Control' => 'public, max-age=3600'];
 
+    public int $jwksStatus = 200;
+
     /** @var (callable(RequestInterface): ResponseInterface)|null */
     public $token = null;
 
@@ -170,10 +172,10 @@ final class FakeProvider
         if ($method === 'GET' && $url === self::ISSUER . '/.well-known/openid-configuration') {
             return $this->json($this->discovery, 200, $this->discoveryHeaders);
         }
-        if ($method === 'GET' && $url === self::ISSUER . '/oauth/jwks.json') {
-            return $this->json(['keys' => $this->jwks], 200, $this->jwksHeaders);
+        if ($method === 'GET' && $url === $this->discovery['jwks_uri']) {
+            return $this->json(['keys' => $this->jwks], $this->jwksStatus, $this->jwksHeaders);
         }
-        if ($method === 'POST' && $url === self::ISSUER . '/oauth/token' && $this->token !== null) {
+        if ($method === 'POST' && $url === $this->discovery['token_endpoint'] && $this->token !== null) {
             return ($this->token)($request);
         }
         if ($method === 'GET' && $url === self::ISSUER . '/oauth/userinfo' && $this->userinfo !== null) {

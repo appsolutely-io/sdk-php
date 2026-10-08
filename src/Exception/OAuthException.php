@@ -26,7 +26,7 @@ final class OAuthException extends RuntimeException implements AppsolutelyExcept
         // received on the properties, made printable and short in the message.
         parent::__construct($errorDescription === null
             ? sprintf('OAuth error "%s".', Untrusted::text($error))
-            : sprintf('OAuth error "%s": %s', Untrusted::text($error), Untrusted::text($errorDescription, 200)));
+            : sprintf('OAuth error "%s": %s', Untrusted::text($error), Untrusted::text($errorDescription, Untrusted::MAX_LONG_LENGTH)));
     }
 
     /**

@@ -6,6 +6,7 @@ namespace Appsolutely\Sdk\Http;
 
 use Appsolutely\Sdk\Exception\TransportException;
 use Appsolutely\Sdk\Sdk;
+use Appsolutely\Sdk\Support\Untrusted;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
@@ -68,13 +69,23 @@ final readonly class HttpTransport
         return $request;
     }
 
+    /**
+     * The URL may be one a discovery document named and the message is the
+     * HTTP client's, so both reach the message only as short printable text;
+     * the client's exception is kept whole as the previous one.
+     */
     private function send(RequestInterface $request): ResponseInterface
     {
         try {
             return $this->client->sendRequest($request);
         } catch (ClientExceptionInterface $exception) {
             throw new TransportException(
-                sprintf('%s %s failed: %s', $request->getMethod(), (string) $request->getUri(), $exception->getMessage()),
+                sprintf(
+                    '%s %s failed: %s',
+                    $request->getMethod(),
+                    Untrusted::text((string) $request->getUri(), Untrusted::MAX_LONG_LENGTH),
+                    Untrusted::text($exception->getMessage(), Untrusted::MAX_LONG_LENGTH),
+                ),
                 0,
                 $exception,
             );
