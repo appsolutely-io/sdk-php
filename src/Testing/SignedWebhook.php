@@ -16,6 +16,7 @@ final readonly class SignedWebhook
     public function __construct(
         public string $id,
         public string $body,
+        #[\SensitiveParameter]
         public array $headers,
     ) {}
 }

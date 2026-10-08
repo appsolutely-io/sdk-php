@@ -34,7 +34,7 @@ final class OAuthException extends RuntimeException implements AppsolutelyExcept
      *
      * @param array<mixed> $fields
      */
-    public static function fromFields(array $fields, ?int $statusCode = null): ?self
+    public static function fromFields(#[\SensitiveParameter] array $fields, ?int $statusCode = null): ?self
     {
         $error = $fields['error'] ?? null;
         if (!is_string($error) || $error === '') {

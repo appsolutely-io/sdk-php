@@ -38,7 +38,7 @@ final readonly class IdTokenVerifier
         private int $leeway,
     ) {}
 
-    public function verify(string $jwt, ?string $nonce, ?string $accessToken = null, ?int $maxAge = null): IdToken
+    public function verify(#[\SensitiveParameter] string $jwt, ?string $nonce, #[\SensitiveParameter] ?string $accessToken = null, ?int $maxAge = null): IdToken
     {
         $segments = explode('.', $jwt);
         if (count($segments) !== 3) {
@@ -72,7 +72,7 @@ final readonly class IdTokenVerifier
         return new IdToken($jwt, $subject, $claims);
     }
 
-    private function verifySignature(string $jwt, string $kid, string $alg): void
+    private function verifySignature(#[\SensitiveParameter] string $jwt, string $kid, string $alg): void
     {
         $key = $this->keys->key($kid, [$alg]);
 
@@ -129,7 +129,7 @@ final readonly class IdTokenVerifier
      * @param array<string, mixed> $claims
      * @param list<string> $audiences
      */
-    private function verifyClaims(array $claims, array $audiences, ?string $nonce, ?string $accessToken, ?int $maxAge): void
+    private function verifyClaims(array $claims, array $audiences, ?string $nonce, #[\SensitiveParameter] ?string $accessToken, ?int $maxAge): void
     {
         if (($claims['iss'] ?? null) !== $this->issuer) {
             throw new IdTokenException(sprintf('The ID token\'s iss is not "%s".', $this->issuer));

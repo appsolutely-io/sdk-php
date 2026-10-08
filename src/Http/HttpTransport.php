@@ -35,7 +35,7 @@ final readonly class HttpTransport
     /**
      * @param array<string, string> $headers
      */
-    public function get(string $url, array $headers = []): ResponseInterface
+    public function get(string $url, #[\SensitiveParameter] array $headers = []): ResponseInterface
     {
         return $this->send($this->request('GET', $url, $headers));
     }
@@ -44,7 +44,7 @@ final readonly class HttpTransport
      * @param array<string, string> $fields
      * @param array<string, string> $headers
      */
-    public function postForm(string $url, array $fields, array $headers = []): ResponseInterface
+    public function postForm(string $url, #[\SensitiveParameter] array $fields, #[\SensitiveParameter] array $headers = []): ResponseInterface
     {
         $request = $this->request('POST', $url, $headers)
             ->withHeader('Content-Type', 'application/x-www-form-urlencoded')
@@ -56,7 +56,7 @@ final readonly class HttpTransport
     /**
      * @param array<string, string> $headers
      */
-    private function request(string $method, string $url, array $headers): RequestInterface
+    private function request(string $method, string $url, #[\SensitiveParameter] array $headers): RequestInterface
     {
         $request = $this->requests->createRequest($method, $url)
             ->withHeader('User-Agent', Sdk::userAgent())
@@ -74,7 +74,7 @@ final readonly class HttpTransport
      * HTTP client's, so both reach the message only as short printable text;
      * the client's exception is kept whole as the previous one.
      */
-    private function send(RequestInterface $request): ResponseInterface
+    private function send(#[\SensitiveParameter] RequestInterface $request): ResponseInterface
     {
         try {
             return $this->client->sendRequest($request);

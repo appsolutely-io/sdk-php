@@ -14,6 +14,7 @@ use Firebase\JWT\JWT;
 final readonly class Pkce
 {
     private function __construct(
+        #[\SensitiveParameter]
         public string $verifier,
         public string $challenge,
     ) {}
@@ -25,7 +26,7 @@ final readonly class Pkce
         return new self($verifier, self::challengeFor($verifier));
     }
 
-    public static function challengeFor(string $verifier): string
+    public static function challengeFor(#[\SensitiveParameter] string $verifier): string
     {
         return JWT::urlsafeB64Encode(hash('sha256', $verifier, true));
     }

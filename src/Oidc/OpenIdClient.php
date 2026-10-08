@@ -139,7 +139,7 @@ final readonly class OpenIdClient
      *
      * @param array<mixed> $query
      */
-    public function validateCallback(array $query, AuthorizationRequest $request): string
+    public function validateCallback(#[\SensitiveParameter] array $query, #[\SensitiveParameter] AuthorizationRequest $request): string
     {
         $metadata = $this->metadata();
 
@@ -173,7 +173,7 @@ final readonly class OpenIdClient
      * Exchanges the code and verifies the ID token against the nonce of the
      * request it answers.
      */
-    public function exchangeCode(string $code, AuthorizationRequest $request): TokenSet
+    public function exchangeCode(#[\SensitiveParameter] string $code, #[\SensitiveParameter] AuthorizationRequest $request): TokenSet
     {
         $fields = $this->tokenRequest([
             'grant_type' => 'authorization_code',
@@ -188,7 +188,7 @@ final readonly class OpenIdClient
     /**
      * @param array<mixed> $query
      */
-    public function exchangeCallback(array $query, AuthorizationRequest $request): TokenSet
+    public function exchangeCallback(#[\SensitiveParameter] array $query, #[\SensitiveParameter] AuthorizationRequest $request): TokenSet
     {
         return $this->exchangeCode($this->validateCallback($query, $request), $request);
     }
@@ -234,7 +234,7 @@ final readonly class OpenIdClient
     /**
      * @param int|null $maxAge the max_age the authorization request was sent with, if any
      */
-    public function verifyIdToken(string $idToken, ?string $nonce, ?string $accessToken = null, ?int $maxAge = null): IdToken
+    public function verifyIdToken(#[\SensitiveParameter] string $idToken, ?string $nonce, #[\SensitiveParameter] ?string $accessToken = null, ?int $maxAge = null): IdToken
     {
         $metadata = $this->metadata();
 
@@ -357,7 +357,7 @@ final readonly class OpenIdClient
      * @param array<string, string> $fields
      * @return array<string, mixed>
      */
-    private function tokenRequest(array $fields): array
+    private function tokenRequest(#[\SensitiveParameter] array $fields): array
     {
         $endpoint = $this->metadata()->tokenEndpoint;
         [$fields, $headers] = $this->authenticate($fields);
@@ -372,7 +372,7 @@ final readonly class OpenIdClient
      * @param array<string, string> $fields
      * @return array{array<string, string>, array<string, string>}
      */
-    private function authenticate(array $fields): array
+    private function authenticate(#[\SensitiveParameter] array $fields): array
     {
         return match ($this->config->clientAuthentication) {
             ClientAuthentication::ClientSecretBasic => [$fields, [
@@ -405,7 +405,7 @@ final readonly class OpenIdClient
      *
      * @param array<string, mixed> $fields
      */
-    private function tokenSet(array $fields, ?string $nonce, bool $idTokenRequired, ?int $maxAge = null): TokenSet
+    private function tokenSet(#[\SensitiveParameter] array $fields, ?string $nonce, bool $idTokenRequired, ?int $maxAge = null): TokenSet
     {
         $accessToken = $fields['access_token'] ?? null;
         $tokenType = $fields['token_type'] ?? null;
