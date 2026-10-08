@@ -2,9 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please do not report security vulnerabilities in public issues or pull requests.
-
-Report them privately through GitHub: open the repository's **Security** tab and choose **Report a vulnerability**, or go to <https://github.com/appsolutely-io/sdk-php/security/advisories/new>.
+While this repository is private, open an issue in it: only its collaborators can see the issues of a private repository. Once the repository is public, do not report vulnerabilities in public issues or pull requests; report them privately through GitHub instead, from the repository's **Security** tab with **Report a vulnerability**.
 
 Include what you can of:
 
