@@ -8,6 +8,7 @@ use Appsolutely\Sdk\Exception\InvalidConfigException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Http\SecureUrl;
 use Appsolutely\Sdk\Oidc\ClientAuthentication;
+use Appsolutely\Sdk\Support\Untrusted;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
@@ -120,21 +121,29 @@ final readonly class Config
     }
 
     /**
-     * HTTPS, or plain HTTP on a loopback host only (see SecureUrl), and no
-     * query or fragment, which would be carried into every derived URL.
+     * HTTPS, or plain HTTP on a loopback host only, nothing parsers read
+     * differently (see SecureUrl), and no query or fragment, which would be
+     * carried into every derived URL. The value is echoed as printable text:
+     * a refused issuer may hold the very control characters refused here.
      */
     private static function assertIssuer(string $url): void
     {
+        $shown = Untrusted::text($url, Untrusted::MAX_LONG_LENGTH);
+
+        if (!SecureUrl::isUnambiguous($url)) {
+            throw new InvalidConfigException(sprintf('The issuer must contain %s, got "%s".', SecureUrl::UNAMBIGUOUS_RULE, $shown));
+        }
+
         if (!SecureUrl::isAbsolute($url)) {
-            throw new InvalidConfigException(sprintf('The issuer must be an absolute URL, got "%s".', $url));
+            throw new InvalidConfigException(sprintf('The issuer must be an absolute URL, got "%s".', $shown));
         }
 
         if (str_contains($url, '?') || str_contains($url, '#')) {
-            throw new InvalidConfigException(sprintf('The issuer must not carry a query or a fragment, got "%s".', $url));
+            throw new InvalidConfigException(sprintf('The issuer must not carry a query or a fragment, got "%s".', $shown));
         }
 
         if (!SecureUrl::isSecure($url)) {
-            throw new InvalidConfigException(sprintf('The issuer must use https (plain http is accepted for localhost, 127.0.0.1 and [::1] only), got "%s".', $url));
+            throw new InvalidConfigException(sprintf('The issuer must use https (plain http is accepted for localhost, 127.0.0.1 and [::1] only), got "%s".', $shown));
         }
     }
 }

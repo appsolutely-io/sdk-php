@@ -189,6 +189,41 @@ final class DiscoveryTest extends TestCase
         $provider->oidc()->metadata();
     }
 
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function ambiguousEndpoints(): iterable
+    {
+        $forms = [
+            'backslash before user info on the loopback' => 'http://evil.com\\@localhost/oauth/x',
+            'backslash before user info' => 'https://evil.com\\@login.example.com/oauth/x',
+            'user info' => 'https://a@login.example.com/oauth/x',
+            'a line break' => "https://login.example.com/oauth/x\nFORGED",
+            'a NUL byte' => "https://login.example.com/oauth/x\0",
+        ];
+        foreach (self::endpoints() as $name => [$endpoint]) {
+            foreach ($forms as $form => $url) {
+                yield $name . ' with ' . $form => [$endpoint, $url];
+            }
+        }
+    }
+
+    /**
+     * The issuer's rule holds for every endpoint, including what parsers
+     * read differently (see ConfigTest).
+     */
+    #[DataProvider('ambiguousEndpoints')]
+    public function testItRefusesAnEndpointThatParsersReadDifferently(string $name, string $url): void
+    {
+        $provider = new FakeProvider();
+        $provider->discovery[$name] = $url;
+
+        $this->expectException(DiscoveryException::class);
+        $this->expectExceptionMessage($name);
+
+        $provider->oidc()->metadata();
+    }
+
     public function testItAcceptsEndpointsOverPlainHttpOnEachLoopbackForm(): void
     {
         $document = [
