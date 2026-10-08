@@ -1,0 +1,429 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Appsolutely\Sdk\Tests\Oidc;
+
+use Appsolutely\Sdk\Exception\IdTokenException;
+use Appsolutely\Sdk\Tests\Support\FakeProvider;
+use Appsolutely\Sdk\Tests\Support\RecordingLogger;
+use Appsolutely\Sdk\Tests\Support\SigningKey;
+use Firebase\JWT\JWT;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+
+final class IdTokenVerificationTest extends TestCase
+{
+    private const string JWKS_URL = FakeProvider::ISSUER . '/oauth/jwks.json';
+
+    public function testAnRs256TokenSignedByAPublishedKeyIsAccepted(): void
+    {
+        $provider = new FakeProvider();
+
+        $token = $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+
+        self::assertSame('member-42', $token->subject);
+        self::assertSame('member-42', $token->claims['sub']);
+    }
+
+    public function testAnEs256TokenSignedByAPublishedKeyIsAccepted(): void
+    {
+        $provider = new FakeProvider();
+
+        $token = $provider->oidc()->verifyIdToken($provider->ec->sign($provider->claims()), 'the-nonce');
+
+        self::assertSame('member-42', $token->subject);
+    }
+
+    public function testATokenSignedByAKeyThatIsNotPublishedIsRefused(): void
+    {
+        $provider = new FakeProvider();
+        $impostor = SigningKey::rsa('rsa-1');
+
+        $this->expectException(IdTokenException::class);
+
+        $provider->oidc()->verifyIdToken($impostor->sign($provider->claims()), 'the-nonce');
+    }
+
+    /**
+     * RFC 7517 section 4.2: a key published for encryption is not a signing
+     * key, even under the right kid and algorithm.
+     */
+    public function testAKeyPublishedForEncryptionIsNotUsedToVerify(): void
+    {
+        $provider = new FakeProvider();
+        $provider->jwks = [['use' => 'enc'] + $provider->rsa->jwk];
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('does not publish');
+
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+    }
+
+    public function testAnAlgorithmTheProviderDoesNotAdvertiseIsRefused(): void
+    {
+        $provider = new FakeProvider();
+        $provider->discovery['id_token_signing_alg_values_supported'] = ['RS256'];
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('ES256');
+
+        $provider->oidc()->verifyIdToken($provider->ec->sign($provider->claims()), 'the-nonce');
+    }
+
+    public function testASymmetricAlgorithmIsRefusedEvenWhenAdvertised(): void
+    {
+        $provider = new FakeProvider();
+        $provider->discovery['id_token_signing_alg_values_supported'] = ['RS256', 'ES256', 'HS256'];
+        $token = JWT::encode($provider->claims(), FakeProvider::CLIENT_SECRET . str_repeat('x', 32), 'HS256', 'rsa-1');
+
+        // The verifier's own refusal, before any key is looked up: KeySet's
+        // "not published for HS256" would also name the algorithm.
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('The ID token is signed with HS256; only RS256 or ES256 is accepted.');
+
+        $provider->oidc()->verifyIdToken($token, 'the-nonce');
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
+    public static function badClaims(): iterable
+    {
+        yield 'another issuer' => [['iss' => 'https://evil.example.com'], 'iss'];
+        yield 'issuer with a trailing slash' => [['iss' => FakeProvider::ISSUER . '/'], 'iss'];
+        yield 'audience without this client' => [['aud' => 'someone-else'], 'aud does not contain this client'];
+        yield 'another audience beside this client' => [['aud' => [FakeProvider::CLIENT_ID, 'other']], 'other than this client'];
+        // Section 3.1.3.7 rule 3: an audience the client does not trust is a
+        // refusal even when azp names this client.
+        yield 'another audience beside this client and azp' => [['aud' => [FakeProvider::CLIENT_ID, 'other'], 'azp' => FakeProvider::CLIENT_ID], 'other than this client'];
+        // RFC 7519 section 4.1.3: aud is a string or an array of strings.
+        yield 'an audience list with a member that is not a string' => [['aud' => [FakeProvider::CLIENT_ID, 7]], 'aud must be a string or a list of strings'];
+        yield 'an audience that is a number' => [['aud' => 7], 'aud must be a string or a list of strings'];
+        yield 'an audience that is an object' => [['aud' => (object) ['client' => FakeProvider::CLIENT_ID]], 'aud must be a string or a list of strings'];
+        yield 'an audience that is an object with a numeric key' => [['aud' => (object) ['0' => FakeProvider::CLIENT_ID]], 'aud must be a string or a list of strings'];
+        yield 'no audience' => [['aud' => null], 'aud must be a string or a list of strings'];
+        yield 'an empty audience list' => [['aud' => []], 'aud does not contain this client'];
+        yield 'one audience repeated without azp' => [['aud' => [FakeProvider::CLIENT_ID, FakeProvider::CLIENT_ID]], 'has no azp'];
+        yield 'azp naming another client' => [['azp' => 'someone-else'], 'azp'];
+        yield 'missing subject' => [['sub' => ''], 'sub'];
+        yield 'missing exp' => [['exp' => null], 'exp'];
+        yield 'missing iat' => [['iat' => null], 'iat'];
+        yield 'missing nonce' => [['nonce' => null], 'nonce'];
+        yield 'another nonce' => [['nonce' => 'replayed'], 'nonce'];
+    }
+
+    /**
+     * @param array<string, mixed> $overrides
+     */
+    #[DataProvider('badClaims')]
+    public function testAClaimThatFailsItsRuleIsRefused(array $overrides, string $mentioned): void
+    {
+        $provider = new FakeProvider();
+        $claims = array_filter($provider->claims($overrides), static fn(mixed $value): bool => $value !== null);
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage($mentioned);
+
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($claims), 'the-nonce');
+    }
+
+    public function testAnAudienceListOfThisClientAloneIsAccepted(): void
+    {
+        $provider = new FakeProvider();
+        $claims = $provider->claims(['aud' => [FakeProvider::CLIENT_ID]]);
+
+        $token = $provider->oidc()->verifyIdToken($provider->rsa->sign($claims), 'the-nonce');
+
+        self::assertSame('member-42', $token->subject);
+    }
+
+    public function testAnExpiredTokenIsRefusedOnceTheLeewayHasPassed(): void
+    {
+        $provider = new FakeProvider();
+        $jwt = $provider->rsa->sign($provider->claims(['exp' => $provider->clock->timestamp() - 30]));
+
+        self::assertSame('member-42', $provider->oidc(leeway: 60)->verifyIdToken($jwt, 'the-nonce')->subject);
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('exp');
+
+        $provider->oidc(leeway: 10)->verifyIdToken($jwt, 'the-nonce');
+    }
+
+    public function testATokenIssuedInTheFutureIsRefusedBeyondTheLeeway(): void
+    {
+        $provider = new FakeProvider();
+        $jwt = $provider->rsa->sign($provider->claims(['iat' => $provider->clock->timestamp() + 120]));
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('iat');
+
+        $provider->oidc(leeway: 60)->verifyIdToken($jwt, 'the-nonce');
+    }
+
+    /**
+     * Section 3.1.3.7 rule 11 with the clock leeway: the member must have
+     * authenticated within max_age seconds of now.
+     */
+    public function testWithMaxAgeTheAuthenticationMustBeRecentEnough(): void
+    {
+        $provider = new FakeProvider();
+        $oldest = $provider->clock->timestamp() - 600 - 60;
+
+        $accepted = $provider->rsa->sign($provider->claims(['auth_time' => $oldest]));
+        self::assertSame('member-42', $provider->oidc(leeway: 60)->verifyIdToken($accepted, 'the-nonce', maxAge: 600)->subject);
+
+        $refused = $provider->rsa->sign($provider->claims(['auth_time' => $oldest - 1]));
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('max_age');
+
+        $provider->oidc(leeway: 60)->verifyIdToken($refused, 'the-nonce', maxAge: 600);
+    }
+
+    /**
+     * The JWT library's own exception keeps the raw token among its frame
+     * arguments, so a refusal it raised is not chained: an error tracker that
+     * records arguments would otherwise store the member's ID token.
+     */
+    #[DataProvider('refusalsTheLibraryRaises')]
+    public function testARefusalTheJwtLibraryRaisedDoesNotChainItsException(string $which): void
+    {
+        $provider = new FakeProvider();
+        $jwt = match ($which) {
+            'signature' => SigningKey::rsa('rsa-1')->sign($provider->claims()),
+            'expired' => $provider->rsa->sign($provider->claims(['exp' => $provider->clock->timestamp() - 3600])),
+            default => throw new \LogicException('No token is built for ' . $which . '.'),
+        };
+
+        try {
+            $provider->oidc()->verifyIdToken($jwt, 'the-nonce');
+            self::fail('The token was accepted.');
+        } catch (IdTokenException $refusal) {
+            self::assertNull($refusal->getPrevious());
+        }
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function refusalsTheLibraryRaises(): iterable
+    {
+        yield 'a signature that does not verify' => ['signature'];
+        yield 'an expired token' => ['expired'];
+    }
+
+    /**
+     * auth_time is a NumericDate (section 2) whenever it is present. A token
+     * that carries it in another form cannot be compared with the original
+     * authentication on a refresh, so it is refused rather than read as absent.
+     */
+    public function testAnAuthTimeThatIsNotANumberIsRefused(): void
+    {
+        $provider = new FakeProvider();
+        $jwt = $provider->rsa->sign($provider->claims(['auth_time' => 'garbage']));
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('auth_time');
+
+        $provider->oidc()->verifyIdToken($jwt, 'the-nonce');
+    }
+
+    public function testWithMaxAgeAnIdTokenWithoutAuthTimeIsRefused(): void
+    {
+        $provider = new FakeProvider();
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('auth_time');
+
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce', maxAge: 600);
+    }
+
+    public function testWithoutMaxAgeAnOldAuthTimeIsAccepted(): void
+    {
+        $provider = new FakeProvider();
+        $jwt = $provider->rsa->sign($provider->claims(['auth_time' => $provider->clock->timestamp() - 86400 * 30]));
+
+        self::assertSame('member-42', $provider->oidc()->verifyIdToken($jwt, 'the-nonce')->subject);
+    }
+
+    public function testAnAccessTokenHashThatDoesNotMatchIsRefused(): void
+    {
+        $provider = new FakeProvider();
+        $hash = JWT::urlsafeB64Encode(substr(hash('sha256', 'the-access-token', true), 0, 16));
+        $jwt = $provider->rsa->sign($provider->claims(['at_hash' => $hash]));
+
+        self::assertSame('member-42', $provider->oidc()->verifyIdToken($jwt, 'the-nonce', 'the-access-token')->subject);
+
+        $this->expectException(IdTokenException::class);
+        $this->expectExceptionMessage('at_hash');
+
+        $provider->oidc()->verifyIdToken($jwt, 'the-nonce', 'another-access-token');
+    }
+
+    public function testTheKeySetIsCachedBetweenVerifications(): void
+    {
+        $provider = new FakeProvider();
+
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+        $provider->oidc()->verifyIdToken($provider->ec->sign($provider->claims()), 'the-nonce');
+
+        self::assertCount(1, $provider->requestsTo('GET', self::JWKS_URL));
+    }
+
+    /**
+     * A key the provider withdraws stops being trusted within a day even if
+     * the key set was served with a far longer max-age.
+     */
+    public function testAWithdrawnKeyIsDroppedWithinADayWhateverTheMaxAge(): void
+    {
+        $provider = new FakeProvider();
+        $provider->jwksHeaders = ['Cache-Control' => 'public, max-age=31536000'];
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+        $provider->jwks = [$provider->ec->jwk];
+
+        $provider->clock->advance(86400);
+
+        $this->expectException(IdTokenException::class);
+
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+    }
+
+    public function testAnUnknownKidRefetchesTheKeySetOnceAndFindsARotatedKey(): void
+    {
+        $provider = new FakeProvider();
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+        $provider->clock->advance(61);
+        $rotated = SigningKey::rsa('rsa-2');
+        $provider->jwks[] = $rotated->jwk;
+
+        $token = $provider->oidc()->verifyIdToken($rotated->sign($provider->claims()), 'the-nonce');
+
+        self::assertSame('member-42', $token->subject);
+        self::assertCount(2, $provider->requestsTo('GET', self::JWKS_URL));
+    }
+
+    public function testAnUnknownKidRefetchesAtMostOncePerMinute(): void
+    {
+        $provider = new FakeProvider();
+        $unknown = SigningKey::rsa('nobody-published-this');
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+        $provider->clock->advance(61);
+
+        foreach ([1, 2, 3] as $attempt) {
+            try {
+                $provider->oidc()->verifyIdToken($unknown->sign($provider->claims()), 'the-nonce');
+                self::fail('An unknown key was accepted.');
+            } catch (IdTokenException) {
+            }
+        }
+        self::assertCount(2, $provider->requestsTo('GET', self::JWKS_URL));
+
+        $provider->clock->advance(61);
+        try {
+            $provider->oidc()->verifyIdToken($unknown->sign($provider->claims()), 'the-nonce');
+        } catch (IdTokenException) {
+        }
+        self::assertCount(3, $provider->requestsTo('GET', self::JWKS_URL));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function keySetHeadersThatForbidKeeping(): iterable
+    {
+        yield 'no-store' => ['no-store'];
+        yield 'max-age=0' => ['public, max-age=0'];
+    }
+
+    /**
+     * Whatever the provider's Cache-Control says, the key set is kept for
+     * the refetch interval, or every verification would fetch it again.
+     */
+    #[DataProvider('keySetHeadersThatForbidKeeping')]
+    public function testTheKeySetIsKeptForTheRefetchIntervalWhateverItsCacheControl(string $cacheControl): void
+    {
+        $provider = new FakeProvider();
+        $provider->jwksHeaders = ['Cache-Control' => $cacheControl];
+
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+        $provider->clock->advance(59);
+        $provider->oidc()->verifyIdToken($provider->ec->sign($provider->claims()), 'the-nonce');
+        self::assertCount(1, $provider->requestsTo('GET', self::JWKS_URL));
+
+        $provider->clock->advance(1);
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+        self::assertCount(2, $provider->requestsTo('GET', self::JWKS_URL));
+    }
+
+    /**
+     * With a key set the provider forbids keeping, made-up key ids still
+     * reach the provider at most once a minute.
+     */
+    #[DataProvider('keySetHeadersThatForbidKeeping')]
+    public function testUnknownKidsFetchAtMostOncePerMinuteWhateverTheCacheControl(string $cacheControl): void
+    {
+        $provider = new FakeProvider();
+        $provider->jwksHeaders = ['Cache-Control' => $cacheControl];
+        $unknown = SigningKey::rsa('nobody-published-this');
+
+        foreach ([0, 10, 61, 10] as $advance) {
+            $provider->clock->advance($advance);
+            try {
+                $provider->oidc()->verifyIdToken($unknown->sign($provider->claims()), 'the-nonce');
+                self::fail('An unknown key was accepted.');
+            } catch (IdTokenException) {
+            }
+        }
+
+        self::assertCount(2, $provider->requestsTo('GET', self::JWKS_URL));
+    }
+
+    private const string HOSTILE = "RS256\r\nFORGED log line \e[31m" . 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+
+    public function testAnUnverifiedAlgReachesTheMessageOnlyAsShortPrintableText(): void
+    {
+        $provider = new FakeProvider();
+        $jwt = JWT::urlsafeB64Encode((string) json_encode(['alg' => self::HOSTILE, 'kid' => 'rsa-1']))
+            . '.' . JWT::urlsafeB64Encode((string) json_encode($provider->claims()))
+            . '.' . JWT::urlsafeB64Encode('signature');
+
+        try {
+            $provider->oidc()->verifyIdToken($jwt, 'the-nonce');
+            self::fail('A made-up algorithm was accepted.');
+        } catch (IdTokenException $exception) {
+            self::assertStringContainsString('RS256??FORGED log line ?[31m', $exception->getMessage());
+            self::assertDoesNotMatchRegularExpression('/[^\x20-\x7E]/', $exception->getMessage());
+            self::assertStringNotContainsString(str_repeat('x', 70), $exception->getMessage());
+        }
+    }
+
+    public function testAnUnverifiedKidReachesTheMessageAndTheLogOnlyAsShortPrintableText(): void
+    {
+        $provider = new FakeProvider();
+        $logger = new RecordingLogger();
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+        $provider->clock->advance(61);
+
+        try {
+            $provider->oidc(logger: $logger)->verifyIdToken($provider->rsa->sign($provider->claims(), kid: self::HOSTILE), 'the-nonce');
+            self::fail('A made-up key id was accepted.');
+        } catch (IdTokenException $exception) {
+            self::assertDoesNotMatchRegularExpression('/[^\x20-\x7E]/', $exception->getMessage());
+            self::assertStringNotContainsString(str_repeat('x', 70), $exception->getMessage());
+        }
+
+        self::assertCount(1, $logger->records);
+        $kid = $logger->records[0]['context']['kid'] ?? null;
+        self::assertIsString($kid);
+        self::assertStringStartsWith('RS256??FORGED log line ?[31m', $kid);
+        self::assertLessThanOrEqual(64 + 3, strlen($kid));
+    }
+
+    public function testAMalformedTokenIsRefusedWithATypedException(): void
+    {
+        $this->expectException(IdTokenException::class);
+
+        (new FakeProvider())->oidc()->verifyIdToken('not.a-jwt', 'the-nonce');
+    }
+}
