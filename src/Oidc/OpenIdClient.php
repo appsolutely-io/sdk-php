@@ -9,6 +9,7 @@ use Appsolutely\Sdk\Exception\AuthorizationResponseException;
 use Appsolutely\Sdk\Exception\DiscoveryException;
 use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Exception\InvalidArgumentException;
+use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\HttpTransport;
@@ -49,6 +50,24 @@ final readonly class OpenIdClient
         private LoggerInterface $logger,
     ) {
         $this->discovery = new Discovery($http, $cache, $config->issuer);
+    }
+
+    /**
+     * Refused like Config's, whose secret this holds.
+     *
+     * @return array<string, mixed>
+     */
+    public function __serialize(): array
+    {
+        throw new NotSerializableException('An OpenIdClient holds the client secret and is not serialized; build it again from its Config.');
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function __unserialize(array $data): void
+    {
+        throw new NotSerializableException('An OpenIdClient holds the client secret and is not unserialized; build it again from its Config.');
     }
 
     public function metadata(): ProviderMetadata
@@ -345,10 +364,10 @@ final readonly class OpenIdClient
     {
         return match ($this->config->clientAuthentication) {
             ClientAuthentication::ClientSecretBasic => [$fields, [
-                'Authorization' => 'Basic ' . base64_encode(urlencode($this->config->clientId) . ':' . urlencode($this->config->clientSecret)),
+                'Authorization' => 'Basic ' . base64_encode(urlencode($this->config->clientId) . ':' . urlencode($this->config->clientSecret())),
             ]],
             ClientAuthentication::ClientSecretPost => [
-                [...$fields, 'client_id' => $this->config->clientId, 'client_secret' => $this->config->clientSecret],
+                [...$fields, 'client_id' => $this->config->clientId, 'client_secret' => $this->config->clientSecret()],
                 [],
             ],
         };

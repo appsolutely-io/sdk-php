@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk;
 
 use Appsolutely\Sdk\Exception\InvalidConfigException;
+use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Http\SecureUrl;
 use Appsolutely\Sdk\Oidc\ClientAuthentication;
 use Psr\Clock\ClockInterface;
@@ -41,7 +42,7 @@ final readonly class Config
         public string $issuer,
         public string $clientId,
         #[\SensitiveParameter]
-        public string $clientSecret,
+        private string $clientSecret,
         public ?ClientInterface $httpClient = null,
         public ?RequestFactoryInterface $requestFactory = null,
         public ?StreamFactoryInterface $streamFactory = null,
@@ -64,6 +65,51 @@ final readonly class Config
         if ($clockLeeway < 0 || $clockLeeway > self::MAX_CLOCK_LEEWAY) {
             throw new InvalidConfigException(sprintf('The clock leeway must be between 0 and %d seconds, got %d.', self::MAX_CLOCK_LEEWAY, $clockLeeway));
         }
+    }
+
+    public function clientSecret(): string
+    {
+        return $this->clientSecret;
+    }
+
+    /**
+     * What var_dump() and print_r() show, here and inside every object that
+     * holds this Config: the secret is replaced so a debug dump or an error
+     * page does not print it. (var_export() ignores this hook; do not export
+     * a Config.)
+     *
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        $properties = [];
+        foreach (get_object_vars($this) as $name => $value) {
+            $properties[(string) $name] = $name === 'clientSecret' ? '[redacted]' : $value;
+        }
+
+        return $properties;
+    }
+
+    /**
+     * Refused rather than redacted: a copy without the secret could not
+     * authenticate, and one with it would carry the secret into whatever
+     * store the serialized string ends up in (a session, a cache, a queue
+     * payload). The PSR services it holds do not serialize either. Client and
+     * OpenIdClient hold a Config, so they are refused too.
+     *
+     * @return array<string, mixed>
+     */
+    public function __serialize(): array
+    {
+        throw new NotSerializableException('A Config holds the client secret and is not serialized; build it again from its settings.');
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function __unserialize(array $data): void
+    {
+        throw new NotSerializableException('A Config holds the client secret and is not unserialized; build it again from its settings.');
     }
 
     /**

@@ -7,6 +7,7 @@ namespace Appsolutely\Sdk;
 use Appsolutely\Sdk\Cache\InMemoryCache;
 use Appsolutely\Sdk\Clock\SystemClock;
 use Appsolutely\Sdk\Exception\InvalidConfigException;
+use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Oidc\OpenIdClient;
 use Http\Discovery\Exception\NotFoundException;
@@ -46,6 +47,24 @@ final readonly class Client
             $clock,
             $config->logger ?? new NullLogger(),
         );
+    }
+
+    /**
+     * Refused like Config's, whose secret this holds.
+     *
+     * @return array<string, mixed>
+     */
+    public function __serialize(): array
+    {
+        throw new NotSerializableException('A Client holds the client secret and is not serialized; build it again from its Config.');
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function __unserialize(array $data): void
+    {
+        throw new NotSerializableException('A Client holds the client secret and is not unserialized; build it again from its Config.');
     }
 
     public function oidc(): OpenIdClient

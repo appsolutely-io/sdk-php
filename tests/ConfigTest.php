@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests;
 
+use Appsolutely\Sdk\Client;
 use Appsolutely\Sdk\Config;
 use Appsolutely\Sdk\Exception\AppsolutelyException;
 use Appsolutely\Sdk\Exception\InvalidConfigException;
+use Appsolutely\Sdk\Exception\NotSerializableException;
+use Appsolutely\Sdk\Tests\Support\FakeProvider;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -22,11 +25,64 @@ final class ConfigTest extends TestCase
 
         self::assertSame('https://login.example.com', $config->issuer);
         self::assertSame('client-1', $config->clientId);
-        self::assertSame('secret-1', $config->clientSecret);
+        self::assertSame('secret-1', $config->clientSecret());
         self::assertNull($config->httpClient);
         self::assertNull($config->cache);
         self::assertNull($config->clock);
         self::assertNull($config->logger);
+    }
+
+    public function testTheSecretIsNotAPublicProperty(): void
+    {
+        $property = new \ReflectionProperty(Config::class, 'clientSecret');
+
+        self::assertFalse($property->isPublic());
+    }
+
+    public function testDumpingTheConfigOrTheClientsBuiltOnItHidesTheSecret(): void
+    {
+        $provider = new FakeProvider();
+        $config = $provider->config();
+        $client = new Client($config);
+
+        foreach ([$config, $client, $client->oidc()] as $object) {
+            ob_start();
+            var_dump($object);
+            $dumped = (string) ob_get_clean();
+
+            self::assertStringNotContainsString(FakeProvider::CLIENT_SECRET, $dumped);
+            self::assertStringNotContainsString(FakeProvider::CLIENT_SECRET, print_r($object, true));
+        }
+        self::assertStringContainsString('[redacted]', print_r($config, true));
+    }
+
+    /**
+     * A serialized copy would carry the secret into a session, a cache or a
+     * queue payload, and the live services it holds do not serialize at all.
+     */
+    public function testTheConfigAndTheClientsBuiltOnItRefuseToBeSerialized(): void
+    {
+        $client = new Client((new FakeProvider())->config());
+
+        foreach ([$client->oidc(), $client] as $object) {
+            try {
+                serialize($object);
+                self::fail(get_debug_type($object) . ' was serialized.');
+            } catch (NotSerializableException $exception) {
+                self::assertStringNotContainsString(FakeProvider::CLIENT_SECRET, $exception->getMessage());
+            }
+        }
+
+        $this->expectException(NotSerializableException::class);
+
+        serialize((new FakeProvider())->config());
+    }
+
+    public function testASerializedConfigIsNotRestored(): void
+    {
+        $this->expectException(NotSerializableException::class);
+
+        unserialize('O:22:"Appsolutely\\Sdk\\Config":0:{}');
     }
 
     /**
