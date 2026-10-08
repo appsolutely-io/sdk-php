@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk;
 
 use Appsolutely\Sdk\Exception\InvalidConfigException;
+use Appsolutely\Sdk\Oidc\ClientAuthentication;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
@@ -26,6 +27,15 @@ use Psr\SimpleCache\CacheInterface;
  */
 final readonly class Config
 {
+    /**
+     * Seconds of disagreement tolerated between this host's clock and the
+     * provider's when checking a token's exp and iat.
+     */
+    public const int DEFAULT_CLOCK_LEEWAY = 60;
+
+    /** A leeway beyond this would keep an expired ID token usable for minutes. */
+    public const int MAX_CLOCK_LEEWAY = 300;
+
     public function __construct(
         public string $issuer,
         public string $apiBaseUrl,
@@ -38,6 +48,8 @@ final readonly class Config
         public ?CacheInterface $cache = null,
         public ?ClockInterface $clock = null,
         public ?LoggerInterface $logger = null,
+        public ClientAuthentication $clientAuthentication = ClientAuthentication::ClientSecretBasic,
+        public int $clockLeeway = self::DEFAULT_CLOCK_LEEWAY,
     ) {
         self::assertBaseUrl('issuer', $issuer);
         self::assertBaseUrl('apiBaseUrl', $apiBaseUrl);
@@ -48,6 +60,10 @@ final readonly class Config
 
         if ($clientSecret === '') {
             throw new InvalidConfigException('The client secret must not be empty.');
+        }
+
+        if ($clockLeeway < 0 || $clockLeeway > self::MAX_CLOCK_LEEWAY) {
+            throw new InvalidConfigException(sprintf('The clock leeway must be between 0 and %d seconds, got %d.', self::MAX_CLOCK_LEEWAY, $clockLeeway));
         }
     }
 

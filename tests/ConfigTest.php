@@ -38,6 +38,13 @@ final class ConfigTest extends TestCase
         self::assertSame('http://localhost:8000', $config->issuer);
     }
 
+    public function testAClockLeewayBeyondFiveMinutesIsRefused(): void
+    {
+        $this->expectException(InvalidConfigException::class);
+
+        new Config('https://login.example.com', 'https://api.example.com', 'id', 'secret', clockLeeway: 301);
+    }
+
     /**
      * @return iterable<string, array{string, string, string, string}>
      */
