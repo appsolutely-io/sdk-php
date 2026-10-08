@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Oidc;
 
 use Appsolutely\Sdk\Exception\DiscoveryException;
+use Appsolutely\Sdk\Oidc\ProviderMetadata;
 use Appsolutely\Sdk\Sdk;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class DiscoveryTest extends TestCase
@@ -88,6 +90,61 @@ final class DiscoveryTest extends TestCase
         $this->expectExceptionMessage('jwks_uri');
 
         $provider->oidc()->metadata();
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function endpoints(): iterable
+    {
+        foreach (['authorization_endpoint', 'token_endpoint', 'jwks_uri', 'userinfo_endpoint', 'revocation_endpoint'] as $name) {
+            yield $name => [$name];
+        }
+    }
+
+    /**
+     * Each of them carries a secret or decides which keys are trusted, so it
+     * is held to the issuer's rule: TLS unless the host is the loopback.
+     */
+    #[DataProvider('endpoints')]
+    public function testItRefusesAnEndpointOverPlainHttpOnARemoteHost(string $name): void
+    {
+        $provider = new FakeProvider();
+        $provider->discovery[$name] = 'http://login.example.com/oauth/x';
+
+        $this->expectException(DiscoveryException::class);
+        $this->expectExceptionMessage($name);
+
+        $provider->oidc()->metadata();
+    }
+
+    #[DataProvider('endpoints')]
+    public function testItRefusesAnEndpointThatIsNotAnAbsoluteUrl(string $name): void
+    {
+        $provider = new FakeProvider();
+        $provider->discovery[$name] = '/oauth/x';
+
+        $this->expectException(DiscoveryException::class);
+        $this->expectExceptionMessage($name);
+
+        $provider->oidc()->metadata();
+    }
+
+    public function testItAcceptsEndpointsOverPlainHttpOnEachLoopbackForm(): void
+    {
+        $document = [
+            'issuer' => 'http://localhost:8000',
+            'authorization_endpoint' => 'http://localhost:8000/oauth/authorize',
+            'token_endpoint' => 'http://127.0.0.1:8000/oauth/token',
+            'jwks_uri' => 'http://[::1]:8000/oauth/jwks.json',
+            'userinfo_endpoint' => 'http://localhost/oauth/userinfo',
+            'revocation_endpoint' => 'http://127.0.0.1/oauth/revoke',
+            'id_token_signing_alg_values_supported' => ['RS256'],
+        ];
+
+        $metadata = ProviderMetadata::fromArray($document);
+
+        self::assertSame('http://[::1]:8000/oauth/jwks.json', $metadata->jwksUri);
     }
 
     public function testItRefusesAnAnswerThatIsNotADiscoveryDocument(): void

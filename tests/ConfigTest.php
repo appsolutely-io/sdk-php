@@ -29,11 +29,20 @@ final class ConfigTest extends TestCase
         self::assertNull($config->logger);
     }
 
-    public function testPlainHttpIsAcceptedForALoopbackHostOnly(): void
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function loopbackIssuers(): iterable
     {
-        $config = new Config('http://localhost:8000', 'id', 'secret');
+        yield 'localhost' => ['http://localhost:8000'];
+        yield 'IPv4 loopback' => ['http://127.0.0.1:8000'];
+        yield 'IPv6 loopback' => ['http://[::1]:8000'];
+    }
 
-        self::assertSame('http://localhost:8000', $config->issuer);
+    #[DataProvider('loopbackIssuers')]
+    public function testPlainHttpIsAcceptedForALoopbackHost(string $issuer): void
+    {
+        self::assertSame($issuer, (new Config($issuer, 'id', 'secret'))->issuer);
     }
 
     public function testAClockLeewayBeyondFiveMinutesIsRefused(): void
@@ -49,6 +58,10 @@ final class ConfigTest extends TestCase
     public static function invalid(): iterable
     {
         yield 'issuer over plain http' => ['http://login.example.com', 'id', 'secret'];
+        // Whether a *.localhost name resolves to the loopback interface is up
+        // to the resolver, so only the three exact loopback forms are trusted.
+        yield 'issuer over plain http on a localhost subdomain' => ['http://login.localhost', 'id', 'secret'];
+        yield 'issuer over plain http on another 127/8 address' => ['http://127.0.0.2', 'id', 'secret'];
         yield 'issuer without a host' => ['https://', 'id', 'secret'];
         yield 'issuer that is not a URL' => ['login.example.com', 'id', 'secret'];
         yield 'issuer with a query' => ['https://login.example.com?x=1', 'id', 'secret'];

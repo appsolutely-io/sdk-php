@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk;
 
 use Appsolutely\Sdk\Exception\InvalidConfigException;
+use Appsolutely\Sdk\Http\SecureUrl;
 use Appsolutely\Sdk\Oidc\ClientAuthentication;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Client\ClientInterface;
@@ -50,7 +51,7 @@ final readonly class Config
         public ClientAuthentication $clientAuthentication = ClientAuthentication::ClientSecretBasic,
         public int $clockLeeway = self::DEFAULT_CLOCK_LEEWAY,
     ) {
-        self::assertBaseUrl('issuer', $issuer);
+        self::assertIssuer($issuer);
 
         if ($clientId === '') {
             throw new InvalidConfigException('The client id must not be empty.');
@@ -66,39 +67,21 @@ final readonly class Config
     }
 
     /**
-     * HTTPS only, except on a loopback host, where a developer's local server
-     * has no certificate and nothing leaves the machine (RFC 8252 section 8.3).
+     * HTTPS, or plain HTTP on a loopback host only (see SecureUrl), and no
+     * query or fragment, which would be carried into every derived URL.
      */
-    private static function assertBaseUrl(string $name, string $url): void
+    private static function assertIssuer(string $url): void
     {
-        $parts = parse_url($url);
-
-        if ($parts === false || !isset($parts['scheme'], $parts['host']) || $parts['host'] === '') {
-            throw new InvalidConfigException(sprintf('The %s must be an absolute URL, got "%s".', $name, $url));
+        if (!SecureUrl::isAbsolute($url)) {
+            throw new InvalidConfigException(sprintf('The issuer must be an absolute URL, got "%s".', $url));
         }
 
-        if (isset($parts['query']) || isset($parts['fragment']) || str_contains($url, '?') || str_contains($url, '#')) {
-            throw new InvalidConfigException(sprintf('The %s must not carry a query or a fragment, got "%s".', $name, $url));
+        if (str_contains($url, '?') || str_contains($url, '#')) {
+            throw new InvalidConfigException(sprintf('The issuer must not carry a query or a fragment, got "%s".', $url));
         }
 
-        $scheme = strtolower($parts['scheme']);
-
-        if ($scheme === 'https') {
-            return;
+        if (!SecureUrl::isSecure($url)) {
+            throw new InvalidConfigException(sprintf('The issuer must use https (plain http is accepted for localhost, 127.0.0.1 and [::1] only), got "%s".', $url));
         }
-
-        if ($scheme === 'http' && self::isLoopback(strtolower($parts['host']))) {
-            return;
-        }
-
-        throw new InvalidConfigException(sprintf('The %s must use https (plain http is accepted for a loopback host only), got "%s".', $name, $url));
-    }
-
-    private static function isLoopback(string $host): bool
-    {
-        return $host === 'localhost'
-            || str_ends_with($host, '.localhost')
-            || $host === '127.0.0.1'
-            || $host === '[::1]';
     }
 }

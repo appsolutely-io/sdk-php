@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Oidc;
 
 use Appsolutely\Sdk\Exception\DiscoveryException;
+use Appsolutely\Sdk\Http\SecureUrl;
 
 /**
  * The parts of an OpenID Provider's discovery document this client relies on
@@ -40,15 +41,39 @@ final readonly class ProviderMetadata
 
         return new self(
             issuer: self::requiredString($document, 'issuer'),
-            authorizationEndpoint: self::requiredString($document, 'authorization_endpoint'),
-            tokenEndpoint: self::requiredString($document, 'token_endpoint'),
-            jwksUri: self::requiredString($document, 'jwks_uri'),
+            authorizationEndpoint: self::requiredEndpoint($document, 'authorization_endpoint'),
+            tokenEndpoint: self::requiredEndpoint($document, 'token_endpoint'),
+            jwksUri: self::requiredEndpoint($document, 'jwks_uri'),
             idTokenSigningAlgValuesSupported: self::stringList($document, 'id_token_signing_alg_values_supported') ?? throw self::missing('id_token_signing_alg_values_supported'),
-            userinfoEndpoint: self::optionalString($document, 'userinfo_endpoint'),
-            revocationEndpoint: self::optionalString($document, 'revocation_endpoint'),
+            userinfoEndpoint: self::optionalEndpoint($document, 'userinfo_endpoint'),
+            revocationEndpoint: self::optionalEndpoint($document, 'revocation_endpoint'),
             codeChallengeMethodsSupported: self::stringList($document, 'code_challenge_methods_supported'),
             authorizationResponseIssParameterSupported: $iss,
         );
+    }
+
+    /**
+     * @param array<string, mixed> $document
+     */
+    private static function requiredEndpoint(array $document, string $name): string
+    {
+        return self::optionalEndpoint($document, $name) ?? throw self::missing($name);
+    }
+
+    /**
+     * Every endpoint is held to the issuer's rule (see SecureUrl): the client
+     * sends its secret, codes and tokens to them and takes its keys from one.
+     *
+     * @param array<string, mixed> $document
+     */
+    private static function optionalEndpoint(array $document, string $name): ?string
+    {
+        $url = self::optionalString($document, $name);
+        if ($url !== null && !SecureUrl::isSecure($url)) {
+            throw new DiscoveryException(sprintf('The discovery document\'s %s must be an absolute https URL (plain http is accepted for localhost, 127.0.0.1 and [::1] only).', $name));
+        }
+
+        return $url;
     }
 
     /**
