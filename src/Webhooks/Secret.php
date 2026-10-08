@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Webhooks;
 
 use Appsolutely\Sdk\Exception\InvalidSecretException;
+use Appsolutely\Sdk\Exception\NotSerializableException;
 
 /**
  * A Standard Webhooks signing secret: `whsec_` followed by the Base64 of the
@@ -66,6 +67,38 @@ final readonly class Secret
         }
 
         return $parsed;
+    }
+
+    /**
+     * What var_dump() and print_r() show, here and inside Verifier and
+     * WebhookFactory, which hold secrets: the key is replaced, as Config
+     * replaces the client secret. (var_export() ignores this hook.)
+     *
+     * @return array<string, string>
+     */
+    public function __debugInfo(): array
+    {
+        return ['key' => '[redacted]'];
+    }
+
+    /**
+     * Refused like Config's: a serialized copy would carry the key into
+     * whatever store the string ends up in. Verifier and WebhookFactory are
+     * refused through the secrets they hold.
+     *
+     * @return array<string, mixed>
+     */
+    public function __serialize(): array
+    {
+        throw new NotSerializableException('A webhook signing secret is not serialized; build the Verifier or WebhookFactory again from the secrets.');
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function __unserialize(array $data): void
+    {
+        throw new NotSerializableException('A webhook signing secret is not unserialized; build the Verifier or WebhookFactory again from the secrets.');
     }
 
     /**
