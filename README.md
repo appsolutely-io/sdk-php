@@ -77,7 +77,7 @@ $memberId = $tokens->idToken->subject;
 
 `authorizationUrl()` generates `state`, `nonce` and a PKCE S256 verifier. `exchangeCallback()` checks the `iss` and `state` of the response, exchanges the code with the verifier and verifies the ID token: its signature against the provider's published keys (RS256 or ES256), `iss`, `aud`, `azp`, `exp`, `iat` and the `nonce`. Any failure throws; never sign the member in after an exception.
 
-The same client refreshes tokens (`refresh()`), reads userinfo (`userInfo($accessToken, $memberId)`), revokes a token (`revoke()`) and obtains a cached `client_credentials` token for the party's own API calls (`machineToken()`). OAuth errors become `Oidc\OAuthException` with the error code in `$exception->error`; every exception the package throws implements `Exception\AppsolutelyException`.
+The same client refreshes tokens (`refresh()`), reads userinfo (`userInfo($accessToken, $memberId)`), revokes a token (`revoke()`) and obtains a cached `client_credentials` token for the party's own API calls (`machineToken()`). OAuth errors become `Exception\OAuthException` with the error code in `$exception->error`. Every exception an integrator may catch lives in the `Appsolutely\Sdk\Exception` namespace and implements `Exception\AppsolutelyException`.
 
 ## Verifying webhook deliveries
 
@@ -86,7 +86,7 @@ Deliveries follow [Standard Webhooks](https://www.standardwebhooks.com/). Verify
 ```php
 use Appsolutely\Sdk\Webhooks\Deliveries;
 use Appsolutely\Sdk\Webhooks\Verifier;
-use Appsolutely\Sdk\Webhooks\WebhookVerificationException;
+use Appsolutely\Sdk\Exception\WebhookVerificationException;
 
 $verifier = new Verifier([getenv('APPSOLUTELY_WEBHOOK_SECRET')]); // add the old secret too while rotating
 $deliveries = new Deliveries($psr16Cache);

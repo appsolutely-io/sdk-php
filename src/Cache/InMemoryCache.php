@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Cache;
 
 use Appsolutely\Sdk\Clock\SystemClock;
+use Appsolutely\Sdk\Exception\InvalidCacheKeyException;
 use DateInterval;
 use Psr\Clock\ClockInterface;
 use Psr\SimpleCache\CacheInterface;

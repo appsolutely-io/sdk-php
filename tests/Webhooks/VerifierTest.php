@@ -6,9 +6,9 @@ namespace Appsolutely\Sdk\Tests\Webhooks;
 
 use Appsolutely\Sdk\Exception\AppsolutelyException;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
-use Appsolutely\Sdk\Webhooks\InvalidSecretException;
+use Appsolutely\Sdk\Exception\InvalidSecretException;
 use Appsolutely\Sdk\Webhooks\Verifier;
-use Appsolutely\Sdk\Webhooks\WebhookVerificationException;
+use Appsolutely\Sdk\Exception\WebhookVerificationException;
 use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

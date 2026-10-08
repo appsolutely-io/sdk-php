@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Webhooks;
 
+use Appsolutely\Sdk\Exception\InvalidSecretException;
+
 /**
  * A Standard Webhooks signing secret: `whsec_` followed by the Base64 of the
  * key bytes. The HMAC key is the decoded bytes, not the string.

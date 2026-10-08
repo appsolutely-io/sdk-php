@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Oidc;
 
-use Appsolutely\Sdk\Oidc\IdTokenException;
+use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
 use Appsolutely\Sdk\Tests\Support\SigningKey;
 use Firebase\JWT\JWT;

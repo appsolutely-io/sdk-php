@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Oidc;
 
-use Appsolutely\Sdk\Http\UnexpectedResponseException;
+use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Oidc\ClientAuthentication;
-use Appsolutely\Sdk\Oidc\IdTokenException;
-use Appsolutely\Sdk\Oidc\OAuthException;
+use Appsolutely\Sdk\Exception\IdTokenException;
+use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
@@ -110,7 +110,7 @@ final class TokenEndpointTest extends TestCase
         try {
             $oidc->exchangeCallback(['code' => 'the-code', 'state' => 'forged', 'iss' => FakeProvider::ISSUER], $request);
             self::fail('No exception was thrown.');
-        } catch (\Appsolutely\Sdk\Oidc\AuthorizationResponseException) {
+        } catch (\Appsolutely\Sdk\Exception\AuthorizationResponseException) {
             self::assertSame([], $provider->requestsTo('POST', self::TOKEN_URL));
         }
     }

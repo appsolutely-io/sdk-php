@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Oidc;
 
+use Appsolutely\Sdk\Exception\DiscoveryException;
+
 /**
  * The parts of an OpenID Provider's discovery document this client relies on
  * (OpenID Connect Discovery 1.0 section 3, RFC 8414, RFC 9207).

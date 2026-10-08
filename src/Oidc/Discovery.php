@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Oidc;
 
+use Appsolutely\Sdk\Exception\DiscoveryException;
 use Appsolutely\Sdk\Http\CacheControl;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Http\Json;

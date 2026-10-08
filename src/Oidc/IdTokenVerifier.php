@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Oidc;
 
+use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Http\Json;
 use Firebase\JWT\BeforeValidException;
 use Firebase\JWT\ExpiredException;

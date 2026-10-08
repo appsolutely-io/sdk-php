@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Oidc;
 
-use Appsolutely\Sdk\Http\UnexpectedResponseException;
-use Appsolutely\Sdk\Oidc\OAuthException;
+use Appsolutely\Sdk\Exception\UnexpectedResponseException;
+use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;

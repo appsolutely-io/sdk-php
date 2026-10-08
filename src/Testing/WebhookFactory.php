@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Testing;
 
 use Appsolutely\Sdk\Clock\SystemClock;
-use Appsolutely\Sdk\Webhooks\InvalidSecretException;
+use Appsolutely\Sdk\Exception\InvalidSecretException;
 use Appsolutely\Sdk\Webhooks\Secret;
 use DateTimeImmutable;
 use DateTimeZone;

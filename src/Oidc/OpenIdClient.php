@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Oidc;
 
 use Appsolutely\Sdk\Config;
+use Appsolutely\Sdk\Exception\AuthorizationResponseException;
+use Appsolutely\Sdk\Exception\DiscoveryException;
+use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Exception\InvalidArgumentException;
+use Appsolutely\Sdk\Exception\OAuthException;
+use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Http\Json;
-use Appsolutely\Sdk\Http\UnexpectedResponseException;
 use Firebase\JWT\JWT;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ResponseInterface;

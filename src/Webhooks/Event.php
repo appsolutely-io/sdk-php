@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Webhooks;
 
+use Appsolutely\Sdk\Exception\WebhookVerificationException;
 use Appsolutely\Sdk\Http\Json;
 use DateTimeImmutable;
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Oidc;
 
 use Appsolutely\Sdk\Exception\InvalidArgumentException;
-use Appsolutely\Sdk\Oidc\DiscoveryException;
+use Appsolutely\Sdk\Exception\DiscoveryException;
 use Appsolutely\Sdk\Oidc\Pkce;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
 use PHPUnit\Framework\TestCase;

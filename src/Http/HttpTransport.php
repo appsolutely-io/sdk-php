@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Http;
 
+use Appsolutely\Sdk\Exception\TransportException;
 use Appsolutely\Sdk\Sdk;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;

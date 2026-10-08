@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Webhooks;
 
 use Appsolutely\Sdk\Clock\SystemClock;
+use Appsolutely\Sdk\Exception\InvalidSecretException;
+use Appsolutely\Sdk\Exception\WebhookVerificationException;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ServerRequestInterface;
 

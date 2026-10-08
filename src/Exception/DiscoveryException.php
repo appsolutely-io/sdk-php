@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace Appsolutely\Sdk\Oidc;
+namespace Appsolutely\Sdk\Exception;
 
-use Appsolutely\Sdk\Exception\AppsolutelyException;
 use RuntimeException;
 
 /**
