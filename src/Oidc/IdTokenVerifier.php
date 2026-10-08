@@ -84,14 +84,16 @@ final readonly class IdTokenVerifier
         JWT::$timestamp = $this->now();
         JWT::$leeway = $this->leeway;
 
+        // The library's exceptions are not chained: their stack frames carry
+        // the raw token as an argument, which an error tracker would record.
         try {
             JWT::decode($jwt, [$kid => $key]);
         } catch (ExpiredException $exception) {
-            throw new IdTokenException('The ID token has expired: its exp is past, beyond the clock leeway.', 0, $exception);
+            throw new IdTokenException('The ID token has expired: its exp is past, beyond the clock leeway.');
         } catch (BeforeValidException $exception) {
-            throw new IdTokenException('The ID token is not valid yet: its iat or nbf is in the future, beyond the clock leeway.', 0, $exception);
+            throw new IdTokenException('The ID token is not valid yet: its iat or nbf is in the future, beyond the clock leeway.');
         } catch (\UnexpectedValueException|\DomainException|\InvalidArgumentException $exception) {
-            throw new IdTokenException('The ID token signature does not verify: ' . Untrusted::text($exception->getMessage(), Untrusted::MAX_LONG_LENGTH), 0, $exception);
+            throw new IdTokenException('The ID token signature does not verify: ' . Untrusted::text($exception->getMessage(), Untrusted::MAX_LONG_LENGTH));
         } finally {
             JWT::$timestamp = $previousTimestamp;
             JWT::$leeway = $previousLeeway;
