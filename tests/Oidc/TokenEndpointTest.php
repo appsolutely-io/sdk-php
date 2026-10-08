@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Oidc;
 
+use Appsolutely\Sdk\Exception\IdTokenException;
+use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Oidc\ClientAuthentication;
 use Appsolutely\Sdk\Oidc\IdToken;
-use Appsolutely\Sdk\Exception\IdTokenException;
-use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
 use PHPUnit\Framework\Attributes\DataProvider;

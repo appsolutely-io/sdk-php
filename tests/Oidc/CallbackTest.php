@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Oidc;
 
-use Appsolutely\Sdk\Oidc\AuthorizationRequest;
 use Appsolutely\Sdk\Exception\AuthorizationResponseException;
 use Appsolutely\Sdk\Exception\OAuthException;
+use Appsolutely\Sdk\Oidc\AuthorizationRequest;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
 use PHPUnit\Framework\TestCase;
 
