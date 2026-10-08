@@ -6,6 +6,7 @@ namespace Appsolutely\Sdk\Tests\Oidc;
 
 use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
+use Appsolutely\Sdk\Tests\Support\RecordingLogger;
 use Appsolutely\Sdk\Tests\Support\SigningKey;
 use Firebase\JWT\JWT;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -254,6 +255,47 @@ final class IdTokenVerificationTest extends TestCase
         } catch (IdTokenException) {
         }
         self::assertCount(3, $provider->requestsTo('GET', self::JWKS_URL));
+    }
+
+    private const string HOSTILE = "RS256\r\nFORGED log line \e[31m" . 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+
+    public function testAnUnverifiedAlgReachesTheMessageOnlyAsShortPrintableText(): void
+    {
+        $provider = new FakeProvider();
+        $jwt = JWT::urlsafeB64Encode((string) json_encode(['alg' => self::HOSTILE, 'kid' => 'rsa-1']))
+            . '.' . JWT::urlsafeB64Encode((string) json_encode($provider->claims()))
+            . '.' . JWT::urlsafeB64Encode('signature');
+
+        try {
+            $provider->oidc()->verifyIdToken($jwt, 'the-nonce');
+            self::fail('A made-up algorithm was accepted.');
+        } catch (IdTokenException $exception) {
+            self::assertStringContainsString('RS256??FORGED log line ?[31m', $exception->getMessage());
+            self::assertDoesNotMatchRegularExpression('/[^\x20-\x7E]/', $exception->getMessage());
+            self::assertStringNotContainsString(str_repeat('x', 70), $exception->getMessage());
+        }
+    }
+
+    public function testAnUnverifiedKidReachesTheMessageAndTheLogOnlyAsShortPrintableText(): void
+    {
+        $provider = new FakeProvider();
+        $logger = new RecordingLogger();
+        $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+        $provider->clock->advance(61);
+
+        try {
+            $provider->oidc(logger: $logger)->verifyIdToken($provider->rsa->sign($provider->claims(), kid: self::HOSTILE), 'the-nonce');
+            self::fail('A made-up key id was accepted.');
+        } catch (IdTokenException $exception) {
+            self::assertDoesNotMatchRegularExpression('/[^\x20-\x7E]/', $exception->getMessage());
+            self::assertStringNotContainsString(str_repeat('x', 70), $exception->getMessage());
+        }
+
+        self::assertCount(1, $logger->records);
+        $kid = $logger->records[0]['context']['kid'] ?? null;
+        self::assertIsString($kid);
+        self::assertStringStartsWith('RS256??FORGED log line ?[31m', $kid);
+        self::assertLessThanOrEqual(64 + 3, strlen($kid));
     }
 
     public function testAMalformedTokenIsRefusedWithATypedException(): void

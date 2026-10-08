@@ -8,6 +8,7 @@ use Appsolutely\Sdk\Exception\DiscoveryException;
 use Appsolutely\Sdk\Http\CacheControl;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Http\Json;
+use Appsolutely\Sdk\Http\Untrusted;
 use Psr\SimpleCache\CacheInterface;
 
 /**
@@ -69,7 +70,7 @@ final readonly class Discovery
         if ($metadata->issuer !== $this->issuer) {
             throw new DiscoveryException(sprintf(
                 'The discovery document names issuer "%s", but the client is configured for "%s".',
-                $metadata->issuer,
+                Untrusted::text($metadata->issuer, 200),
                 $this->issuer,
             ));
         }

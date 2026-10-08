@@ -9,6 +9,7 @@ use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Http\CacheControl;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Http\Json;
+use Appsolutely\Sdk\Http\Untrusted;
 use Firebase\JWT\JWK;
 use Firebase\JWT\Key;
 use Psr\Clock\ClockInterface;
@@ -52,14 +53,14 @@ final readonly class KeySet
         }
 
         if ($this->now() - $set['fetched_at'] >= self::REFETCH_INTERVAL) {
-            $this->logger->info('An ID token names an unknown signing key; fetching the key set again.', ['kid' => $kid, 'jwks_uri' => $this->jwksUri]);
+            $this->logger->info('An ID token names an unknown signing key; fetching the key set again.', ['kid' => Untrusted::text($kid), 'jwks_uri' => $this->jwksUri]);
             $key = self::find($this->fetch()['keys'], $kid, $algorithms);
             if ($key !== null) {
                 return $key;
             }
         }
 
-        throw new IdTokenException(sprintf('The ID token is signed with key "%s", which the provider does not publish for %s.', $kid, implode(' or ', $algorithms)));
+        throw new IdTokenException(sprintf('The ID token is signed with key "%s", which the provider does not publish for %s.', Untrusted::text($kid), implode(' or ', $algorithms)));
     }
 
     /**

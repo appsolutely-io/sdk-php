@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Exception;
 
 use Appsolutely\Sdk\Http\Json;
+use Appsolutely\Sdk\Http\Untrusted;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
 
@@ -21,7 +22,11 @@ final class OAuthException extends RuntimeException implements AppsolutelyExcept
         public readonly ?string $errorUri = null,
         public readonly ?int $statusCode = null,
     ) {
-        parent::__construct($errorDescription === null ? sprintf('OAuth error "%s".', $error) : sprintf('OAuth error "%s": %s', $error, $errorDescription));
+        // The fields came from a redirect or a provider response: kept as
+        // received on the properties, made printable and short in the message.
+        parent::__construct($errorDescription === null
+            ? sprintf('OAuth error "%s".', Untrusted::text($error))
+            : sprintf('OAuth error "%s": %s', Untrusted::text($error), Untrusted::text($errorDescription, 200)));
     }
 
     /**

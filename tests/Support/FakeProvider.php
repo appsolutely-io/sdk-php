@@ -14,6 +14,7 @@ use Http\Mock\Client as MockClient;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * An in-memory stand-in for an Appsolutely sign-in host, shaped like aio's
@@ -79,7 +80,7 @@ final class FakeProvider
         $this->http->on(new CallbackRequestMatcher(static fn(): bool => true), fn(RequestInterface $request): ResponseInterface => $this->handle($request));
     }
 
-    public function config(ClientAuthentication $authentication = ClientAuthentication::ClientSecretBasic, int $leeway = 60): Config
+    public function config(ClientAuthentication $authentication = ClientAuthentication::ClientSecretBasic, int $leeway = 60, ?LoggerInterface $logger = null): Config
     {
         return new Config(
             issuer: self::ISSUER,
@@ -90,14 +91,15 @@ final class FakeProvider
             streamFactory: $this->factory,
             cache: $this->cache,
             clock: $this->clock,
+            logger: $logger,
             clientAuthentication: $authentication,
             clockLeeway: $leeway,
         );
     }
 
-    public function oidc(ClientAuthentication $authentication = ClientAuthentication::ClientSecretBasic, int $leeway = 60): OpenIdClient
+    public function oidc(ClientAuthentication $authentication = ClientAuthentication::ClientSecretBasic, int $leeway = 60, ?LoggerInterface $logger = null): OpenIdClient
     {
-        return (new Client($this->config($authentication, $leeway)))->oidc();
+        return (new Client($this->config($authentication, $leeway, $logger)))->oidc();
     }
 
     /**

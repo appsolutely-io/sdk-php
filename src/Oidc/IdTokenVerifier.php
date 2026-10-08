@@ -6,6 +6,7 @@ namespace Appsolutely\Sdk\Oidc;
 
 use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Http\Json;
+use Appsolutely\Sdk\Http\Untrusted;
 use Firebase\JWT\BeforeValidException;
 use Firebase\JWT\ExpiredException;
 use Firebase\JWT\JWT;
@@ -54,7 +55,7 @@ final readonly class IdTokenVerifier
 
         $allowed = array_values(array_intersect(self::SUPPORTED_ALGORITHMS, $this->advertisedAlgorithms));
         if (!in_array($alg, $allowed, true)) {
-            throw new IdTokenException(sprintf('The ID token is signed with %s; only %s is accepted.', $alg, $allowed === [] ? 'nothing' : implode(' or ', $allowed)));
+            throw new IdTokenException(sprintf('The ID token is signed with %s; only %s is accepted.', Untrusted::text($alg), $allowed === [] ? 'nothing' : implode(' or ', $allowed)));
         }
 
         $this->verifySignature($jwt, $kid, $alg);

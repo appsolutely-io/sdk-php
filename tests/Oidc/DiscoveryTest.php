@@ -125,6 +125,20 @@ final class DiscoveryTest extends TestCase
         $provider->oidc()->metadata();
     }
 
+    public function testAnotherIssuerReachesTheMessageOnlyAsPrintableText(): void
+    {
+        $provider = new FakeProvider();
+        $provider->discovery['issuer'] = "https://evil.example.com\nFORGED";
+
+        try {
+            $provider->oidc()->metadata();
+            self::fail('Another issuer was accepted.');
+        } catch (DiscoveryException $exception) {
+            self::assertStringContainsString('https://evil.example.com?FORGED', $exception->getMessage());
+            self::assertDoesNotMatchRegularExpression('/[^\x20-\x7E]/', $exception->getMessage());
+        }
+    }
+
     public function testItRefusesADocumentMissingARequiredEndpoint(): void
     {
         $provider = new FakeProvider();

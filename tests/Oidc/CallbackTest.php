@@ -91,6 +91,23 @@ final class CallbackTest extends TestCase
         }
     }
 
+    public function testTheErrorReachesTheMessageOnlyAsPrintableText(): void
+    {
+        try {
+            $this->provider->oidc()->validateCallback(
+                ['error' => "access_denied\nFORGED", 'error_description' => "Declined.\r\nFORGED " . str_repeat('x', 300), 'state' => $this->request->state, 'iss' => FakeProvider::ISSUER],
+                $this->request,
+            );
+            self::fail('No exception was thrown.');
+        } catch (OAuthException $exception) {
+            self::assertStringContainsString('access_denied?FORGED', $exception->getMessage());
+            self::assertStringContainsString('Declined.??FORGED', $exception->getMessage());
+            self::assertDoesNotMatchRegularExpression('/[^\x20-\x7E]/', $exception->getMessage());
+            self::assertLessThan(300, strlen($exception->getMessage()));
+            self::assertSame("access_denied\nFORGED", $exception->error);
+        }
+    }
+
     public function testItRefusesAResponseWithoutACode(): void
     {
         $this->expectException(AuthorizationResponseException::class);
