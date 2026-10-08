@@ -296,7 +296,7 @@ final readonly class OpenIdClient
             return new TokenSet(
                 $cached['access_token'],
                 $cached['token_type'],
-                (new \DateTimeImmutable())->setTimestamp($cached['expires_at']),
+                $this->clock->now()->setTimestamp($cached['expires_at']),
                 scope: is_string($cachedScope) ? $cachedScope : null,
             );
         }

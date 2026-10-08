@@ -10,6 +10,7 @@ use Appsolutely\Sdk\Oidc\IdToken;
 use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
+use Appsolutely\Sdk\Tests\Support\FrozenClock;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
@@ -275,6 +276,29 @@ final class TokenEndpointTest extends TestCase
             ['grant_type' => 'client_credentials', 'scope' => 'entitlements:read'],
             FakeProvider::form($provider->requestsTo('POST', self::TOKEN_URL)[0]),
         );
+    }
+
+    /**
+     * The cached copy is rebuilt from a stored timestamp; it must come back
+     * in the injected clock's zone like the fresh one, not the PHP default.
+     */
+    public function testACachedMachineTokenExpiresInTheClocksTimeZone(): void
+    {
+        $provider = new FakeProvider(new FrozenClock('2026-10-08T14:00:00+02:00'));
+        $provider->token = fn(): ResponseInterface => $provider->json(['access_token' => 'machine', 'token_type' => 'Bearer', 'expires_in' => 600]);
+        $defaultZone = date_default_timezone_get();
+        date_default_timezone_set('America/New_York');
+
+        try {
+            $fresh = $provider->oidc()->machineToken();
+            $cached = $provider->oidc()->machineToken();
+        } finally {
+            date_default_timezone_set($defaultZone);
+        }
+
+        self::assertCount(1, $provider->requestsTo('POST', self::TOKEN_URL));
+        self::assertSame('2026-10-08T14:10:00+02:00', $fresh->expiresAt?->format(DATE_ATOM));
+        self::assertSame('2026-10-08T14:10:00+02:00', $cached->expiresAt?->format(DATE_ATOM));
     }
 
     public function testMachineTokensForDifferentScopesAreCachedApart(): void

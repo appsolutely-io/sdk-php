@@ -53,9 +53,9 @@ final class FakeProvider
     /** @var (callable(RequestInterface): ResponseInterface)|null */
     public $revoke = null;
 
-    public function __construct()
+    public function __construct(?FrozenClock $clock = null)
     {
-        $this->clock = new FrozenClock();
+        $this->clock = $clock ?? new FrozenClock();
         $this->cache = new InMemoryCache($this->clock);
         $this->factory = new Psr17Factory();
         $this->http = new MockClient($this->factory);
