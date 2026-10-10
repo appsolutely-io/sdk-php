@@ -192,13 +192,21 @@ final class PagingTest extends TestCase
         $provider->client()->api()->raw()->page('/api/v1/articles');
     }
 
-    public function testASiteThatHandsBackTheSameCursorDoesNotLoopForever(): void
+    public function testASiteThatHandsBackTheSameCursorDoesNotLoopForeverYetKeepsThePagesItems(): void
     {
         $provider = self::pages([[['id' => 'a']], 'same'], [[['id' => 'b']], 'same']);
 
-        $this->expectException(UnexpectedResponseException::class);
+        $ids = [];
+        try {
+            foreach ($provider->client()->api()->raw()->paginate('/api/v1/articles') as $item) {
+                $ids[] = $item['id'] ?? null;
+            }
+            self::fail('The repeated cursor was followed.');
+        } catch (UnexpectedResponseException) {
+        }
 
-        iterator_to_array($provider->client()->api()->raw()->paginate('/api/v1/articles'), false);
+        self::assertSame(['a', 'b'], $ids);
+        self::assertCount(2, $provider->siteRequests());
     }
 
     public function testASiteWhoseCursorsLeadBackToAnEarlierPageDoesNotLoopForever(): void
@@ -212,12 +220,16 @@ final class PagingTest extends TestCase
             return $provider->json(['data' => [['id' => $cursor]], 'next_cursor' => $next[$cursor]]);
         };
 
+        $ids = [];
         try {
-            iterator_to_array($provider->client()->api()->raw()->paginate('/api/v1/articles'), false);
+            foreach ($provider->client()->api()->raw()->paginate('/api/v1/articles') as $item) {
+                $ids[] = $item['id'] ?? null;
+            }
             self::fail('The cycle was followed to its end.');
         } catch (UnexpectedResponseException) {
         }
 
+        self::assertSame(['', 'A', 'B'], $ids);
         self::assertCount(3, $provider->siteRequests());
     }
 
