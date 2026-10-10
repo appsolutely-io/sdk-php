@@ -6,12 +6,18 @@ namespace Appsolutely\Sdk\Tests\Webhooks\Events;
 
 use Appsolutely\Sdk\Exception\UnexpectedPayloadException;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
+use Appsolutely\Sdk\Webhooks\Data\Order;
 use Appsolutely\Sdk\Webhooks\Events\AccountEvent;
 use Appsolutely\Sdk\Webhooks\Events\ArticleEvent;
 use Appsolutely\Sdk\Webhooks\Events\FormSubmittedEvent;
+use Appsolutely\Sdk\Webhooks\Events\OrderEvent;
+use Appsolutely\Sdk\Webhooks\Events\OrderPaidEvent;
 use Appsolutely\Sdk\Webhooks\Events\PageEvent;
+use Appsolutely\Sdk\Webhooks\Events\PaymentReturnedEvent;
 use Appsolutely\Sdk\Webhooks\Events\PingEvent;
 use Appsolutely\Sdk\Webhooks\Events\ProductEvent;
+use Appsolutely\Sdk\Webhooks\Events\ReferralRewardIssuedEvent;
+use Appsolutely\Sdk\Webhooks\Events\RefundEvent;
 use Appsolutely\Sdk\Webhooks\Events\TypedEvent;
 use Appsolutely\Sdk\Webhooks\Events\UnknownEvent;
 use Appsolutely\Sdk\Webhooks\EventType;
@@ -255,6 +261,156 @@ final class TypedEventTest extends TestCase
         self::assertSame([], $entry->extra);
         self::assertSame('Contact', $event->form->name);
         self::assertSame('contact', $event->form->slug);
+    }
+
+    private static function assertTheOrder(Order $order, string $status): void
+    {
+        self::assertSame('7b9d1f3a-5c7e-4a9b-b1d3-f5a7c9e1b3d5', $order->id);
+        self::assertNull($order->subjectReference);
+        self::assertNull($order->couponCode);
+        self::assertSame($status, $order->status);
+        self::assertSame('production', $order->mode);
+        self::assertNull($order->subscriptionStartState);
+        self::assertSame('Team plan', $order->summary);
+        self::assertSame(1900, $order->amount);
+        self::assertSame('USD', $order->currency);
+        self::assertSame(0, $order->discountedAmount);
+        self::assertSame(0, $order->shippingAmount);
+        self::assertSame(0, $order->taxAmount);
+        self::assertTrue($order->taxIncluded);
+        self::assertSame(1900, $order->totalAmount);
+        self::assertSame('final', $order->totalShown);
+        self::assertSame('2026-10-08T11:58:40+00:00', $order->createdAt?->format(DATE_RFC3339));
+        self::assertSame('2026-10-08T11:59:58+00:00', $order->updatedAt?->format(DATE_RFC3339));
+        self::assertCount(1, $order->items ?? []);
+        $line = ($order->items ?? [])[0];
+        self::assertSame('1c3e5a7b-9d1f-4b3c-8e5a-7c9e1b3d5f7a', $line->id);
+        self::assertSame('3a5c7e9b-1d3f-4b5d-8f1a-3c5e7a9b1d3f', $line->productId);
+        self::assertSame(1, $line->quantity);
+        self::assertSame(1900, $line->price);
+        self::assertSame('USD', $line->currency);
+        self::assertSame([], $order->extra);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function orderTypes(): iterable
+    {
+        return self::each(OrderEvent::TYPES);
+    }
+
+    #[DataProvider('orderTypes')]
+    public function testEveryOrderEventCarriesTheOrderWithItsLines(string $type): void
+    {
+        $event = self::deliver($type, self::fixture('order'));
+
+        self::assertInstanceOf(OrderEvent::class, $event);
+        self::assertTheOrder($event->order, 'shipped');
+    }
+
+    public function testAPaidOrderNamesTheSettlingPaymentAndTheBuyer(): void
+    {
+        $event = self::deliver(EventType::ORDER_PAID, self::fixture('order-paid'));
+
+        self::assertInstanceOf(OrderPaidEvent::class, $event);
+        self::assertTheOrder($event->order, 'paid');
+        self::assertNotNull($event->payment);
+        self::assertSame('PAY-8F3K2M9Q4T7W', $event->payment->reference);
+        self::assertSame(1900, $event->payment->amount);
+        self::assertSame('USD', $event->payment->currency);
+        self::assertSame('5f0c2a9e8b7d41c3a6e2f9b1d0c8a7e65f4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d', $event->subject);
+    }
+
+    public function testAGuestsPaidOrderHasNoSubject(): void
+    {
+        $data = substr(self::fixture('order'), 0, -1) . ',"payment":null,"subject":null}';
+        $event = self::deliver(EventType::ORDER_PAID, $data);
+
+        self::assertInstanceOf(OrderPaidEvent::class, $event);
+        self::assertNull($event->payment);
+        self::assertNull($event->subject);
+        self::assertSame([], $event->order->extra);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function paymentReturnedTypes(): iterable
+    {
+        return self::each(PaymentReturnedEvent::TYPES);
+    }
+
+    #[DataProvider('paymentReturnedTypes')]
+    public function testMoneyComingBackNamesTheOrderAndThePayment(string $type): void
+    {
+        $event = self::deliver($type, self::fixture('order-payment'));
+
+        self::assertInstanceOf(PaymentReturnedEvent::class, $event);
+        self::assertTheOrder($event->order, 'cancelled');
+        self::assertSame('PAY-8F3K2M9Q4T7W', $event->payment->reference);
+        self::assertSame(1900, $event->payment->amount);
+        self::assertSame('USD', $event->payment->currency);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function refundTypes(): iterable
+    {
+        return self::each(RefundEvent::TYPES);
+    }
+
+    #[DataProvider('refundTypes')]
+    public function testARefundEventNamesTheRefundByItsReference(string $type): void
+    {
+        $event = self::deliver($type, self::fixture('refund'));
+
+        self::assertInstanceOf(RefundEvent::class, $event);
+        self::assertSame('RF-9K2M4Q6T8W1Z', $event->refund->id);
+        self::assertSame('Refund', $event->refund->type);
+    }
+
+    public function testAReferralRewardNamesTheReferrerTheCodeThePaymentAndTheReward(): void
+    {
+        $event = self::deliver(EventType::REFERRAL_REWARD_ISSUED, self::fixture('referral-reward'));
+
+        self::assertInstanceOf(ReferralRewardIssuedEvent::class, $event);
+        self::assertSame('5f0c2a9e8b7d41c3a6e2f9b1d0c8a7e65f4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d', $event->subject);
+        self::assertSame('ADA-7Q2K', $event->referralCode);
+        self::assertSame('PAY-8F3K2M9Q4T7W', $event->paymentReference);
+        self::assertSame('credit', $event->reward->type);
+        self::assertSame(500, $event->reward->value);
+        self::assertSame('USD', $event->reward->currency);
+        self::assertSame('RWD-4N8P2X6Z', $event->reward->code);
+        self::assertSame(0, $event->reward->minOrderAmount);
+        self::assertSame('2027-01-06T11:59:58+00:00', $event->reward->expiresAt?->format(DATE_RFC3339));
+        self::assertSame([], $event->extra);
+    }
+
+    public function testACashbackRewardHasNoCouponAndAGoneReferrerNoSubject(): void
+    {
+        $event = self::deliver(
+            EventType::REFERRAL_REWARD_ISSUED,
+            '{"subject":null,"referral_code":null,"payment_reference":null,"reward":{"type":"cashback","value":250,"currency":"EUR","code":null,"min_order_amount":null,"expires_at":null}}',
+        );
+
+        self::assertInstanceOf(ReferralRewardIssuedEvent::class, $event);
+        self::assertNull($event->subject);
+        self::assertNull($event->referralCode);
+        self::assertNull($event->paymentReference);
+        self::assertSame('cashback', $event->reward->type);
+        self::assertNull($event->reward->code);
+        self::assertNull($event->reward->minOrderAmount);
+        self::assertNull($event->reward->expiresAt);
+    }
+
+    public function testAnAmountThatIsNotAnIntegerIsRefused(): void
+    {
+        $this->expectException(UnexpectedPayloadException::class);
+        $this->expectExceptionMessage('The payment.refunded delivery\'s data.payment.amount is not an integer.');
+
+        self::deliver(EventType::PAYMENT_REFUNDED, str_replace('"amount":1900,"currency":"USD"}', '"amount":"19.00","currency":"USD"}', self::fixture('order-payment')));
     }
 
     public function testAnUnknownTypeIsAGenericEventWithItsDataStillReadable(): void
