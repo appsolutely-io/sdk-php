@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Support;
 
 /**
- * A record as the site serves it, one file per shape under Fixtures/Site:
- * the fields in the site's order, null where it sends null, times as RFC
- * 3339 UTC to the second, ids as strings and amounts as integer minor units.
- * The site serialises a record the same way in an API answer and in a
- * webhook delivery's `data`, so tests of both read the same file.
+ * What the site sends, one file per shape under Fixtures/Site: a record,
+ * or the `data` of a delivery that carries none. The fields are in the
+ * site's order, null where it sends null, times as RFC 3339 UTC to the
+ * second, ids as strings and amounts as integer minor units. The site
+ * serialises a record the same way in an API answer and in a webhook
+ * delivery's `data`, so tests of both read the same file.
  */
 final class SiteFixture
 {
