@@ -10,7 +10,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `Client` and `Config`, built on PSR-18/17 HTTP, PSR-16 cache, PSR-20 clock and PSR-3 logger interfaces, with an HTTP client discovered when none is given.
-- OpenID Connect sign-in through `Client::oidc()`: discovery and the signing keys cached per `Cache-Control` for a day at most, an authorization URL with `state`, `nonce`, PKCE S256 and an optional `max_age` whose `auth_time` is then checked, callback validation including the RFC 9207 `iss` parameter, the code exchange, ID token verification against the provider's RS256/ES256 keys, userinfo, RFC 7009 revocation and a cached `client_credentials` machine token for the party's API calls (the calls themselves are not wrapped yet).
+- OpenID Connect sign-in through `Client::oidc()`: discovery and the signing keys cached per `Cache-Control` for a day at most, an authorization URL with `state`, `nonce`, PKCE S256 and an optional `max_age` whose `auth_time` is then checked, callback validation including the RFC 9207 `iss` parameter, the code exchange, ID token verification against the provider's RS256/ES256 keys, userinfo and RFC 7009 revocation.
 - Token refresh that holds every refreshed ID token to the original authentication (OpenID Connect Core section 12.2): the original ID token is required, the result always carries the ID token to keep for the next refresh (the original when the provider sends none), and a refreshed token without `auth_time` keeps the original's in `IdToken::$authTime`.
 - `IdToken::toArray()` and `IdToken::fromTrustedStorage()` to keep the ID token in a session stored as JSON; the latter trusts the integrator's own storage and verifies nothing.
 - `Exception\OAuthException` carrying the OAuth error code returned by the provider.
@@ -18,14 +18,24 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Webhooks\Verifier` for Standard Webhooks v1 deliveries, including secret rotation with secrets of 24 to 64 bytes and a timestamp tolerance of five minutes by default, configurable from 1 to 3600 seconds, returning a typed `Webhooks\Event`.
 - `Webhooks\Deliveries` to acknowledge a retried or redelivered event without running its handler twice, with an optional namespace per endpoint so several endpoints can share one cache.
 - `Testing\WebhookFactory` to build deliveries signed exactly as Appsolutely signs them.
+- Site API calls through `Client::api()`, carrying the administrator token, and `Client::forMember($accessToken)->api()`, carrying a member's access token: `get()`, `post()`, `put()`, `patch()` and `delete()` on paths the site's API document names, joined to the base URL, with `Accept: application/json, application/problem+json`, the SDK `User-Agent` and an `X-Request-Id` that is generated or passed in. A success is an `Api\ApiResponse` with the decoded body, the status, the `Location`, the answered request id and the rate-limit budget.
+- Cursor paging of Site API lists: `SiteApi::page()` returns an `Api\Page` with its `items` and `nextCursor`, and `SiteApi::paginate()` an `Api\Paginator` that follows `next_cursor` unchanged, fetching each page only when iteration reaches it, until a page carries none. The `limit` runs from 1 to 100; `limit` and `cursor` cannot be passed as filters, so a cursor is never built by hand.
+- Idempotent writes through `SiteApi::postIdempotent()`: an `Idempotency-Key` that is passed in or generated as a UUID v4, the same key on every retry of the call, and `ApiResponse::$replayed` from `Idempotent-Replayed`. Reads and keyed writes are retried after a network failure, a 429, a 503 and a keyed write's 409 still in flight, waiting what `Retry-After` (or a spent `RateLimit` quota) asks or a jittered backoff, under an `Api\RetryPolicy` set in `Config` (2 retries and a 30-second ceiling by default, `RetryPolicy::none()` to turn it off, and a `Clock\Sleeper` to wait some other way). Other refusals, and writes without a key, are never retried.
+- `Exception\ApiException` for a refusal from the site: an RFC 9457 problem's `type`, `title`, `status`, `detail`, `instance`, the validation `errors`, every other member through `extension()`, the `X-Request-Id`, `Retry-After` in seconds, the `WWW-Authenticate` challenge and the rate-limit budget. `ValidationFailedException`, `NotFoundException`, `UnauthenticatedException`, `ForbiddenException`, `ConflictException`, `RateLimitedException` and `ServiceUnavailableException` cover the cases callers branch on; any other refusal, an unknown `type` included, is the base class. An error body that is not a problem keeps its raw text in `$body`, and a broken problem never fails the parse.
+- `Api\RateLimit` and `Api\RateLimitQuota`: the `RateLimit-Policy` and `RateLimit` fields of draft-ietf-httpapi-ratelimit-headers-11 read as Structured Field lists and joined by quota name (`quota`, `window`, `remaining`, `reset`), with `exhausted()` naming the spent quota that turns over last. A field that does not parse is ignored whole, never failing the call.
 
 ### Changed
 
+- **BREAKING:** `Config` describes one site: it takes the site's `baseUrl` first (its origin, held to the issuer's HTTPS rules and refused with a path), then the site's `issuer`, the OAuth client that signs its members in, and an optional `apiToken`, the administrator token for server-side calls, which is shown as `[redacted]` and refused when it holds a space or a control character.
 - `Exception\InvalidArgumentException` is renamed `Exception\InvalidArgumentValueException`, so an import is not mistaken for PHP's own class; `Webhooks\Verifier` and `Webhooks\Deliveries` throw it instead of `InvalidConfigException` for their own arguments.
 - `OpenIdClient::refresh()` requires the original ID token; it is no longer nullable.
 - `ProviderMetadata::$userinfoEndpoint` is renamed `$userInfoEndpoint`, cased like `userInfo()`.
 - `ProviderMetadata` can only be built through `fromArray()`, and `ProviderMetadata::fromArray()` and `Config::clientSecret()` are internal.
 - The User-Agent sends `dev` as the SDK version when Composer reports no real one.
+
+### Removed
+
+- **BREAKING:** `OpenIdClient::machineToken()` and the `client_credentials` grant behind it. Neither credential the client sends to a site comes from the token endpoint: server-side calls use the administrator token issued on the site, and calls made as a member use that member's access token.
 
 ### Security
 

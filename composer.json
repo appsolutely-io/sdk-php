@@ -1,9 +1,9 @@
 {
     "name": "appsolutely/sdk-php",
-    "description": "Framework-free PHP client for Appsolutely relying parties: OpenID Connect sign-in, the machine token for the party's API calls, and verified Standard Webhooks deliveries.",
+    "description": "Framework-free PHP client for one Appsolutely site: OpenID Connect sign-in of its members, the Site API as its administrator or a member, and verified Standard Webhooks deliveries.",
     "type": "library",
     "license": "MIT",
-    "keywords": ["appsolutely", "openid-connect", "oauth2", "pkce", "standard-webhooks", "sdk"],
+    "keywords": ["appsolutely", "api-client", "openid-connect", "oauth2", "pkce", "problem-details", "standard-webhooks", "sdk"],
     "homepage": "https://github.com/appsolutely-io/sdk-php",
     "support": {
         "issues": "https://github.com/appsolutely-io/sdk-php/issues",

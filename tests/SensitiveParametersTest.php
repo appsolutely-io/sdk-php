@@ -32,7 +32,7 @@ final class SensitiveParametersTest extends TestCase
     ];
 
     /**
-     * Named generically, yet carrying cached machine tokens.
+     * Named generically, yet carrying whatever is cached, which may be a credential.
      */
     private const array SENSITIVE_PARAMETERS = [
         [InMemoryCache::class, 'set', 'value'],

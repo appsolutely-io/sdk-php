@@ -1,6 +1,8 @@
 # Appsolutely PHP SDK
 
-A framework-free PHP client for relying parties of Appsolutely: OpenID Connect sign-in, the machine token for the party's own API calls (the calls themselves are not wrapped yet), and verified Standard Webhooks deliveries.
+A framework-free PHP client for one app's own site: it signs the site's members in with OpenID Connect, calls the Site API as the site's administrator or as a signed-in member, and verifies the site's Standard Webhooks deliveries.
+
+A site hosted for you and one you host yourself answer the same paths in the same shapes, so pointing the client from one to the other changes the base URL, the issuer and the credentials, nothing else.
 
 Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://github.com/appsolutely-io/sdk-laravel), which wires this client into the container, Socialite and the router.
 
@@ -51,29 +53,32 @@ use Appsolutely\Sdk\Config;
 // refuses under strict_types; casting it would turn a missing secret into ''.
 $clientId = getenv('APPSOLUTELY_CLIENT_ID');
 $clientSecret = getenv('APPSOLUTELY_CLIENT_SECRET');
-if ($clientId === false || $clientSecret === false) {
-    throw new RuntimeException('Set APPSOLUTELY_CLIENT_ID and APPSOLUTELY_CLIENT_SECRET.');
+$apiToken = getenv('APPSOLUTELY_API_TOKEN');
+if ($clientId === false || $clientSecret === false || $apiToken === false) {
+    throw new RuntimeException('Set APPSOLUTELY_CLIENT_ID, APPSOLUTELY_CLIENT_SECRET and APPSOLUTELY_API_TOKEN.');
 }
 
 $client = new Client(new Config(
-    issuer: 'https://login.example.com',          // the party's sign-in host, exactly as discovery names it
-    clientId: $clientId,
+    baseUrl: 'https://shop.example.com',           // the site's origin, without a path
+    issuer: 'https://shop.example.com',            // the site's OpenID issuer, exactly as its discovery names it
+    clientId: $clientId,                           // the site's OAuth client that signs members in
     clientSecret: $clientSecret,
+    apiToken: $apiToken,                           // optional: the administrator token issued on the site
     cache: $psr16Cache,                            // your application's shared cache; see below
 ));
 ```
 
-`Config` also takes a PSR-18 client and PSR-17 factories, a PSR-20 clock, a PSR-3 logger, the token-endpoint authentication (`client_secret_basic` by default, or `ClientAuthentication::ClientSecretPost`) and the clock leeway for ID tokens (60 seconds by default).
+The administrator token is a long-lived credential issued on the site's API-token screen; it is sent on the calls your server makes on its own behalf. Leave it out when your server only acts for signed-in members. Keep it, like the client secret, out of version control.
+
+`Config` also takes a PSR-18 client and PSR-17 factories, a PSR-20 clock, a PSR-3 logger, the token-endpoint authentication (`client_secret_basic` by default, or `ClientAuthentication::ClientSecretPost`), the clock leeway for ID tokens (60 seconds by default) and the retry policy for Site API calls (see [Writes that must happen once](#writes-that-must-happen-once)).
 
 ### The cache
 
-In production, pass your application's shared PSR-16 cache (Redis, Memcached, APCu or your framework's cache). Without one, the client falls back to a cache in memory that lives as long as the PHP process; under PHP-FPM that is a single request, so every request fetches the discovery document and the signing keys again and asks for a new machine token. The fallback exists so the client works anywhere, not for production.
-
-The cache holds the machine tokens from `machineToken()` until shortly before they expire. They are live bearer credentials for your party's API calls: protect the cache like a credential store, and do not share it with applications that should not act as your party.
+In production, pass your application's shared PSR-16 cache (Redis, Memcached, APCu or your framework's cache). Without one, the client falls back to a cache in memory that lives as long as the PHP process; under PHP-FPM that is a single request, so every request fetches the discovery document and the signing keys again. The fallback exists so the client works anywhere, not for production.
 
 ## Signing a member in with OpenID Connect
 
-Two requests: one sends the member to Appsolutely, the other receives them back.
+Two requests: one sends the member to the site's sign-in page, the other receives them back.
 
 ```php
 // 1. Start: build the URL and keep the request in the session.
@@ -123,7 +128,69 @@ $_SESSION['appsolutely_tokens'] = [
 
 ### Other calls
 
-The same client reads the member's UserInfo claims (`userInfo($accessToken, $memberId)`), revokes a token (`revoke()`) and obtains a cached `client_credentials` token for the party's own API calls (`machineToken()`). OAuth errors become `Exception\OAuthException` with the error code in `$exception->error`. Every exception an integrator may catch lives in the `Appsolutely\Sdk\Exception` namespace and implements `Exception\AppsolutelyException`. A refused argument is an `Exception\InvalidArgumentValueException`, or a subclass naming what was refused (`InvalidConfigException` for a `Config` value, `InvalidSecretException` for a webhook signing secret).
+The same client reads the member's UserInfo claims (`userInfo($accessToken, $memberId)`) and revokes a token (`revoke()`). OAuth errors become `Exception\OAuthException` with the error code in `$exception->error`. Every exception an integrator may catch lives in the `Appsolutely\Sdk\Exception` namespace and implements `Exception\AppsolutelyException`. A refused argument is an `Exception\InvalidArgumentValueException`, or a subclass naming what was refused (`InvalidConfigException` for a `Config` value, `InvalidSecretException` for a webhook signing secret).
+
+## Calling the Site API
+
+`$client->api()` calls the site's API as its administrator, with the token from `Config`; `$client->forMember($accessToken)->api()` makes the same calls as a signed-in member, with the access token their sign-in returned. Paths are the ones the site's API document names:
+
+```php
+use Appsolutely\Sdk\Exception\ApiException;
+use Appsolutely\Sdk\Exception\NotFoundException;
+use Appsolutely\Sdk\Exception\ValidationFailedException;
+
+$article = $client->api()->get('/api/v1/articles/' . rawurlencode($id))->data;
+
+$me = $client->forMember($tokens->accessToken)->api()->get('/api/v1/me')->data;
+
+try {
+    $client->api()->patch('/api/v1/articles/' . rawurlencode($id), ['title' => $title]);
+} catch (ValidationFailedException $exception) {
+    $errors = $exception->errors;          // ['title' => ['The title field is required.']]
+} catch (NotFoundException) {
+    // gone in the meantime
+}
+```
+
+Every call sends `Accept: application/json, application/problem+json`, the SDK's `User-Agent` and an `X-Request-Id`: a fresh UUID, or the one you pass as `requestId:` to tie the call to your own logs. A success is an `Api\ApiResponse`: the decoded resource in `$data` (null for a `204`), `$status`, `$location` for a created resource, `$requestId` as the site answered it, and `$rateLimit`, the budget the site states in its `RateLimit-Policy` and `RateLimit` headers, by quota name (`$response->rateLimit->quota('api:authenticated')?->remaining`).
+
+A list answers a page, `{"data": [...], "next_cursor": "..."}`. `paginate()` walks every item, asking for each next page only when iteration reaches it and stopping at the page without a cursor; `page()` fetches one page when you keep the cursor yourself, say between requests:
+
+```php
+foreach ($client->api()->paginate('/api/v1/orders', ['status' => 'paid'], limit: 100) as $order) {
+    // every paid order, 100 per request
+}
+
+$page = $client->api()->page('/api/v1/orders', ['status' => 'paid'], cursor: $savedCursor);
+$savedCursor = $page->nextCursor;      // null on the last page
+```
+
+`limit` runs from 1 to 100 (25 by default). The filters go with every page; the cursor is sealed by the site, so pass back `nextCursor` unchanged and never build one. `$paginator->pages()` yields whole `Api\Page`s, and `$paginator->map($fn)` converts each item as it is reached.
+
+A refusal is thrown as an `Exception\ApiException` built from the site's RFC 9457 problem: `$type` (branch on it, or on `hasType('validation-failed')`), `$title`, `$status`, `$detail`, `$errors`, `$requestId`, `$retryAfter`, `$challenge` (the `WWW-Authenticate` header) and any other member through `extension('required_ability')`. `ValidationFailedException`, `NotFoundException`, `UnauthenticatedException`, `ForbiddenException`, `ConflictException`, `RateLimitedException` and `ServiceUnavailableException` extend it for the cases you are likely to handle; an answer that is not a problem (a proxy's error page) is an `ApiException` with `$isProblem` false and the raw `$body`. A request that never got an answer is an `Exception\TransportException`.
+
+### Writes that must happen once
+
+Some writes, such as creating an article or filing a member's address, accept an `Idempotency-Key`. Send them with `postIdempotent()`: the client generates a UUID v4 key (or takes yours, 1 to 255 printable ASCII characters, one per operation) and sends the same key on every retry, so a retry after a lost answer is answered with the first answer instead of creating a second record:
+
+```php
+$response = $client->forMember($accessToken)->api()->postIdempotent('/api/v1/me/addresses', $address);
+$response->replayed;          // true when this is the stored answer to an earlier attempt
+$response->idempotencyKey;    // the key that was sent
+```
+
+Reads and keyed writes are retried after a network failure, a `429`, a `503`, and, for a keyed write, the `409` of an attempt with the same key still running. Each wait is what the site asks in `Retry-After` (or, on a `429` without it, until the spent quota in `RateLimit` turns over), otherwise a jittered backoff doubling from half a second. Other refusals are thrown at once, and so is a `500` under a key, whose outcome only reading the current state can settle; send the operation again under a new key if it still needs doing. `post()`, `put()`, `patch()` and `delete()` are never retried. Tune or turn this off in `Config`:
+
+```php
+use Appsolutely\Sdk\Api\RetryPolicy;
+
+new Config(/* ... */, retryPolicy: new RetryPolicy(maxRetries: 3, maxDelay: 60));
+new Config(/* ... */, retryPolicy: RetryPolicy::none());
+```
+
+`maxRetries` runs from 0 to 10 (2 by default), and a wait the site asks for beyond `maxDelay` seconds (30 by default) is not made: the refusal is thrown instead. Each retry is logged at `info` through the PSR-3 logger.
+
+When the site refuses a token with `UnauthenticatedException`, renew it rather than retrying: refused credentials count against a budget of their own, and a client that keeps sending a dead token locks out every caller behind the same address.
 
 ## Verifying webhook deliveries
 
