@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Exception;
 
 use Appsolutely\Sdk\Api\RateLimit;
+use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\Json;
 use Appsolutely\Sdk\Http\RetryAfter;
 use Appsolutely\Sdk\Support\Untrusted;
@@ -76,16 +77,16 @@ class ApiException extends RuntimeException implements AppsolutelyException
     {
         $status = $response->getStatusCode();
         $body = (string) $response->getBody();
-        $mediaType = strtolower(trim(explode(';', $response->getHeaderLine('Content-Type'))[0]));
+        $mediaType = strtolower(trim(explode(';', $response->getHeaderLine(Header::CONTENT_TYPE))[0]));
         $problem = $mediaType === 'application/problem+json' ? Json::decodeObject($body) : null;
         $members = $problem ?? [];
 
         $type = self::nonEmptyString($members['type'] ?? null) ?? self::ABOUT_BLANK;
         $title = self::nonEmptyString($members['title'] ?? null)
             ?? ($response->getReasonPhrase() !== '' ? $response->getReasonPhrase() : 'HTTP ' . $status);
-        $retryAfter = $response->hasHeader('Retry-After') ? RetryAfter::seconds($response->getHeaderLine('Retry-After'), $now) : null;
-        $challenge = $response->getHeaderLine('WWW-Authenticate');
-        $answeredId = $response->getHeaderLine('X-Request-Id');
+        $retryAfter = $response->hasHeader(Header::RETRY_AFTER) ? RetryAfter::seconds($response->getHeaderLine(Header::RETRY_AFTER), $now) : null;
+        $challenge = $response->getHeaderLine(Header::WWW_AUTHENTICATE);
+        $answeredId = $response->getHeaderLine(Header::REQUEST_ID);
 
         $class = match (true) {
             $status === 422 && $type === self::TYPE_BASE . 'validation-failed' => ValidationFailedException::class,
@@ -111,7 +112,7 @@ class ApiException extends RuntimeException implements AppsolutelyException
             $answeredId !== '' ? $answeredId : $requestId,
             $retryAfter,
             $challenge !== '' ? $challenge : null,
-            RateLimit::fromHeaders($response->getHeaderLine('RateLimit-Policy'), $response->getHeaderLine('RateLimit')),
+            RateLimit::fromHeaders($response->getHeaderLine(Header::RATE_LIMIT_POLICY), $response->getHeaderLine(Header::RATE_LIMIT)),
         );
     }
 

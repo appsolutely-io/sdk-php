@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Exception;
 
+use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\Json;
 use Appsolutely\Sdk\Support\Untrusted;
 use Psr\Http\Message\ResponseInterface;
@@ -61,7 +62,7 @@ final class OAuthException extends RuntimeException implements AppsolutelyExcept
             return $exception;
         }
 
-        $challenge = $response->getHeaderLine('WWW-Authenticate');
+        $challenge = $response->getHeaderLine(Header::WWW_AUTHENTICATE);
         if (preg_match_all('/(error|error_description|error_uri)="([^"]*)"/', $challenge, $matches, PREG_SET_ORDER) > 0) {
             $fields = [];
             foreach ($matches as $match) {

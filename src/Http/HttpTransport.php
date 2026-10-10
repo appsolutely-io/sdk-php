@@ -47,7 +47,7 @@ final readonly class HttpTransport
     public function postForm(string $url, #[\SensitiveParameter] array $fields, #[\SensitiveParameter] array $headers = []): ResponseInterface
     {
         $request = $this->request('POST', $url, $headers)
-            ->withHeader('Content-Type', 'application/x-www-form-urlencoded')
+            ->withHeader(Header::CONTENT_TYPE, 'application/x-www-form-urlencoded')
             ->withBody($this->streams->createStream(http_build_query($fields, '', '&', PHP_QUERY_RFC1738)));
 
         return $this->send($request);
@@ -63,7 +63,7 @@ final readonly class HttpTransport
         $request = $this->request($method, $url, $headers);
         if ($body !== null) {
             $request = $request
-                ->withHeader('Content-Type', 'application/json')
+                ->withHeader(Header::CONTENT_TYPE, 'application/json')
                 ->withBody($this->streams->createStream($body));
         }
 
@@ -76,8 +76,8 @@ final readonly class HttpTransport
     private function request(string $method, string $url, #[\SensitiveParameter] array $headers): RequestInterface
     {
         $request = $this->requests->createRequest($method, $url)
-            ->withHeader('User-Agent', Sdk::userAgent())
-            ->withHeader('Accept', 'application/json');
+            ->withHeader(Header::USER_AGENT, Sdk::userAgent())
+            ->withHeader(Header::ACCEPT, 'application/json');
 
         foreach ($headers as $name => $value) {
             $request = $request->withHeader($name, $value);
