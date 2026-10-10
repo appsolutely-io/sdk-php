@@ -4,57 +4,101 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Model;
 
+use Appsolutely\Sdk\Exception\UnexpectedPayloadException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\Json;
+use Appsolutely\Sdk\Support\Untrusted;
 use DateTimeImmutable;
 use DateTimeZone;
+use RuntimeException;
 
 /**
- * One JSON object of a Site API answer, read field by field into a model.
- * Each kind of value has one reading: an identifier or a text is a string,
- * a time is RFC 3339 read as an instant in UTC, money is an integer count
- * of minor units. A field the site sent in another shape is refused, naming
- * the schema and the path to the field, rather than read as something else.
+ * One JSON object the site sent, an API answer or a webhook delivery's
+ * `data`, read field by field into a model. The site serialises a record
+ * the same way on both, so one reader serves both.
  *
- * The names read are recorded, so the contract test can hold every model to
- * the schema the document gives it.
+ * Each kind of value has one reading: an identifier or a text is a string,
+ * a time is RFC 3339 read as an instant in UTC, money is an integer count of
+ * minor units. A required field that is absent, null or of another type is
+ * refused, naming where it is, rather than read as something else; a
+ * nullable field that is absent reads as null. The value itself never
+ * reaches the message: it may be personal data.
+ *
+ * The members read are remembered twice: per object, so what the site sends
+ * beyond them stays readable as extra(); and as paths across the whole
+ * answer, so the contract test can hold every model to its schema.
  *
  * @internal
  */
 final class Fields
 {
     /**
+     * RFC 3339 section 5.6: a full date, `T`, a full time with an optional
+     * fraction, and `Z` or a numeric offset. The letters may be lower case.
+     */
+    private const string RFC_3339 = '/^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:([Zz])|([+-])(\d{2}):(\d{2}))$/D';
+
+    /** @var array<string, true> the members of this object read so far */
+    private array $read = [];
+
+    /**
      * @param array<string, mixed> $object
-     * @param \ArrayObject<int, string> $reads shared by a model and the objects nested in it
-     * @param string $path the object's place in the answer, for a refusal: `items[1]`
+     * @param string $source what the object came in, for a refusal: a schema name, or an event type
+     * @param bool $delivery whether it is a webhook delivery's data rather than an API answer
+     * @param \ArrayObject<int, string> $reads shared by an object and the objects nested in it
+     * @param string $path the object's place in what was sent, for a refusal: `items[1]`
      * @param string $readPath the object's place in its schema, for the record: `items[]`
      */
     private function __construct(
         private readonly array $object,
-        private readonly string $schema,
+        private readonly string $source,
+        private readonly bool $delivery,
         private readonly \ArrayObject $reads,
         private readonly string $path,
         private readonly string $readPath,
     ) {}
 
     /**
+     * An object of a Site API answer; a field that breaks the schema is an
+     * UnexpectedResponseException.
+     *
      * @param array<string, mixed> $object
-     * @param string $schema the name of the document's schema the object follows, for a refusal
+     * @param string $schema the name of the document's schema the object follows
      */
-    public static function of(array $object, string $schema): self
+    public static function of(#[\SensitiveParameter] array $object, string $schema): self
     {
-        return new self($object, $schema, new \ArrayObject(), '', '');
+        return new self($object, $schema, false, new \ArrayObject(), '', '');
     }
 
     /**
-     * The object as the site sent it, members this client has no property
-     * for included.
+     * A verified delivery's `data`; a field that breaks the shape its type is
+     * sent with is an UnexpectedPayloadException.
+     *
+     * @param array<string, mixed> $data
+     */
+    public static function ofDelivery(#[\SensitiveParameter] array $data, string $type): self
+    {
+        return new self($data, $type, true, new \ArrayObject(), 'data', '');
+    }
+
+    /**
+     * The same object without members another reader owns, such as the
+     * `payment` an `order.paid` delivery adds beside the order's own fields.
+     */
+    public function except(string ...$names): self
+    {
+        return new self(array_diff_key($this->object, array_flip($names)), $this->source, $this->delivery, $this->reads, $this->path, $this->readPath);
+    }
+
+    /**
+     * The members no reader asked for, as decoded: what the site added after
+     * this client was written.
      *
      * @return array<string, mixed>
      */
-    public function all(): array
+    public function extra(): array
     {
-        return $this->object;
+        return array_diff_key($this->object, $this->read);
     }
 
     /**
@@ -69,14 +113,14 @@ final class Fields
 
     public function string(string $name): string
     {
-        return $this->optionalString($name) ?? $this->missing($name);
+        return $this->nullableString($name) ?? $this->missing($name);
     }
 
-    public function optionalString(string $name): ?string
+    public function nullableString(string $name): ?string
     {
         $value = $this->value($name);
         if ($value !== null && !is_string($value)) {
-            $this->refuse($name, 'a string');
+            $this->refuse($name, 'a string', $value);
         }
 
         return $value;
@@ -84,14 +128,14 @@ final class Fields
 
     public function int(string $name): int
     {
-        return $this->optionalInt($name) ?? $this->missing($name);
+        return $this->nullableInt($name) ?? $this->missing($name);
     }
 
-    public function optionalInt(string $name): ?int
+    public function nullableInt(string $name): ?int
     {
         $value = $this->value($name);
         if ($value !== null && !is_int($value)) {
-            $this->refuse($name, 'an integer');
+            $this->refuse($name, 'an integer', $value);
         }
 
         return $value;
@@ -99,14 +143,14 @@ final class Fields
 
     public function bool(string $name): bool
     {
-        return $this->optionalBool($name) ?? $this->missing($name);
+        return $this->nullableBool($name) ?? $this->missing($name);
     }
 
-    public function optionalBool(string $name): ?bool
+    public function nullableBool(string $name): ?bool
     {
         $value = $this->value($name);
         if ($value !== null && !is_bool($value)) {
-            $this->refuse($name, 'a boolean');
+            $this->refuse($name, 'a boolean', $value);
         }
 
         return $value;
@@ -114,29 +158,51 @@ final class Fields
 
     public function time(string $name): DateTimeImmutable
     {
-        return $this->optionalTime($name) ?? $this->missing($name);
+        return $this->nullableTime($name) ?? $this->missing($name);
     }
 
     /**
      * An RFC 3339 date-time with an offset (`2026-10-08T12:34:56Z`), as the
-     * same instant in UTC.
+     * same instant in UTC. The site writes every time in UTC to the second;
+     * an offset or a fraction is still read, the fraction to the
+     * microsecond. A leap second (`:60`) is refused: a DateTimeImmutable
+     * cannot hold one.
      */
-    public function optionalTime(string $name): ?DateTimeImmutable
+    public function nullableTime(string $name): ?DateTimeImmutable
     {
         $value = $this->value($name);
         if ($value === null) {
             return null;
         }
 
-        $match = is_string($value) && preg_match('/^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?([Zz]|[+-]\d{2}:\d{2})$/D', $value, $parts) === 1;
-        if (!$match || !checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1]) || (int) $parts[4] > 23 || (int) $parts[5] > 59 || (int) $parts[6] > 59) {
-            $this->refuse($name, 'an RFC 3339 date-time with an offset');
+        if (!is_string($value) || preg_match(self::RFC_3339, $value, $parts, PREG_UNMATCHED_AS_NULL) !== 1) {
+            $this->refuse($name, 'an RFC 3339 date-time with an offset', $value);
+        }
+        [, $year, $month, $day, $hour, $minute, $second] = $parts;
+        $fraction = $parts[7] ?? '';
+        $zulu = $parts[8] !== null;
+        $offsetHours = $parts[10] ?? '00';
+        $offsetMinutes = $parts[11] ?? '00';
+        if (!checkdate((int) $month, (int) $day, (int) $year)
+            || (int) $hour > 23 || (int) $minute > 59 || (int) $second > 59
+            || (int) $offsetHours > 23 || (int) $offsetMinutes > 59) {
+            $this->refuse($name, 'an RFC 3339 date-time with an offset', $value);
         }
 
-        $offset = strtoupper($parts[7]) === 'Z' ? '+00:00' : $parts[7];
-        $time = DateTimeImmutable::createFromFormat('Y-m-d\TH:i:sP', sprintf('%s-%s-%sT%s:%s:%s%s', $parts[1], $parts[2], $parts[3], $parts[4], $parts[5], $parts[6], $offset));
+        $offset = $zulu ? '+00:00' : ($parts[9] ?? '+') . $offsetHours . ':' . $offsetMinutes;
+        $time = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i:s.uP', sprintf(
+            '%s-%s-%sT%s:%s:%s.%s%s',
+            $year,
+            $month,
+            $day,
+            $hour,
+            $minute,
+            $second,
+            str_pad(substr($fraction, 0, 6), 6, '0'),
+            $offset,
+        ));
         if ($time === false) {
-            $this->refuse($name, 'an RFC 3339 date-time with an offset');
+            $this->refuse($name, 'an RFC 3339 date-time with an offset', $value);
         }
 
         return $time->setTimezone(new DateTimeZone('UTC'));
@@ -150,7 +216,7 @@ final class Fields
         $values = $this->list($name, 'a list of strings');
         foreach ($values as $value) {
             if (!is_string($value)) {
-                $this->refuse($name, 'a list of strings');
+                $this->refuse($name, 'a list of strings', $values);
             }
         }
 
@@ -160,28 +226,48 @@ final class Fields
 
     /**
      * A free-form object, such as a form entry's answers, kept as decoded.
+     * `{}` and `[]` both decode to an empty array.
      *
      * @return array<string, mixed>
      */
     public function map(string $name): array
     {
-        return $this->optionalMap($name) ?? $this->missing($name);
+        return $this->nullableMap($name) ?? $this->missing($name);
     }
 
     /**
      * @return array<string, mixed>|null
      */
-    public function optionalMap(string $name): ?array
+    public function nullableMap(string $name): ?array
     {
         $value = $this->value($name);
         if ($value === null) {
             return null;
         }
         if (!self::isObject($value)) {
-            $this->refuse($name, 'an object');
+            $this->refuse($name, 'an object', $value);
         }
 
         return Json::stringKeys($value);
+    }
+
+    /**
+     * An object of integers, such as an account's totals, which the site
+     * sends as `{}` when there are none.
+     *
+     * @return array<string, int>
+     */
+    public function intMap(string $name): array
+    {
+        $integers = [];
+        foreach ($this->map($name) as $member => $value) {
+            if (!is_int($value)) {
+                $this->refuse($name . '.' . $member, 'an integer', $value);
+            }
+            $integers[$member] = $value;
+        }
+
+        return $integers;
     }
 
     /**
@@ -189,20 +275,20 @@ final class Fields
      */
     public function object(string $name): self
     {
-        return $this->optionalObject($name) ?? $this->missing($name);
+        return $this->nullableObject($name) ?? $this->missing($name);
     }
 
-    public function optionalObject(string $name): ?self
+    public function nullableObject(string $name): ?self
     {
         $value = $this->value($name);
         if ($value === null) {
             return null;
         }
         if (!self::isObject($value)) {
-            $this->refuse($name, 'an object');
+            $this->refuse($name, 'an object', $value);
         }
 
-        return new self(Json::stringKeys($value), $this->schema, $this->reads, $this->join($this->path, $name), $this->join($this->readPath, $name));
+        return new self(Json::stringKeys($value), $this->source, $this->delivery, $this->reads, $this->join($this->path, $name), $this->join($this->readPath, $name));
     }
 
     /**
@@ -215,9 +301,9 @@ final class Fields
         $objects = [];
         foreach ($this->list($name, 'a list of objects') as $index => $value) {
             if (!self::isObject($value)) {
-                $this->refuse($name, 'a list of objects');
+                $this->refuse($name . '[' . $index . ']', 'an object', $value);
             }
-            $objects[] = new self(Json::stringKeys($value), $this->schema, $this->reads, $this->join($this->path, $name) . '[' . $index . ']', $this->join($this->readPath, $name) . '[]');
+            $objects[] = new self(Json::stringKeys($value), $this->source, $this->delivery, $this->reads, $this->join($this->path, $name) . '[' . $index . ']', $this->join($this->readPath, $name) . '[]');
         }
 
         return $objects;
@@ -228,12 +314,9 @@ final class Fields
      */
     private function list(string $name, string $expected): array
     {
-        $value = $this->value($name);
-        if ($value === null) {
-            $this->missing($name);
-        }
+        $value = $this->value($name) ?? $this->missing($name);
         if (!is_array($value) || !array_is_list($value)) {
-            $this->refuse($name, $expected);
+            $this->refuse($name, $expected, $value);
         }
 
         return $value;
@@ -241,6 +324,7 @@ final class Fields
 
     private function value(string $name): mixed
     {
+        $this->read[$name] = true;
         $this->reads[] = $this->join($this->readPath, $name);
 
         return $this->object[$name] ?? null;
@@ -261,18 +345,28 @@ final class Fields
 
     private function missing(string $name): never
     {
-        throw new UnexpectedResponseException(sprintf('The site answered a "%s" object without "%s", which the Site API document requires.', $this->schema, $this->join($this->path, $name)), 0);
+        throw $this->delivery
+            ? $this->refusal(sprintf('The %s delivery\'s %s is missing.', Untrusted::text($this->source), $this->where($name)))
+            : $this->refusal(sprintf('The site answered a "%s" object without "%s", which the Site API document requires.', $this->source, $this->where($name)));
     }
 
-    private function refuse(string $name, string $expected): never
+    private function refuse(string $name, string $expected, mixed $value): never
     {
-        // The value itself is left out: it may be personal data.
-        throw new UnexpectedResponseException(sprintf(
-            'The site answered a "%s" object whose "%s" is not %s (%s).',
-            $this->schema,
-            $this->join($this->path, $name),
-            $expected,
-            get_debug_type($this->object[$name] ?? null),
-        ), 0);
+        throw $this->delivery
+            ? $this->refusal(sprintf('The %s delivery\'s %s is not %s.', Untrusted::text($this->source), $this->where($name), $expected))
+            : $this->refusal(sprintf('The site answered a "%s" object whose "%s" is not %s (%s).', $this->source, $this->where($name), $expected, get_debug_type($value)));
+    }
+
+    /**
+     * The field's path, its last step printable whatever the site named it.
+     */
+    private function where(string $name): string
+    {
+        return $this->join($this->path, Untrusted::text($name));
+    }
+
+    private function refusal(string $message): RuntimeException
+    {
+        return $this->delivery ? new UnexpectedPayloadException($message) : new UnexpectedResponseException($message, 0);
     }
 }

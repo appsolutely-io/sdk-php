@@ -18,7 +18,7 @@ final readonly class WebhookDelivery
      * @param string $webhookId the event's id, sent as `webhook-id`
      * @param string $type such as `order.paid`
      * @param string $status `pending`, `succeeded` or `failed`
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $webhookId,
@@ -30,11 +30,11 @@ final readonly class WebhookDelivery
         public ?DateTimeImmutable $nextAttemptAt,
         public ?DateTimeImmutable $deliveredAt,
         public ?DateTimeImmutable $failedAt,
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /** @internal */
-    public static function from(Fields $json): self
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
         return new self(
             webhookId: $json->string('webhook_id'),
@@ -42,11 +42,11 @@ final readonly class WebhookDelivery
             occurredAt: $json->time('occurred_at'),
             status: $json->string('status'),
             attempts: $json->int('attempts'),
-            lastResponseStatus: $json->optionalInt('last_response_status'),
-            nextAttemptAt: $json->optionalTime('next_attempt_at'),
-            deliveredAt: $json->optionalTime('delivered_at'),
-            failedAt: $json->optionalTime('failed_at'),
-            attributes: $json->all(),
+            lastResponseStatus: $json->nullableInt('last_response_status'),
+            nextAttemptAt: $json->nullableTime('next_attempt_at'),
+            deliveredAt: $json->nullableTime('delivered_at'),
+            failedAt: $json->nullableTime('failed_at'),
+            extra: $json->extra(),
         );
     }
 }

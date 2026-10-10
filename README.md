@@ -134,7 +134,7 @@ The same client reads the member's UserInfo claims (`userInfo($accessToken, $mem
 
 `$client->api()` calls the site's API as its administrator, with the token from `Config`; `$client->forMember($accessToken)->api()` calls it as a signed-in member, with the access token their sign-in returned. Every operation of the Site API document has one typed method, on the client of the audience that may call it: the member's own data only on the member's, everything else only on the administrator's.
 
-Answers are small readonly models in `Appsolutely\Sdk\Model`. Ids are strings, times are `DateTimeImmutable` in UTC, money is an integer count of the currency's minor units beside its ISO 4217 `currency` (`1999` with `USD` is 19.99), and `$model->attributes` keeps the whole object as the site sent it, so a field added by a newer site stays readable. The document the client is written against is pinned at `Contract::REVISION`, a commit of the site software.
+Answers are small readonly models in `Appsolutely\Sdk\Model`. Ids are strings, times are `DateTimeImmutable` in UTC, money is an integer count of the currency's minor units beside its ISO 4217 `currency` (`1999` with `USD` is 19.99), and `$model->extra` keeps the members the site sent that the model has no property for, as decoded, so a field added by a newer site stays readable. A webhook delivery carries a record in the same shape as the API serves it, so typed events hold these same models. The document the client is written against is pinned at `Contract::REVISION`, a commit of the site software.
 
 ### Pages, articles and products
 
@@ -396,7 +396,7 @@ match (true) {
 | `PingEvent` | `webhook.ping` | `$subscriptionId` |
 | `UnknownEvent` | any other type | none |
 
-`EventType` names every type as a constant. Times are `DateTimeImmutable` in UTC, ids are strings, and amounts are integers in the minor unit of the `currency` beside them. Every value object keeps the fields the site sent that it does not name in `$extra`, and every event keeps its envelope in `$envelope`, `data` included, so nothing that arrived is out of reach.
+`EventType` names every type as a constant. Times are `DateTimeImmutable` in UTC, ids are strings, and amounts are integers in the minor unit of the `currency` beside them. The records they carry are the `Model` classes the API returns (an `ArticleEvent`'s `$article` is a `Model\Article`), and every model keeps the members the site sent that it has no property for in `$extra`, and every event keeps its envelope in `$envelope`, `data` included, so nothing that arrived is out of reach.
 
 A type this client does not know becomes an `UnknownEvent`, never an exception: acknowledge it with a 2xx. A known type whose `data` lacks a field or carries one of the wrong type throws `Exception\UnexpectedPayloadException`; the delivery is genuine, so answer it with a 5xx and the site will retry it.
 

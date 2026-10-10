@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Webhooks\Events;
 
-use Appsolutely\Sdk\Webhooks\Data\Article;
-use Appsolutely\Sdk\Webhooks\Data\Fields;
+use Appsolutely\Sdk\Model\Article;
+use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Webhooks\Event;
 use Appsolutely\Sdk\Webhooks\EventType;
 
@@ -31,8 +31,8 @@ final readonly class ArticleEvent extends TypedEvent
     /**
      * @internal
      */
-    public static function read(Event $envelope, Fields $data): self
+    public static function read(Event $envelope, #[\SensitiveParameter] Fields $data): self
     {
-        return new self($envelope, Article::read($data));
+        return new self($envelope, Article::from($data));
     }
 }

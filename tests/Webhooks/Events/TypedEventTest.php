@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Webhooks\Events;
 
 use Appsolutely\Sdk\Exception\UnexpectedPayloadException;
+use Appsolutely\Sdk\Model\Order;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
 use Appsolutely\Sdk\Tests\Support\SiteFixture;
-use Appsolutely\Sdk\Webhooks\Data\Order;
 use Appsolutely\Sdk\Webhooks\Events\AccountEvent;
 use Appsolutely\Sdk\Webhooks\Events\ArticleEvent;
 use Appsolutely\Sdk\Webhooks\Events\FormSubmittedEvent;
@@ -177,18 +177,18 @@ final class TypedEventTest extends TestCase
         self::assertNull($article->expiredAt);
         self::assertSame('2026-09-30T16:20:00+00:00', $article->createdAt->format(DATE_RFC3339));
         self::assertSame('2026-10-08T11:59:58+00:00', $article->updatedAt->format(DATE_RFC3339));
-        self::assertCount(1, $article->categories ?? []);
-        self::assertSame('2b4d6f8a-1c3e-4a5b-8d7f-9e0a1b2c3d4e', $article->categories[0]->id ?? null);
-        self::assertSame('News', $article->categories[0]->title ?? null);
+        self::assertCount(1, $article->categories);
+        self::assertSame('2b4d6f8a-1c3e-4a5b-8d7f-9e0a1b2c3d4e', $article->categories[0]->id);
+        self::assertSame('News', $article->categories[0]->title);
         self::assertSame([], $article->extra);
     }
 
-    public function testAnArticleWithoutItsCategoriesHasNullRatherThanNone(): void
+    public function testAnArticleWithoutItsCategoriesIsRefused(): void
     {
-        $event = self::deliver(EventType::ARTICLE_DELETED, '{"id":"a","title":"t","slug":null,"description":null,"keywords":null,"cover":null,"status":0,"sort":null,"published_at":"2026-10-01T09:00:00Z","expired_at":null,"created_at":"2026-09-30T16:20:00Z","updated_at":"2026-10-08T11:59:58Z"}');
+        $this->expectException(UnexpectedPayloadException::class);
+        $this->expectExceptionMessage('The article.deleted delivery\'s data.categories is missing.');
 
-        self::assertInstanceOf(ArticleEvent::class, $event);
-        self::assertNull($event->article->categories);
+        self::deliver(EventType::ARTICLE_DELETED, '{"id":"a","title":"t","slug":null,"description":null,"keywords":null,"cover":null,"status":0,"sort":null,"published_at":"2026-10-01T09:00:00Z","expired_at":null,"created_at":"2026-09-30T16:20:00Z","updated_at":"2026-10-08T11:59:58Z"}');
     }
 
     /**
@@ -289,8 +289,8 @@ final class TypedEventTest extends TestCase
         self::assertSame('final', $order->totalShown);
         self::assertSame('2026-10-08T11:58:40+00:00', $order->createdAt?->format(DATE_RFC3339));
         self::assertSame('2026-10-08T11:59:58+00:00', $order->updatedAt?->format(DATE_RFC3339));
-        self::assertCount(1, $order->items ?? []);
-        $line = ($order->items ?? [])[0];
+        self::assertCount(1, $order->items);
+        $line = $order->items[0];
         self::assertSame('1c3e5a7b-9d1f-4b3c-8e5a-7c9e1b3d5f7a', $line->id);
         self::assertSame('3a5c7e9b-1d3f-4b5d-8f1a-3c5e7a9b1d3f', $line->productId);
         self::assertSame(1, $line->quantity);

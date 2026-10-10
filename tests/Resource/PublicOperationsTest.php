@@ -42,7 +42,7 @@ final class PublicOperationsTest extends TestCase
         self::assertSame('2027-04-01T07:30:00+00:00', $version->sunset?->format(DATE_ATOM));
         self::assertSame('v2', $version->successor);
         self::assertNull($version->documentation);
-        self::assertTrue($version->attributes['added_later']);
+        self::assertTrue($version->extra['added_later']);
     }
 
     public function testTheApiDocumentIsReadWithoutACredential(): void

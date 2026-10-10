@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Appsolutely\Sdk\Webhooks\Data;
+namespace Appsolutely\Sdk\Model;
 
 use DateTimeImmutable;
 
@@ -19,7 +19,7 @@ final readonly class Subscription
      * @param string|null $transitionCause what moved it to its current status
      * @param string|null $recoveryReason why a payment is being recovered
      * @param string|null $subjectReference what the subscription is for beyond the account it bills
-     * @param array<string, mixed> $extra fields the site sent that this class does not name
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,
@@ -38,28 +38,26 @@ final readonly class Subscription
         public array $extra = [],
     ) {}
 
-    /**
-     * @internal
-     */
-    public static function read(#[\SensitiveParameter] Fields $fields): self
+    /** @internal */
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
-        $pending = $fields->nullableObject('pending_period');
+        $pending = $json->nullableObject('pending_period');
 
         return new self(
-            $fields->string('id'),
-            $fields->string('type'),
-            $fields->string('status'),
-            $fields->string('mode'),
-            $fields->bool('cancel_at_period_end'),
-            $fields->nullableString('transition_cause'),
-            $fields->nullableString('recovery_reason'),
-            $fields->nullableTime('current_period_start'),
-            $fields->nullableTime('current_period_end'),
-            $fields->nullableTime('trial_ends_at'),
-            $fields->nullableTime('ended_at'),
-            $fields->nullableString('subject_reference'),
-            $pending === null ? null : PendingPeriod::read($pending),
-            $fields->extra(),
+            $json->string('id'),
+            $json->string('type'),
+            $json->string('status'),
+            $json->string('mode'),
+            $json->bool('cancel_at_period_end'),
+            $json->nullableString('transition_cause'),
+            $json->nullableString('recovery_reason'),
+            $json->nullableTime('current_period_start'),
+            $json->nullableTime('current_period_end'),
+            $json->nullableTime('trial_ends_at'),
+            $json->nullableTime('ended_at'),
+            $json->nullableString('subject_reference'),
+            $pending === null ? null : PendingPeriod::from($pending),
+            $json->extra(),
         );
     }
 }

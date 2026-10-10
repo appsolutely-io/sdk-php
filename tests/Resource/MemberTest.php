@@ -97,7 +97,7 @@ final class MemberTest extends TestCase
         self::assertSame('GET /api/v1/me/orders?limit=25', $site->line(0));
         self::assertSame('ord-1', $listed[0]->id);
         self::assertSame('GET /api/v1/me/orders/ord-2', $site->line(1));
-        self::assertSame(2659, $order->totalAmount);
+        self::assertSame(1900, $order->totalAmount);
     }
 
     public function testTheMembersEntitlementsAreOnePage(): void

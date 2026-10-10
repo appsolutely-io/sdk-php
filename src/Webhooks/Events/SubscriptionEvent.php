@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Webhooks\Events;
 
-use Appsolutely\Sdk\Webhooks\Data\Fields;
-use Appsolutely\Sdk\Webhooks\Data\Subscription;
-use Appsolutely\Sdk\Webhooks\Data\SubscriptionPeriod;
+use Appsolutely\Sdk\Model\Fields;
+use Appsolutely\Sdk\Model\Subscription;
+use Appsolutely\Sdk\Model\SubscriptionPeriod;
 use Appsolutely\Sdk\Webhooks\Event;
 use Appsolutely\Sdk\Webhooks\EventType;
 
@@ -44,14 +44,14 @@ final readonly class SubscriptionEvent extends TypedEvent
     /**
      * @internal
      */
-    public static function read(Event $envelope, Fields $data): self
+    public static function read(Event $envelope, #[\SensitiveParameter] Fields $data): self
     {
         $period = $data->nullableObject('period');
 
         return new self(
             $envelope,
-            Subscription::read($data->except('period')),
-            $period === null ? null : SubscriptionPeriod::read($period),
+            Subscription::from($data->except('period')),
+            $period === null ? null : SubscriptionPeriod::from($period),
         );
     }
 }

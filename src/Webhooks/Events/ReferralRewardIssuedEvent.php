@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Webhooks\Events;
 
-use Appsolutely\Sdk\Webhooks\Data\Fields;
-use Appsolutely\Sdk\Webhooks\Data\ReferralReward;
+use Appsolutely\Sdk\Model\Fields;
+use Appsolutely\Sdk\Model\IssuedReferralReward;
 use Appsolutely\Sdk\Webhooks\Event;
 use Appsolutely\Sdk\Webhooks\EventType;
 
@@ -31,7 +31,7 @@ final readonly class ReferralRewardIssuedEvent extends TypedEvent
         public ?string $subject,
         public ?string $referralCode,
         public ?string $paymentReference,
-        public ReferralReward $reward,
+        public IssuedReferralReward $reward,
         public array $extra = [],
     ) {
         parent::__construct($envelope);
@@ -40,14 +40,14 @@ final readonly class ReferralRewardIssuedEvent extends TypedEvent
     /**
      * @internal
      */
-    public static function read(Event $envelope, Fields $data): self
+    public static function read(Event $envelope, #[\SensitiveParameter] Fields $data): self
     {
         return new self(
             $envelope,
             $data->nullableString('subject'),
             $data->nullableString('referral_code'),
             $data->nullableString('payment_reference'),
-            ReferralReward::read($data->object('reward')),
+            IssuedReferralReward::from($data->object('reward')),
             $data->extra(),
         );
     }

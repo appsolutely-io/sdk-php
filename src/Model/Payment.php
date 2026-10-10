@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Appsolutely\Sdk\Webhooks\Data;
+namespace Appsolutely\Sdk\Model;
 
 /**
  * One payment on an order. Book a purchase, and match a refund or a
@@ -12,7 +12,7 @@ final readonly class Payment
 {
     /**
      * @param int $amount in the minor unit of `$currency`
-     * @param array<string, mixed> $extra fields the site sent that this class does not name
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $reference,
@@ -21,16 +21,14 @@ final readonly class Payment
         public array $extra = [],
     ) {}
 
-    /**
-     * @internal
-     */
-    public static function read(#[\SensitiveParameter] Fields $fields): self
+    /** @internal */
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
         return new self(
-            $fields->string('reference'),
-            $fields->int('amount'),
-            $fields->string('currency'),
-            $fields->extra(),
+            $json->string('reference'),
+            $json->int('amount'),
+            $json->string('currency'),
+            $json->extra(),
         );
     }
 }

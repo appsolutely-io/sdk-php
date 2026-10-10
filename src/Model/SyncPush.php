@@ -24,11 +24,11 @@ final readonly class SyncPush
 
     /**
      * @param list<SyncResult<T>> $results
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public array $results,
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /**
@@ -39,11 +39,11 @@ final readonly class SyncPush
      * @param Closure(Fields): U $record reads one record of the resource
      * @return self<U>
      */
-    public static function from(Fields $json, Closure $record): self
+    public static function from(#[\SensitiveParameter] Fields $json, Closure $record): self
     {
         return new self(
             results: array_map(static fn(Fields $result): SyncResult => SyncResult::from($result, $record), $json->objects('results')),
-            attributes: $json->all(),
+            extra: $json->extra(),
         );
     }
 }

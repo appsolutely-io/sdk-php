@@ -7,7 +7,8 @@ namespace Appsolutely\Sdk\Model;
 use DateTimeImmutable;
 
 /**
- * An article of the site's content.
+ * An article of the site's content, as an API answer and an `article.*`
+ * delivery both carry it.
  */
 final readonly class Article
 {
@@ -15,9 +16,10 @@ final readonly class Article
     public const string SCHEMA = 'Article';
 
     /**
-     * @param int $status 1 published, 0 a draft
-     * @param list<ArticleCategory> $categories
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param string|null $cover the absolute URL the cover image is served at
+     * @param int $status 1 when published, 0 when a draft
+     * @param list<ArticleCategory> $categories every category it is filed under; empty when none
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,
@@ -33,27 +35,27 @@ final readonly class Article
         public DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
         public array $categories,
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /** @internal */
-    public static function from(Fields $json): self
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
         return new self(
             id: $json->string('id'),
             title: $json->string('title'),
-            slug: $json->optionalString('slug'),
-            description: $json->optionalString('description'),
-            keywords: $json->optionalString('keywords'),
-            cover: $json->optionalString('cover'),
+            slug: $json->nullableString('slug'),
+            description: $json->nullableString('description'),
+            keywords: $json->nullableString('keywords'),
+            cover: $json->nullableString('cover'),
             status: $json->int('status'),
-            sort: $json->optionalInt('sort'),
+            sort: $json->nullableInt('sort'),
             publishedAt: $json->time('published_at'),
-            expiredAt: $json->optionalTime('expired_at'),
+            expiredAt: $json->nullableTime('expired_at'),
             createdAt: $json->time('created_at'),
             updatedAt: $json->time('updated_at'),
             categories: array_map(ArticleCategory::from(...), $json->objects('categories')),
-            attributes: $json->all(),
+            extra: $json->extra(),
         );
     }
 }

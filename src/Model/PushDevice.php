@@ -18,7 +18,7 @@ final readonly class PushDevice
      * @param string $token the push provider's device token
      * @param string $platform `ios`, `android` or `web`
      * @param string $provider `apns` or `fcm`
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         #[\SensitiveParameter]
@@ -29,20 +29,20 @@ final readonly class PushDevice
         public ?string $installationId,
         public ?DateTimeImmutable $lastUsedAt,
         #[\SensitiveParameter]
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /** @internal */
-    public static function from(Fields $json): self
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
         return new self(
             token: $json->string('token'),
             platform: $json->string('platform'),
             provider: $json->string('provider'),
-            appIdentifier: $json->optionalString('app_identifier'),
-            installationId: $json->optionalString('installation_id'),
-            lastUsedAt: $json->optionalTime('last_used_at'),
-            attributes: $json->all(),
+            appIdentifier: $json->nullableString('app_identifier'),
+            installationId: $json->nullableString('installation_id'),
+            lastUsedAt: $json->nullableTime('last_used_at'),
+            extra: $json->extra(),
         );
     }
 }

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Webhooks\Events;
 
-use Appsolutely\Sdk\Webhooks\Data\Fields;
-use Appsolutely\Sdk\Webhooks\Data\Form;
-use Appsolutely\Sdk\Webhooks\Data\FormEntry;
+use Appsolutely\Sdk\Model\Fields;
+use Appsolutely\Sdk\Model\Form;
+use Appsolutely\Sdk\Model\FormEntry;
 use Appsolutely\Sdk\Webhooks\Event;
 use Appsolutely\Sdk\Webhooks\EventType;
 
@@ -31,12 +31,12 @@ final readonly class FormSubmittedEvent extends TypedEvent
     /**
      * @internal
      */
-    public static function read(Event $envelope, Fields $data): self
+    public static function read(Event $envelope, #[\SensitiveParameter] Fields $data): self
     {
         return new self(
             $envelope,
-            FormEntry::read($data->except('form')),
-            Form::read($data->object('form')),
+            FormEntry::from($data->except('form')),
+            Form::from($data->object('form')),
         );
     }
 }

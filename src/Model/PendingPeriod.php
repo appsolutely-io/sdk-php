@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Appsolutely\Sdk\Webhooks\Data;
+namespace Appsolutely\Sdk\Model;
 
 use DateTimeImmutable;
 
@@ -15,7 +15,7 @@ final readonly class PendingPeriod
 {
     /**
      * @param string $status where the period's payment stands, such as `pending` or `settling`
-     * @param array<string, mixed> $extra fields the site sent that this class does not name
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public DateTimeImmutable $start,
@@ -23,11 +23,9 @@ final readonly class PendingPeriod
         public array $extra = [],
     ) {}
 
-    /**
-     * @internal
-     */
-    public static function read(#[\SensitiveParameter] Fields $fields): self
+    /** @internal */
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
-        return new self($fields->time('start'), $fields->string('status'), $fields->extra());
+        return new self($json->time('start'), $json->string('status'), $json->extra());
     }
 }

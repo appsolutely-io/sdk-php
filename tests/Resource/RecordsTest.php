@@ -21,28 +21,7 @@ final class RecordsTest extends TestCase
      */
     public static function order(string $id = 'ord-1'): array
     {
-        return [
-            'id' => $id,
-            'subject_reference' => 'member-42',
-            'coupon_code' => null,
-            'status' => 2,
-            'mode' => 'live',
-            'subscription_start_state' => null,
-            'subscription_start_refusal' => null,
-            'summary' => 'Plan x1',
-            'amount' => 1999,
-            'currency' => 'USD',
-            'discounted_amount' => 0,
-            'shipping_amount' => 500,
-            'tax_amount' => 160,
-            'tax_included' => false,
-            'total_amount' => 2659,
-            'total_shown' => '$26.59',
-            'note' => null,
-            'created_at' => '2026-10-08T12:00:00Z',
-            'updated_at' => '2026-10-08T12:34:56Z',
-            'items' => [['id' => 'line-1', 'product_id' => 'prod-1', 'quantity' => 1, 'price' => 1999, 'currency' => 'USD']],
-        ];
+        return SiteFixture::record('order', ['id' => $id]);
     }
 
     /**
@@ -82,20 +61,35 @@ final class RecordsTest extends TestCase
         self::assertSame('GET /api/v1/orders?sort=updated_at&limit=50', $site->line(0));
         self::assertSame('GET /api/v1/orders/ord-2', $site->line(1));
         self::assertSame('ord-1', $listed[0]->id);
-        self::assertSame('member-42', $order->subjectReference);
-        self::assertSame(2, $order->status);
-        self::assertSame('live', $order->mode);
-        self::assertSame(1999, $order->amount);
+        self::assertNull($order->subjectReference);
+        self::assertSame('production', $order->mode);
+        self::assertSame(1900, $order->amount);
         self::assertSame('USD', $order->currency);
-        self::assertSame(500, $order->shippingAmount);
-        self::assertSame(160, $order->taxAmount);
-        self::assertFalse($order->taxIncluded);
-        self::assertSame(2659, $order->totalAmount);
-        self::assertSame('$26.59', $order->totalShown);
-        self::assertSame('prod-1', $order->items[0]->productId);
+        self::assertSame(0, $order->shippingAmount);
+        self::assertSame(0, $order->taxAmount);
+        self::assertTrue($order->taxIncluded);
+        self::assertSame(1900, $order->totalAmount);
+        self::assertSame('final', $order->totalShown);
+        self::assertSame('3a5c7e9b-1d3f-4b5d-8f1a-3c5e7a9b1d3f', $order->items[0]->productId);
         self::assertSame(1, $order->items[0]->quantity);
-        self::assertSame(1999, $order->items[0]->price);
+        self::assertSame(1900, $order->items[0]->price);
         self::assertSame('USD', $order->items[0]->currency);
+    }
+
+    public function testAnOrderStatusIsTheStringTheSiteSends(): void
+    {
+        $site = (new SiteRecorder())->json(SiteFixture::record('order', ['status' => 'shipped']))->json(SiteFixture::record('order', ['status' => null]));
+        $orders = $site->provider->client()->api()->orders();
+
+        self::assertSame('shipped', $orders->get('ord-1')->status);
+        self::assertNull($orders->get('ord-2')->status);
+    }
+
+    public function testAnOrderNotYetUpdatedHasNoUpdateTime(): void
+    {
+        $site = (new SiteRecorder())->json(SiteFixture::record('order', ['updated_at' => null]));
+
+        self::assertNull($site->provider->client()->api()->orders()->get('ord-1')->updatedAt);
     }
 
     public function testFormEntriesAreListedAndReadWithTheirAnswers(): void

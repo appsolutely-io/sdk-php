@@ -15,21 +15,21 @@ final readonly class SyncTombstone
     public const string SCHEMA = 'SyncTombstone';
 
     /**
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,
         public DateTimeImmutable $deletedAt,
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /** @internal */
-    public static function from(Fields $json): self
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
         return new self(
             id: $json->string('id'),
             deletedAt: $json->time('deleted_at'),
-            attributes: $json->all(),
+            extra: $json->extra(),
         );
     }
 }
