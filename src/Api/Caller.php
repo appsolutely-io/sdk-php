@@ -87,14 +87,22 @@ final readonly class Caller
     }
 
     /**
-     * A list the site answers as one page that never has a cursor.
+     * A list the site answers as one page that never has a cursor, as models.
      *
+     * @template T
+     *
+     * @param Closure(Fields): T $read
      * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query
-     * @return Page<array<string, mixed>>
+     * @return Page<T>
      */
-    public function onlyPage(Operation $operation, #[\SensitiveParameter] array $query = []): Page
+    public function onlyPage(Operation $operation, string $schema, Closure $read, #[\SensitiveParameter] array $query = []): Page
     {
-        return Page::fromResponse($this->send($operation, [], $query), $operation->path());
+        if ($operation->isCursorList()) {
+            throw new LogicException(sprintf('%s is a cursor list.', $operation->value));
+        }
+
+        return Page::fromResponse($this->send($operation, [], $query), $operation->path())
+            ->map(static fn(array $item): mixed => $read(Fields::of($item, $schema)));
     }
 
     /**

@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Api;
 
 use Appsolutely\Sdk\Model\ApiVersion;
+use Appsolutely\Sdk\Resource\AccountStates;
 use Appsolutely\Sdk\Resource\Articles;
+use Appsolutely\Sdk\Resource\FormEntries;
 use Appsolutely\Sdk\Resource\MagicLink;
+use Appsolutely\Sdk\Resource\Orders;
 use Appsolutely\Sdk\Resource\Pages;
 use Appsolutely\Sdk\Resource\Products;
+use Appsolutely\Sdk\Resource\WebhookDeliveries;
 
 /**
  * The Site API as the site's administrator, from Client::api(): a typed
@@ -78,5 +82,25 @@ final readonly class AdministratorApi
     public function products(): Products
     {
         return new Products($this->administrator);
+    }
+
+    public function orders(): Orders
+    {
+        return new Orders($this->administrator);
+    }
+
+    public function formEntries(): FormEntries
+    {
+        return new FormEntries($this->administrator);
+    }
+
+    public function accountStates(): AccountStates
+    {
+        return new AccountStates($this->administrator);
+    }
+
+    public function webhookDeliveries(): WebhookDeliveries
+    {
+        return new WebhookDeliveries($this->administrator);
     }
 }
