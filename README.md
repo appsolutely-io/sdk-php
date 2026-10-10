@@ -1,6 +1,8 @@
 # Appsolutely PHP SDK
 
-A framework-free PHP client for relying parties of Appsolutely: OpenID Connect sign-in and verified Standard Webhooks deliveries.
+A framework-free PHP client for one app's own site: it signs the site's members in with OpenID Connect, calls the Site API as the site's administrator or as a signed-in member, and verifies the site's Standard Webhooks deliveries.
+
+A site hosted for you and one you host yourself answer the same paths in the same shapes, so pointing the client from one to the other changes the base URL, the issuer and the credentials, nothing else.
 
 Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://github.com/appsolutely-io/sdk-laravel), which wires this client into the container, Socialite and the router.
 
@@ -51,17 +53,22 @@ use Appsolutely\Sdk\Config;
 // refuses under strict_types; casting it would turn a missing secret into ''.
 $clientId = getenv('APPSOLUTELY_CLIENT_ID');
 $clientSecret = getenv('APPSOLUTELY_CLIENT_SECRET');
-if ($clientId === false || $clientSecret === false) {
-    throw new RuntimeException('Set APPSOLUTELY_CLIENT_ID and APPSOLUTELY_CLIENT_SECRET.');
+$apiToken = getenv('APPSOLUTELY_API_TOKEN');
+if ($clientId === false || $clientSecret === false || $apiToken === false) {
+    throw new RuntimeException('Set APPSOLUTELY_CLIENT_ID, APPSOLUTELY_CLIENT_SECRET and APPSOLUTELY_API_TOKEN.');
 }
 
 $client = new Client(new Config(
-    issuer: 'https://login.example.com',          // the party's sign-in host, exactly as discovery names it
-    clientId: $clientId,
+    baseUrl: 'https://shop.example.com',           // the site's origin, without a path
+    issuer: 'https://shop.example.com',            // the site's OpenID issuer, exactly as its discovery names it
+    clientId: $clientId,                           // the site's OAuth client that signs members in
     clientSecret: $clientSecret,
+    apiToken: $apiToken,                           // optional: the administrator token issued on the site
     cache: $psr16Cache,                            // your application's shared cache; see below
 ));
 ```
+
+The administrator token is a long-lived credential issued on the site's API-token screen; it is sent on the calls your server makes on its own behalf. Leave it out when your server only acts for signed-in members. Keep it, like the client secret, out of version control.
 
 `Config` also takes a PSR-18 client and PSR-17 factories, a PSR-20 clock, a PSR-3 logger, the token-endpoint authentication (`client_secret_basic` by default, or `ClientAuthentication::ClientSecretPost`) and the clock leeway for ID tokens (60 seconds by default).
 
@@ -71,7 +78,7 @@ In production, pass your application's shared PSR-16 cache (Redis, Memcached, AP
 
 ## Signing a member in with OpenID Connect
 
-Two requests: one sends the member to Appsolutely, the other receives them back.
+Two requests: one sends the member to the site's sign-in page, the other receives them back.
 
 ```php
 // 1. Start: build the URL and keep the request in the session.

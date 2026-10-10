@@ -11,9 +11,9 @@ use RecursiveIteratorIterator;
 use SplFileInfo;
 
 /**
- * The package is framework-free and speaks for one relying party: its source
- * names no Laravel (Illuminate) symbol, which only the Laravel bridge may use,
- * and no tenant, a server-side concept a relying party never sees.
+ * The package is framework-free and speaks to one site: its source names no
+ * Laravel (Illuminate) symbol, which only the Laravel bridge may use, and no
+ * tenant, a hosting concept a site's own client never sees.
  *
  * The source tree is scanned rather than a no-dev install exercised: the
  * package requires nothing from Illuminate, so with or without dev
