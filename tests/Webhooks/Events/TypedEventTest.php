@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Webhooks\Events;
 
+use Appsolutely\Sdk\Exception\UnexpectedPayloadException;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
+use Appsolutely\Sdk\Webhooks\Events\AccountEvent;
 use Appsolutely\Sdk\Webhooks\Events\PingEvent;
 use Appsolutely\Sdk\Webhooks\Events\TypedEvent;
 use Appsolutely\Sdk\Webhooks\Events\UnknownEvent;
 use Appsolutely\Sdk\Webhooks\EventType;
 use Appsolutely\Sdk\Webhooks\Verifier;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use StandardWebhooks\Webhook;
 
@@ -68,6 +71,58 @@ final class TypedEventTest extends TestCase
         self::assertSame('webhook.ping', $event->envelope->type);
         self::assertSame('test', $event->envelope->mode);
         self::assertSame('2026-10-08T11:59:58+00:00', $event->envelope->timestamp->format(DATE_RFC3339));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function accountTypes(): iterable
+    {
+        foreach (AccountEvent::TYPES as $type) {
+            yield $type => [$type];
+        }
+    }
+
+    #[DataProvider('accountTypes')]
+    public function testEveryAccountEventCarriesTheAccountsWholeState(string $type): void
+    {
+        $event = self::deliver($type, self::fixture('account-state'));
+
+        self::assertInstanceOf(AccountEvent::class, $event);
+        $state = $event->state;
+        self::assertSame('5f0c2a9e8b7d41c3a6e2f9b1d0c8a7e65f4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d', $state->subject);
+        self::assertSame(42, $state->sequence);
+        self::assertSame('active', $state->status);
+        self::assertSame('ada@example.com', $state->email);
+        self::assertTrue($state->emailVerified);
+        self::assertCount(2, $state->entitlements);
+        self::assertSame('seats', $state->entitlements[0]->key);
+        self::assertSame('Team seats', $state->entitlements[0]->label);
+        self::assertSame(3, $state->entitlements[0]->quantity);
+        self::assertSame('2026-10-22T00:00:00+00:00', $state->entitlements[0]->expiresAt?->format(DATE_RFC3339));
+        self::assertNull($state->entitlements[1]->expiresAt);
+        self::assertSame(['seats' => 3, 'reports.export' => 1], $state->totals);
+        self::assertSame([], $state->extra);
+    }
+
+    public function testAnErasedAccountHasNoAddressNoGrantsAndEmptyTotals(): void
+    {
+        $event = self::deliver(EventType::ACCOUNT_ERASED, self::fixture('account-erased'));
+
+        self::assertInstanceOf(AccountEvent::class, $event);
+        self::assertSame('erased', $event->state->status);
+        self::assertNull($event->state->email);
+        self::assertFalse($event->state->emailVerified);
+        self::assertSame([], $event->state->entitlements);
+        self::assertSame([], $event->state->totals);
+    }
+
+    public function testAnAccountStateMissingItsSequenceIsRefused(): void
+    {
+        $this->expectException(UnexpectedPayloadException::class);
+        $this->expectExceptionMessage('The account.suspended delivery\'s data.sequence is missing.');
+
+        self::deliver(EventType::ACCOUNT_SUSPENDED, '{"subject":"s","status":"suspended","email":null,"email_verified":false,"entitlements":[],"totals":{}}');
     }
 
     public function testAnUnknownTypeIsAGenericEventWithItsDataStillReadable(): void

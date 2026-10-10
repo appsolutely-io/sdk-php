@@ -36,8 +36,11 @@ abstract readonly class TypedEvent
     {
         $fields = Fields::of($envelope->data, $envelope->type);
 
-        return match ($envelope->type) {
-            EventType::WEBHOOK_PING => PingEvent::read($envelope, $fields),
+        $type = $envelope->type;
+
+        return match (true) {
+            in_array($type, AccountEvent::TYPES, true) => AccountEvent::read($envelope, $fields),
+            $type === EventType::WEBHOOK_PING => PingEvent::read($envelope, $fields),
             default => new UnknownEvent($envelope),
         };
     }
