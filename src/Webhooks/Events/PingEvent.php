@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Webhooks\Events;
 
-use Appsolutely\Sdk\Webhooks\Data\Fields;
+use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Webhooks\Event;
 
 /**
@@ -28,7 +28,7 @@ final readonly class PingEvent extends TypedEvent
     /**
      * @internal
      */
-    public static function read(Event $envelope, Fields $data): self
+    public static function read(Event $envelope, #[\SensitiveParameter] Fields $data): self
     {
         return new self($envelope, $data->string('subscription_id'), $data->extra());
     }

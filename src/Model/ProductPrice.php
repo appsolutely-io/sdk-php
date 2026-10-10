@@ -15,23 +15,23 @@ final readonly class ProductPrice
 
     /**
      * @param string $currency ISO 4217
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $currency,
         public int $price,
         public ?int $originalPrice,
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /** @internal */
-    public static function from(Fields $json): self
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
         return new self(
             currency: $json->string('currency'),
             price: $json->int('price'),
-            originalPrice: $json->optionalInt('original_price'),
-            attributes: $json->all(),
+            originalPrice: $json->nullableInt('original_price'),
+            extra: $json->extra(),
         );
     }
 }

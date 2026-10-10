@@ -17,7 +17,7 @@ final readonly class MagicLinkToken
     /**
      * @param string $token the member's bearer token; pass it to Client::forMember()
      * @param list<string> $abilities what the token may do, such as `me:read`
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         #[\SensitiveParameter]
@@ -25,17 +25,17 @@ final readonly class MagicLinkToken
         public array $abilities,
         public ?DateTimeImmutable $expiresAt,
         #[\SensitiveParameter]
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /** @internal */
-    public static function from(Fields $json): self
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
         return new self(
             token: $json->string('token'),
             abilities: $json->strings('abilities'),
-            expiresAt: $json->optionalTime('expires_at'),
-            attributes: $json->all(),
+            expiresAt: $json->nullableTime('expires_at'),
+            extra: $json->extra(),
         );
     }
 

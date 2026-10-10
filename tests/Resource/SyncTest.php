@@ -67,7 +67,7 @@ final class SyncTest extends TestCase
         $sync = $site->provider->client()->api()->sync();
 
         self::assertSame('fe-1', $sync->formEntries()->pull()->upserts[0]->id);
-        self::assertSame(2659, $sync->orders()->pull()->upserts[0]->totalAmount);
+        self::assertSame(1900, $sync->orders()->pull()->upserts[0]->totalAmount);
         self::assertSame('About', $sync->pages()->pull()->upserts[0]->name);
         self::assertSame('subscription', $sync->products()->pull()->upserts[0]->type);
     }

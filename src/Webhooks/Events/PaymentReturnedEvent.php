@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Webhooks\Events;
 
-use Appsolutely\Sdk\Webhooks\Data\Fields;
-use Appsolutely\Sdk\Webhooks\Data\Order;
-use Appsolutely\Sdk\Webhooks\Data\Payment;
+use Appsolutely\Sdk\Model\Fields;
+use Appsolutely\Sdk\Model\Order;
+use Appsolutely\Sdk\Model\Payment;
 use Appsolutely\Sdk\Webhooks\Event;
 use Appsolutely\Sdk\Webhooks\EventType;
 
@@ -37,12 +37,12 @@ final readonly class PaymentReturnedEvent extends TypedEvent
     /**
      * @internal
      */
-    public static function read(Event $envelope, Fields $data): self
+    public static function read(Event $envelope, #[\SensitiveParameter] Fields $data): self
     {
         return new self(
             $envelope,
-            Order::read($data->except('payment')),
-            Payment::read($data->object('payment')),
+            Order::from($data->except('payment')),
+            Payment::from($data->object('payment')),
         );
     }
 }

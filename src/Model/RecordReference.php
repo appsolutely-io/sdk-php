@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Appsolutely\Sdk\Webhooks\Data;
+namespace Appsolutely\Sdk\Model;
 
 /**
  * A record the site's REST API has no representation for, named by its
@@ -12,7 +12,7 @@ final readonly class RecordReference
 {
     /**
      * @param string $type the kind of record, such as `Refund`
-     * @param array<string, mixed> $extra fields the site sent that this class does not name
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public ?string $id,
@@ -20,11 +20,9 @@ final readonly class RecordReference
         public array $extra = [],
     ) {}
 
-    /**
-     * @internal
-     */
-    public static function read(#[\SensitiveParameter] Fields $fields): self
+    /** @internal */
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
-        return new self($fields->nullableString('id'), $fields->string('type'), $fields->extra());
+        return new self($json->nullableString('id'), $json->string('type'), $json->extra());
     }
 }

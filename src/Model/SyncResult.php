@@ -27,7 +27,7 @@ final readonly class SyncResult
      * @param string|null $reason why it was not applied
      * @param array<string, mixed>|null $errors the validation messages, keyed by field
      * @param T|null $serverRecord the record as the site now holds it
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $mutationId,
@@ -36,7 +36,7 @@ final readonly class SyncResult
         public ?string $reason,
         public ?array $errors,
         public mixed $serverRecord,
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /**
@@ -47,18 +47,18 @@ final readonly class SyncResult
      * @param Closure(Fields): U $record reads one record of the resource
      * @return self<U>
      */
-    public static function from(Fields $json, Closure $record): self
+    public static function from(#[\SensitiveParameter] Fields $json, Closure $record): self
     {
-        $serverRecord = $json->optionalObject('server_record');
+        $serverRecord = $json->nullableObject('server_record');
 
         return new self(
             mutationId: $json->string('mutation_id'),
-            id: $json->optionalString('id'),
+            id: $json->nullableString('id'),
             applied: $json->bool('applied'),
-            reason: $json->optionalString('reason'),
-            errors: $json->optionalMap('errors'),
+            reason: $json->nullableString('reason'),
+            errors: $json->nullableMap('errors'),
             serverRecord: $serverRecord === null ? null : $record($serverRecord),
-            attributes: $json->all(),
+            extra: $json->extra(),
         );
     }
 }

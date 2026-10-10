@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Webhooks\Events;
 
 use Appsolutely\Sdk\Exception\UnexpectedPayloadException;
-use Appsolutely\Sdk\Webhooks\Data\Fields;
+use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Webhooks\Event;
 use Appsolutely\Sdk\Webhooks\EventType;
 
@@ -34,7 +34,7 @@ abstract readonly class TypedEvent
      */
     public static function from(Event $envelope): self
     {
-        $fields = Fields::of($envelope->data, $envelope->type);
+        $fields = Fields::ofDelivery($envelope->data, $envelope->type);
 
         $type = $envelope->type;
 

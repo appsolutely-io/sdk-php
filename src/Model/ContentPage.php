@@ -7,8 +7,9 @@ namespace Appsolutely\Sdk\Model;
 use DateTimeImmutable;
 
 /**
- * A page of the site's content (the document's `Page` schema), named so it
- * is not mistaken for Api\Page, a page of a list.
+ * A page of the site's content (the document's `Page` schema), as an API
+ * answer and a `page.*` delivery both carry it, named so it is not mistaken
+ * for Api\Page, a page of a list.
  */
 final readonly class ContentPage
 {
@@ -17,7 +18,8 @@ final readonly class ContentPage
 
     /**
      * @param string|null $parentId the id of the page this one sits under
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param int|null $status 1 when active, 0 when not
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,
@@ -33,27 +35,27 @@ final readonly class ContentPage
         public ?DateTimeImmutable $expiredAt,
         public ?DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /** @internal */
-    public static function from(Fields $json): self
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
         return new self(
             id: $json->string('id'),
-            name: $json->optionalString('name'),
-            title: $json->optionalString('title'),
-            slug: $json->optionalString('slug'),
-            description: $json->optionalString('description'),
-            keywords: $json->optionalString('keywords'),
-            language: $json->optionalString('language'),
-            parentId: $json->optionalString('parent_id'),
-            status: $json->optionalInt('status'),
+            name: $json->nullableString('name'),
+            title: $json->nullableString('title'),
+            slug: $json->nullableString('slug'),
+            description: $json->nullableString('description'),
+            keywords: $json->nullableString('keywords'),
+            language: $json->nullableString('language'),
+            parentId: $json->nullableString('parent_id'),
+            status: $json->nullableInt('status'),
             publishedAt: $json->time('published_at'),
-            expiredAt: $json->optionalTime('expired_at'),
-            createdAt: $json->optionalTime('created_at'),
+            expiredAt: $json->nullableTime('expired_at'),
+            createdAt: $json->nullableTime('created_at'),
             updatedAt: $json->time('updated_at'),
-            attributes: $json->all(),
+            extra: $json->extra(),
         );
     }
 }

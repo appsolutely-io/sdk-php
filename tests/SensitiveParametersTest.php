@@ -6,7 +6,7 @@ namespace Appsolutely\Sdk\Tests;
 
 use Appsolutely\Sdk\Cache\InMemoryCache;
 use Appsolutely\Sdk\Model\Entitlement;
-use Appsolutely\Sdk\Webhooks\Data\Entitlement as WebhookEntitlement;
+use Appsolutely\Sdk\Model\Fields;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -47,7 +47,6 @@ final class SensitiveParametersTest extends TestCase
      */
     private const array NOT_SENSITIVE = [
         [Entitlement::class, '__construct', 'key'],
-        [WebhookEntitlement::class, '__construct', 'key'],
         [InMemoryCache::class, 'get', 'key'],
         [InMemoryCache::class, 'set', 'key'],
         [InMemoryCache::class, 'delete', 'key'],
@@ -61,6 +60,26 @@ final class SensitiveParametersTest extends TestCase
         $checked = 0;
         foreach (self::parameters() as [$class, $method, $parameter]) {
             if (!in_array($parameter->getName(), self::SENSITIVE_NAMES, true) || in_array([$class, $method, $parameter->getName()], self::NOT_SENSITIVE, true)) {
+                continue;
+            }
+
+            self::assertNotSame([], $parameter->getAttributes(SensitiveParameter::class), sprintf('%s::%s() $%s is not marked #[\SensitiveParameter].', $class, $method, $parameter->getName()));
+            $checked++;
+        }
+
+        self::assertGreaterThan(0, $checked);
+    }
+
+    /**
+     * The site's JSON is read into models through Fields, whatever the
+     * reader names it, and it carries members' names, addresses and codes.
+     */
+    public function testEveryReaderOfTheSitesJsonIsMarkedSensitive(): void
+    {
+        $checked = 0;
+        foreach (self::parameters() as [$class, $method, $parameter]) {
+            $type = $parameter->getType();
+            if (!$type instanceof \ReflectionNamedType || $type->getName() !== Fields::class) {
                 continue;
             }
 

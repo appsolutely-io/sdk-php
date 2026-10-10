@@ -18,7 +18,7 @@ final readonly class BillingEntry
      * @param string|null $wording the label to show for the entry
      * @param string|null $presentation how to present it, such as `link`
      * @param string|null $url where the member manages their billing; it expires at $expiresAt
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public bool $available,
@@ -27,20 +27,20 @@ final readonly class BillingEntry
         public ?bool $needsStoreToken,
         public ?string $url,
         public ?DateTimeImmutable $expiresAt,
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /** @internal */
-    public static function from(Fields $json): self
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
         return new self(
             available: $json->bool('available'),
-            wording: $json->optionalString('wording'),
-            presentation: $json->optionalString('presentation'),
-            needsStoreToken: $json->optionalBool('needs_store_token'),
-            url: $json->optionalString('url'),
-            expiresAt: $json->optionalTime('expires_at'),
-            attributes: $json->all(),
+            wording: $json->nullableString('wording'),
+            presentation: $json->nullableString('presentation'),
+            needsStoreToken: $json->nullableBool('needs_store_token'),
+            url: $json->nullableString('url'),
+            expiresAt: $json->nullableTime('expires_at'),
+            extra: $json->extra(),
         );
     }
 }

@@ -26,14 +26,14 @@ final readonly class SyncPull
      * @param list<T> $upserts the records created or changed
      * @param list<SyncTombstone> $tombstones the records deleted
      * @param bool $hasMore whether more changes are waiting now; pull again from $nextCursor until it is false
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public array $upserts,
         public array $tombstones,
         public string $nextCursor,
         public bool $hasMore,
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /**
@@ -44,14 +44,14 @@ final readonly class SyncPull
      * @param Closure(Fields): U $record reads one record of the resource
      * @return self<U>
      */
-    public static function from(Fields $json, Closure $record): self
+    public static function from(#[\SensitiveParameter] Fields $json, Closure $record): self
     {
         return new self(
             upserts: array_map($record, $json->objects('upserts')),
             tombstones: array_map(SyncTombstone::from(...), $json->objects('tombstones')),
             nextCursor: $json->string('next_cursor'),
             hasMore: $json->bool('has_more'),
-            attributes: $json->all(),
+            extra: $json->extra(),
         );
     }
 }

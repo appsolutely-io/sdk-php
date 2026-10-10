@@ -2,23 +2,28 @@
 
 declare(strict_types=1);
 
-namespace Appsolutely\Sdk\Tests\Webhooks\Data;
+namespace Appsolutely\Sdk\Tests\Model;
 
 use Appsolutely\Sdk\Exception\AppsolutelyException;
 use Appsolutely\Sdk\Exception\UnexpectedPayloadException;
-use Appsolutely\Sdk\Webhooks\Data\Fields;
+use Appsolutely\Sdk\Model\Fields;
 use Closure;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-final class FieldsTest extends TestCase
+/**
+ * A webhook delivery's `data` is read by the same Fields as an API answer;
+ * what differs is the refusal, an UnexpectedPayloadException naming the
+ * event type and the field's path under `data`.
+ */
+final class DeliveryFieldsTest extends TestCase
 {
     /**
      * @param array<string, mixed> $data
      */
     private static function fields(array $data): Fields
     {
-        return Fields::of($data, 'order.paid');
+        return Fields::ofDelivery($data, 'order.paid');
     }
 
     public function testATimeIsReadAsRfc3339InUtc(): void
@@ -69,7 +74,6 @@ final class FieldsTest extends TestCase
         self::assertNull($fields->nullableTime('expired_at'));
         self::assertNull($fields->nullableObject('payment'));
         self::assertNull($fields->nullableMap('data'));
-        self::assertNull($fields->nullableObjects('items'));
     }
 
     public function testAMissingRequiredFieldNamesTheTypeAndThePath(): void

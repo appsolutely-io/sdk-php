@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Webhooks\Events;
 
-use Appsolutely\Sdk\Webhooks\Data\Fields;
-use Appsolutely\Sdk\Webhooks\Data\RecordReference;
+use Appsolutely\Sdk\Model\Fields;
+use Appsolutely\Sdk\Model\RecordReference;
 use Appsolutely\Sdk\Webhooks\Event;
 use Appsolutely\Sdk\Webhooks\EventType;
 
@@ -30,8 +30,8 @@ final readonly class RefundEvent extends TypedEvent
     /**
      * @internal
      */
-    public static function read(Event $envelope, Fields $data): self
+    public static function read(Event $envelope, #[\SensitiveParameter] Fields $data): self
     {
-        return new self($envelope, RecordReference::read($data));
+        return new self($envelope, RecordReference::from($data));
     }
 }

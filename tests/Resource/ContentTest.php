@@ -75,7 +75,7 @@ final class ContentTest extends TestCase
         self::assertSame('2b4d6f8a-1c3e-4a5b-8d7f-9e0a1b2c3d4e', $article->categories[0]->id);
         self::assertSame('News', $article->categories[0]->title);
         self::assertSame('news', $article->categories[0]->slug);
-        self::assertSame('x', $article->attributes['added_later']);
+        self::assertSame('x', $article->extra['added_later']);
     }
 
     public function testAnArticleIsCreatedOnceUnderTheCallersKey(): void

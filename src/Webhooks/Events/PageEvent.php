@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Webhooks\Events;
 
-use Appsolutely\Sdk\Webhooks\Data\Fields;
-use Appsolutely\Sdk\Webhooks\Data\Page;
+use Appsolutely\Sdk\Model\ContentPage;
+use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Webhooks\Event;
 use Appsolutely\Sdk\Webhooks\EventType;
 
@@ -23,7 +23,7 @@ final readonly class PageEvent extends TypedEvent
 
     public function __construct(
         Event $envelope,
-        public Page $page,
+        public ContentPage $page,
     ) {
         parent::__construct($envelope);
     }
@@ -31,8 +31,8 @@ final readonly class PageEvent extends TypedEvent
     /**
      * @internal
      */
-    public static function read(Event $envelope, Fields $data): self
+    public static function read(Event $envelope, #[\SensitiveParameter] Fields $data): self
     {
-        return new self($envelope, Page::read($data));
+        return new self($envelope, ContentPage::from($data));
     }
 }

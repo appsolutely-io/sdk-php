@@ -15,7 +15,7 @@ final readonly class Member
     public const string SCHEMA = 'Member';
 
     /**
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,
@@ -24,20 +24,20 @@ final readonly class Member
         public ?DateTimeImmutable $emailVerifiedAt,
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt,
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /** @internal */
-    public static function from(Fields $json): self
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
         return new self(
             id: $json->string('id'),
-            name: $json->optionalString('name'),
-            email: $json->optionalString('email'),
-            emailVerifiedAt: $json->optionalTime('email_verified_at'),
-            createdAt: $json->optionalTime('created_at'),
-            updatedAt: $json->optionalTime('updated_at'),
-            attributes: $json->all(),
+            name: $json->nullableString('name'),
+            email: $json->nullableString('email'),
+            emailVerifiedAt: $json->nullableTime('email_verified_at'),
+            createdAt: $json->nullableTime('created_at'),
+            updatedAt: $json->nullableTime('updated_at'),
+            extra: $json->extra(),
         );
     }
 }

@@ -97,6 +97,20 @@ final class ResourceContractTest extends TestCase
     }
 
     /**
+     * Fields the pinned document types otherwise than the site sends them,
+     * where the model follows the site: sampled as the site sends them.
+     * An entry goes once the pinned document agrees with the site.
+     *
+     * The document declares an order's `status` an integer; the site sends
+     * its order status as a string (`shipped`). It leaves an account's
+     * `totals` an open object; the site sends a quantity per key.
+     */
+    private const array AS_THE_SITE_SENDS = [
+        'Order' => ['status' => 'shipped'],
+        'AccountState' => ['totals' => ['seats' => 3]],
+    ];
+
+    /**
      * @return iterable<string, array{class-string, string}>
      */
     public static function models(): iterable
@@ -117,7 +131,7 @@ final class ResourceContractTest extends TestCase
     #[DataProvider('models')]
     public function testAModelReadsOnlyAndAllOfWhatItsSchemaDefines(string $class, string $schema): void
     {
-        $fields = Fields::of(Document::map(self::sample(Document::schema($schema))), $schema);
+        $fields = Fields::of(self::sampleOf($schema), $schema);
         $from = [$class, 'from'];
         self::assertIsCallable($from);
         $from($fields);
@@ -144,7 +158,7 @@ final class ResourceContractTest extends TestCase
     #[DataProvider('syncSchemas')]
     public function testASyncModelReadsOnlyAndAllOfWhatEachOfItsSchemasDefines(string $class, string $schema, string $record): void
     {
-        $fields = Fields::of(Document::map(self::sample(Document::schema($schema))), $schema);
+        $fields = Fields::of(self::sampleOf($schema), $schema);
         $from = [$class, 'from'];
         $read = [$record, 'from'];
         self::assertIsCallable($from);
@@ -401,6 +415,17 @@ final class ResourceContractTest extends TestCase
     }
 
     /**
+     * A sample object of a named schema, with the fields the document types
+     * otherwise than the site sends them sampled as the site sends them.
+     *
+     * @return array<string, mixed>
+     */
+    private static function sampleOf(string $name): array
+    {
+        return [...Document::map(self::sample(Document::schema($name))), ...(self::AS_THE_SITE_SENDS[$name] ?? [])];
+    }
+
+    /**
      * A value of the schema with every property present, so a model's
      * every read lands on something of the documented type.
      *
@@ -408,6 +433,10 @@ final class ResourceContractTest extends TestCase
      */
     private static function sample(array $schema): mixed
     {
+        $name = Document::refName($schema);
+        if ($name !== null) {
+            return self::sampleOf($name);
+        }
         $schema = self::nonNull(Document::resolve($schema));
         $type = $schema['type'] ?? (isset($schema['properties']) ? 'object' : null);
         if (is_array($type)) {

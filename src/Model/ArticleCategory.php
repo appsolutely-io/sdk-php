@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Model;
 
 /**
- * A category an article is filed under.
+ * A category an article is filed under: enough to link or group by, not the
+ * whole category.
  */
 final readonly class ArticleCategory
 {
@@ -13,23 +14,23 @@ final readonly class ArticleCategory
     public const string SCHEMA = 'ArticleCategorySummary';
 
     /**
-     * @param array<string, mixed> $attributes the object as the site sent it, members without a property here included
+     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,
         public string $title,
         public ?string $slug,
-        public array $attributes,
+        public array $extra = [],
     ) {}
 
     /** @internal */
-    public static function from(Fields $json): self
+    public static function from(#[\SensitiveParameter] Fields $json): self
     {
         return new self(
             id: $json->string('id'),
             title: $json->string('title'),
-            slug: $json->optionalString('slug'),
-            attributes: $json->all(),
+            slug: $json->nullableString('slug'),
+            extra: $json->extra(),
         );
     }
 }
