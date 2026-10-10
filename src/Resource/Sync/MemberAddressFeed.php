@@ -32,7 +32,7 @@ final readonly class MemberAddressFeed
     #[Endpoint(Operation::PullSyncMeAddress)]
     public function pull(?string $cursor = null, ?int $limit = null): SyncPull
     {
-        return $this->caller->read(Operation::PullSyncMeAddress, 'UserAddressSyncPull', static fn(Fields $json): SyncPull => SyncPull::from($json, Address::from(...)), query: Caller::feed($cursor, $limit));
+        return $this->caller->read(Operation::PullSyncMeAddress, 'UserAddressSyncPull', static fn(#[\SensitiveParameter] Fields $json): SyncPull => SyncPull::from($json, Address::from(...)), query: Caller::feed($cursor, $limit));
     }
 
     /**
@@ -48,6 +48,6 @@ final readonly class MemberAddressFeed
     #[Endpoint(Operation::PushSyncMeAddress)]
     public function push(array $mutations): SyncPush
     {
-        return $this->caller->read(Operation::PushSyncMeAddress, 'UserAddressSyncPush', static fn(Fields $json): SyncPush => SyncPush::from($json, Address::from(...)), body: ['mutations' => $mutations]);
+        return $this->caller->read(Operation::PushSyncMeAddress, 'UserAddressSyncPush', static fn(#[\SensitiveParameter] Fields $json): SyncPush => SyncPush::from($json, Address::from(...)), body: ['mutations' => $mutations]);
     }
 }

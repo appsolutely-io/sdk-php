@@ -30,6 +30,6 @@ final readonly class PageFeed
     #[Endpoint(Operation::PullSyncPage)]
     public function pull(?string $cursor = null, ?int $limit = null): SyncPull
     {
-        return $this->caller->read(Operation::PullSyncPage, 'PageSyncPull', static fn(Fields $json): SyncPull => SyncPull::from($json, ContentPage::from(...)), query: Caller::feed($cursor, $limit));
+        return $this->caller->read(Operation::PullSyncPage, 'PageSyncPull', static fn(#[\SensitiveParameter] Fields $json): SyncPull => SyncPull::from($json, ContentPage::from(...)), query: Caller::feed($cursor, $limit));
     }
 }

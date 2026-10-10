@@ -30,6 +30,6 @@ final readonly class FormEntryFeed
     #[Endpoint(Operation::PullSyncFormEntry)]
     public function pull(?string $cursor = null, ?int $limit = null): SyncPull
     {
-        return $this->caller->read(Operation::PullSyncFormEntry, 'FormEntrySyncPull', static fn(Fields $json): SyncPull => SyncPull::from($json, FormEntry::from(...)), query: Caller::feed($cursor, $limit));
+        return $this->caller->read(Operation::PullSyncFormEntry, 'FormEntrySyncPull', static fn(#[\SensitiveParameter] Fields $json): SyncPull => SyncPull::from($json, FormEntry::from(...)), query: Caller::feed($cursor, $limit));
     }
 }

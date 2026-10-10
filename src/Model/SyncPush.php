@@ -42,7 +42,7 @@ final readonly class SyncPush
     public static function from(#[\SensitiveParameter] Fields $json, Closure $record): self
     {
         return new self(
-            results: array_map(static fn(Fields $result): SyncResult => SyncResult::from($result, $record), $json->objects('results')),
+            results: array_map(static fn(#[\SensitiveParameter] Fields $result): SyncResult => SyncResult::from($result, $record), $json->objects('results')),
             extra: $json->extra(),
         );
     }

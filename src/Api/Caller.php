@@ -108,7 +108,7 @@ final readonly class Caller
         }
 
         return Page::fromResponse($this->send($operation, [], $query), $operation->path())
-            ->map(static fn(array $item): mixed => $read(Fields::of($item, $schema)));
+            ->map(static fn(#[\SensitiveParameter] array $item): mixed => $read(Fields::of($item, $schema)));
     }
 
     /**
@@ -140,7 +140,7 @@ final readonly class Caller
      */
     public function list(Operation $operation, string $schema, Closure $read, #[\SensitiveParameter] array $query, int $limit, array $path = []): Paginator
     {
-        return $this->paginate($operation, $path, $query, $limit)->map(static fn(array $item): mixed => $read(Fields::of($item, $schema)));
+        return $this->paginate($operation, $path, $query, $limit)->map(static fn(#[\SensitiveParameter] array $item): mixed => $read(Fields::of($item, $schema)));
     }
 
     /**
