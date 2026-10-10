@@ -57,17 +57,8 @@ final class HeaderTest extends TestCase
     {
         $found = [];
         foreach (self::sources() as $file => $tokens) {
-            foreach ($tokens as $index => [$id, $text]) {
-                $method = strtolower($text);
-                if ($id !== T_STRING || !array_key_exists($method, self::NAME_ARGUMENTS) || ($tokens[$index + 1][0] ?? null) !== '(' || ($tokens[$index - 1][0] ?? null) === T_FUNCTION) {
-                    continue;
-                }
-                foreach (SourceTokens::arguments($tokens, $index + 1) as $position => $argument) {
-                    $positions = self::NAME_ARGUMENTS[$method];
-                    if (($positions === null || in_array($position, $positions, true)) && SourceTokens::isLiteral($argument)) {
-                        $found[] = sprintf('%s:%d %s(%s)', $file, $argument[0][2], $text, $argument[0][1]);
-                    }
-                }
+            foreach (self::calledHeaderNames($tokens) as $name) {
+                $found[] = sprintf('%s:%d %s', $file, $name[2], $name[1]);
             }
         }
 
@@ -91,13 +82,24 @@ final class HeaderTest extends TestCase
         self::assertSame([], $found);
     }
 
-    public function testTheRulesSeeTheHeaderNamesTheyAreMeantToRefuse(): void
+    public function testTheCallRuleSeesTheHeaderNameInEachPlaceACallTakesOne(): void
     {
         $tokens = SourceTokens::of(<<<'PHP'
             <?php
             $request->withHeader('X-Trace', 'v')->getHeaderLine("Accept");
             $this->header($all, 'webhook-id');
-            $response->withHeader(Header::ACCEPT, 'application/json');
+            $response->withHeader(Header::ACCEPT, 'application/json')->withoutHeader($name);
+            $cache->get('X-Not-A-Header');
+            function header(string $name = 'X-Default', string ...$values): void {}
+            PHP);
+
+        self::assertSame(["'X-Trace'", '"Accept"', "'webhook-id'"], array_map(static fn(array $name): string => $name[1], self::calledHeaderNames($tokens)));
+    }
+
+    public function testTheArrayRuleSeesTheKeysOfEveryHeaderArray(): void
+    {
+        $tokens = SourceTokens::of(<<<'PHP'
+            <?php
             $headers = ['webhook-id' => $id];
             $map = [Header::AUTHORIZATION => $token, 'X-Other' => 'v'];
             $headers['X-Late'] = 'v';
@@ -108,19 +110,6 @@ final class HeaderTest extends TestCase
             $json = ['location' => 'here', 'P-256' => $curve, 'validation-failed' => 1];
             PHP);
 
-        $calls = [];
-        foreach ($tokens as $index => [$id, $text]) {
-            if ($id === T_STRING && array_key_exists(strtolower($text), self::NAME_ARGUMENTS) && ($tokens[$index + 1][0] ?? null) === '(') {
-                $positions = self::NAME_ARGUMENTS[strtolower($text)];
-                foreach (SourceTokens::arguments($tokens, $index + 1) as $position => $argument) {
-                    if (($positions === null || in_array($position, $positions, true)) && SourceTokens::isLiteral($argument)) {
-                        $calls[] = $argument[0][1];
-                    }
-                }
-            }
-        }
-
-        self::assertSame(["'X-Trace'", '"Accept"', "'webhook-id'"], $calls);
         self::assertSame(["'webhook-id'", "'X-Other'", "'X-Late'", "'X-Named'", "'webhook-timestamp'", "'X-Form'"], array_map(static fn(array $key): string => $key[1], self::headerArrayKeys($tokens)));
     }
 
@@ -136,6 +125,32 @@ final class HeaderTest extends TestCase
                 yield $file => $tokens;
             }
         }
+    }
+
+    /**
+     * The string literals in the places of header names in calls that take
+     * one.
+     *
+     * @param list<Token> $tokens
+     * @return list<Token>
+     */
+    private static function calledHeaderNames(array $tokens): array
+    {
+        $found = [];
+        foreach ($tokens as $index => [$id, $text]) {
+            $method = strtolower($text);
+            if ($id !== T_STRING || !array_key_exists($method, self::NAME_ARGUMENTS) || ($tokens[$index + 1][0] ?? null) !== '(' || ($tokens[$index - 1][0] ?? null) === T_FUNCTION) {
+                continue;
+            }
+            $positions = self::NAME_ARGUMENTS[$method];
+            foreach (SourceTokens::arguments($tokens, $index + 1) as $position => $argument) {
+                if (($positions === null || in_array($position, $positions, true)) && SourceTokens::isLiteral($argument)) {
+                    $found[] = $argument[0];
+                }
+            }
+        }
+
+        return $found;
     }
 
     /**
