@@ -154,6 +154,19 @@ try {
 
 Every call sends `Accept: application/json, application/problem+json`, the SDK's `User-Agent` and an `X-Request-Id`: a fresh UUID, or the one you pass as `requestId:` to tie the call to your own logs. A success is an `Api\ApiResponse`: the decoded resource in `$data` (null for a `204`), `$status`, `$location` for a created resource, `$requestId` as the site answered it, and `$rateLimit`, the budget the site states in its `RateLimit-Policy` and `RateLimit` headers, by quota name (`$response->rateLimit->quota('api:authenticated')?->remaining`).
 
+A list answers a page, `{"data": [...], "next_cursor": "..."}`. `paginate()` walks every item, asking for each next page only when iteration reaches it and stopping at the page without a cursor; `page()` fetches one page when you keep the cursor yourself, say between requests:
+
+```php
+foreach ($client->api()->paginate('/api/v1/orders', ['status' => 'paid'], limit: 100) as $order) {
+    // every paid order, 100 per request
+}
+
+$page = $client->api()->page('/api/v1/orders', ['status' => 'paid'], cursor: $savedCursor);
+$savedCursor = $page->nextCursor;      // null on the last page
+```
+
+`limit` runs from 1 to 100 (25 by default). The filters go with every page; the cursor is sealed by the site, so pass back `nextCursor` unchanged and never build one. `$paginator->pages()` yields whole `Api\Page`s, and `$paginator->map($fn)` converts each item as it is reached.
+
 A refusal is thrown as an `Exception\ApiException` built from the site's RFC 9457 problem: `$type` (branch on it, or on `hasType('validation-failed')`), `$title`, `$status`, `$detail`, `$errors`, `$requestId`, `$retryAfter`, `$challenge` (the `WWW-Authenticate` header) and any other member through `extension('required_ability')`. `ValidationFailedException`, `NotFoundException`, `UnauthenticatedException`, `ForbiddenException`, `ConflictException`, `RateLimitedException` and `ServiceUnavailableException` extend it for the cases you are likely to handle; an answer that is not a problem (a proxy's error page) is an `ApiException` with `$isProblem` false and the raw `$body`. A request that never got an answer is an `Exception\TransportException`.
 
 When the site refuses a token with `UnauthenticatedException`, renew it rather than retrying: refused credentials count against a budget of their own, and a client that keeps sending a dead token locks out every caller behind the same address.
