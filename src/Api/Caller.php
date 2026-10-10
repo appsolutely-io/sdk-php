@@ -41,6 +41,12 @@ final readonly class Caller
         $query = self::query($query);
 
         if ($operation->takesIdempotencyKey()) {
+            // A keyed write is sent as postIdempotent() sends it, a POST with
+            // a body and no query; anything else would go out without part of it.
+            if ($operation->method() !== 'POST' || $query !== []) {
+                throw new LogicException(sprintf('%s is a keyed write, which is sent as a POST without a query.', $operation->value));
+            }
+
             return $this->api->postIdempotent($url, $body ?? [], $idempotencyKey);
         }
         if ($idempotencyKey !== null) {
@@ -51,7 +57,6 @@ final readonly class Caller
             'GET' => $this->api->get($url, $query),
             'POST' => $this->api->post($url, $body ?? []),
             'PATCH' => $this->api->patch($url, $body ?? []),
-            'PUT' => $this->api->put($url, $body ?? []),
             'DELETE' => $this->api->delete($url, $query),
             default => throw new LogicException(sprintf('%s uses %s, which the client does not send.', $operation->value, $operation->method())),
         };
