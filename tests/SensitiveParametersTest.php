@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests;
 
 use Appsolutely\Sdk\Cache\InMemoryCache;
+use Appsolutely\Sdk\Model\Entitlement;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -40,7 +41,8 @@ final class SensitiveParametersTest extends TestCase
     ];
 
     /**
-     * Named like a secret, yet not one: a PSR-16 cache key, a key id.
+     * Named like a secret, yet not one: a PSR-16 cache key, a key id, the
+     * name of what an entitlement grants.
      */
     private const array NOT_SENSITIVE = [
         [InMemoryCache::class, 'get', 'key'],
@@ -49,6 +51,7 @@ final class SensitiveParametersTest extends TestCase
         [InMemoryCache::class, 'has', 'key'],
         [InMemoryCache::class, 'stringKey', 'key'],
         [InMemoryCache::class, 'assertKey', 'key'],
+        [Entitlement::class, '__construct', 'key'],
     ];
 
     public function testEveryParameterNamedLikeASecretOrATokenIsMarkedSensitive(): void
