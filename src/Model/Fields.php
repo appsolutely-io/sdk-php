@@ -49,6 +49,7 @@ final class Fields
      * @param string $readPath the object's place in its schema, for the record: `items[]`
      */
     private function __construct(
+        #[\SensitiveParameter]
         private readonly array $object,
         private readonly string $source,
         private readonly bool $delivery,

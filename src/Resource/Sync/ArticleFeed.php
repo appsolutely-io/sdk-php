@@ -32,7 +32,7 @@ final readonly class ArticleFeed
     #[Endpoint(Operation::PullSyncArticle)]
     public function pull(?string $cursor = null, ?int $limit = null): SyncPull
     {
-        return $this->caller->read(Operation::PullSyncArticle, 'ArticleSyncPull', static fn(Fields $json): SyncPull => SyncPull::from($json, Article::from(...)), query: Caller::feed($cursor, $limit));
+        return $this->caller->read(Operation::PullSyncArticle, 'ArticleSyncPull', static fn(#[\SensitiveParameter] Fields $json): SyncPull => SyncPull::from($json, Article::from(...)), query: Caller::feed($cursor, $limit));
     }
 
     /**
@@ -48,6 +48,6 @@ final readonly class ArticleFeed
     #[Endpoint(Operation::PushSyncArticle)]
     public function push(array $mutations): SyncPush
     {
-        return $this->caller->read(Operation::PushSyncArticle, 'ArticleSyncPush', static fn(Fields $json): SyncPush => SyncPush::from($json, Article::from(...)), body: ['mutations' => $mutations]);
+        return $this->caller->read(Operation::PushSyncArticle, 'ArticleSyncPush', static fn(#[\SensitiveParameter] Fields $json): SyncPush => SyncPush::from($json, Article::from(...)), body: ['mutations' => $mutations]);
     }
 }

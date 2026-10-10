@@ -30,6 +30,6 @@ final readonly class MemberOrderFeed
     #[Endpoint(Operation::PullSyncMeOrder)]
     public function pull(?string $cursor = null, ?int $limit = null): SyncPull
     {
-        return $this->caller->read(Operation::PullSyncMeOrder, 'OrderSyncPull', static fn(Fields $json): SyncPull => SyncPull::from($json, Order::from(...)), query: Caller::feed($cursor, $limit));
+        return $this->caller->read(Operation::PullSyncMeOrder, 'OrderSyncPull', static fn(#[\SensitiveParameter] Fields $json): SyncPull => SyncPull::from($json, Order::from(...)), query: Caller::feed($cursor, $limit));
     }
 }

@@ -30,6 +30,6 @@ final readonly class ProductFeed
     #[Endpoint(Operation::PullSyncProduct)]
     public function pull(?string $cursor = null, ?int $limit = null): SyncPull
     {
-        return $this->caller->read(Operation::PullSyncProduct, 'ProductSyncPull', static fn(Fields $json): SyncPull => SyncPull::from($json, Product::from(...)), query: Caller::feed($cursor, $limit));
+        return $this->caller->read(Operation::PullSyncProduct, 'ProductSyncPull', static fn(#[\SensitiveParameter] Fields $json): SyncPull => SyncPull::from($json, Product::from(...)), query: Caller::feed($cursor, $limit));
     }
 }
