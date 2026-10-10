@@ -13,14 +13,12 @@ use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Model\SyncPull;
 use Appsolutely\Sdk\Model\SyncPush;
 use Appsolutely\Sdk\Model\SyncResult;
+use Appsolutely\Sdk\Tests\Support\SourceTokens;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionNamedType;
-use SplFileInfo;
 
 /**
  * Holds the typed client to the pinned Site API document: every operation
@@ -31,8 +29,6 @@ use SplFileInfo;
  */
 final class ResourceContractTest extends TestCase
 {
-    private const string SOURCE_NAMESPACE = 'Appsolutely\\Sdk\\';
-
     /**
      * @return iterable<string, array{string}>
      */
@@ -142,7 +138,7 @@ final class ResourceContractTest extends TestCase
     {
         foreach (self::classes() as $class) {
             $reflection = new ReflectionClass($class);
-            if ($reflection->hasConstant('SCHEMA') && str_starts_with($class, self::SOURCE_NAMESPACE . 'Model\\')) {
+            if ($reflection->hasConstant('SCHEMA') && str_starts_with($class, SourceTokens::ROOT_NAMESPACE . 'Model\\')) {
                 $schema = $reflection->getConstant('SCHEMA');
                 self::assertIsString($schema);
                 yield $reflection->getShortName() => [$class, $schema];
@@ -269,7 +265,7 @@ final class ResourceContractTest extends TestCase
                     continue;
                 }
                 $returned = $type->getName();
-                if (str_starts_with($returned, self::SOURCE_NAMESPACE . 'Resource\\') && !isset($seen[$returned]) && class_exists($returned)) {
+                if (str_starts_with($returned, SourceTokens::ROOT_NAMESPACE . 'Resource\\') && !isset($seen[$returned]) && class_exists($returned)) {
                     $seen[$returned] = true;
                     $queue[] = $returned;
                 }
@@ -284,14 +280,8 @@ final class ResourceContractTest extends TestCase
      */
     private static function classes(): array
     {
-        $root = dirname(__DIR__, 2) . '/src';
         $classes = [];
-        /** @var SplFileInfo $file */
-        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
-            if ($file->getExtension() !== 'php') {
-                continue;
-            }
-            $class = self::SOURCE_NAMESPACE . str_replace('/', '\\', substr($file->getPathname(), strlen($root) + 1, -4));
+        foreach (SourceTokens::classNames() as $class) {
             if (class_exists($class)) {
                 $classes[] = $class;
             }
