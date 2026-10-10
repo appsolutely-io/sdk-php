@@ -345,16 +345,18 @@ final class Fields
 
     private function missing(string $name): never
     {
-        throw $this->delivery
-            ? $this->refusal(sprintf('The %s delivery\'s %s is missing.', Untrusted::text($this->source), $this->where($name)))
-            : $this->refusal(sprintf('The site answered a "%s" object without "%s", which the Site API document requires.', $this->source, $this->where($name)));
+        throw $this->refusal(
+            sprintf('The %s delivery\'s %s is missing.', Untrusted::text($this->source), $this->where($name)),
+            sprintf('The site answered a "%s" object without "%s", which the Site API document requires.', $this->source, $this->where($name)),
+        );
     }
 
     private function refuse(string $name, string $expected, mixed $value): never
     {
-        throw $this->delivery
-            ? $this->refusal(sprintf('The %s delivery\'s %s is not %s.', Untrusted::text($this->source), $this->where($name), $expected))
-            : $this->refusal(sprintf('The site answered a "%s" object whose "%s" is not %s (%s).', $this->source, $this->where($name), $expected, get_debug_type($value)));
+        throw $this->refusal(
+            sprintf('The %s delivery\'s %s is not %s.', Untrusted::text($this->source), $this->where($name), $expected),
+            sprintf('The site answered a "%s" object whose "%s" is not %s (%s).', $this->source, $this->where($name), $expected, get_debug_type($value)),
+        );
     }
 
     /**
@@ -365,8 +367,12 @@ final class Fields
         return $this->join($this->path, Untrusted::text($name));
     }
 
-    private function refusal(string $message): RuntimeException
+    /**
+     * The exception for what was read, with the message written for it: a
+     * delivery's names its event type, an answer's names its schema.
+     */
+    private function refusal(string $inDelivery, string $inAnswer): RuntimeException
     {
-        return $this->delivery ? new UnexpectedPayloadException($message) : new UnexpectedResponseException($message, 0);
+        return $this->delivery ? new UnexpectedPayloadException($inDelivery) : new UnexpectedResponseException($inAnswer, 0);
     }
 }
