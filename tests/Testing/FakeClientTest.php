@@ -109,17 +109,30 @@ final class FakeClientTest extends TestCase
 
     public function testARefusalIsThrownAsTheSitesProblemWouldBe(): void
     {
-        $fake = (new FakeClient())->refuse(Operation::UpdateArticle, 'validation-failed', 422, 'The request is invalid.', detail: 'The title is too long.', members: ['errors' => ['title' => ['Too long.']]]);
+        $fake = (new FakeClient())->refuse(Operation::UpdateArticle, 'validation-failed', 422, 'The request did not pass validation.', detail: 'The title is too long.', members: ['errors' => ['title' => ['Too long.']]]);
 
         try {
             $fake->api()->articles()->update('art-1', ['title' => str_repeat('x', 300)]);
             self::fail('The refusal was not thrown.');
         } catch (ValidationFailedException $exception) {
             self::assertSame('https://appsolutely.io/problems/validation-failed', $exception->type);
-            self::assertSame('The request is invalid.', $exception->title);
+            self::assertSame('The request did not pass validation.', $exception->title);
             self::assertSame('The title is too long.', $exception->detail);
             self::assertSame(['title' => ['Too long.']], $exception->errors);
             self::assertSame($fake->lastCall(Operation::UpdateArticle)->requestId, $exception->requestId);
+        }
+    }
+
+    public function testAnEmptyDetailIsLeftOutAsTheSiteLeavesItOut(): void
+    {
+        $fake = (new FakeClient())->refuse(Operation::GetOrder, 'not-found', 404, 'Not found.', detail: '');
+
+        try {
+            $fake->api()->orders()->get('ord-1');
+            self::fail('The refusal was not thrown.');
+        } catch (NotFoundException $exception) {
+            self::assertArrayNotHasKey('detail', $exception->problem);
+            self::assertStringNotContainsString('"detail"', $exception->body);
         }
     }
 

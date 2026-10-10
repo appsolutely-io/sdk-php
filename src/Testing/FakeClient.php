@@ -28,7 +28,7 @@ use Psr\Http\Message\StreamFactoryInterface;
  *
  *     $fake = (new FakeClient())
  *         ->answer(Operation::GetArticle, ['id' => 'a-1', ...])
- *         ->refuse(Operation::CreateArticle, 'validation-failed', 422, 'The request is invalid.', members: ['errors' => [...]]);
+ *         ->refuse(Operation::CreateArticle, 'validation-failed', 422, 'The request did not pass validation.', members: ['errors' => [...]]);
  *     $service = new MyService($fake->client());
  *     ...
  *     $fake->lastCall(Operation::CreateArticle)->body;
@@ -134,7 +134,7 @@ final class FakeClient
      * site sends unless `$headers` gives another.
      *
      * @param string $type the problem type, such as `validation-failed`, or a full type URI
-     * @param string $title the problem's short summary, such as `The request is invalid.`
+     * @param string $title the problem's short summary, such as `The request did not pass validation.`
      * @param array<string, mixed> $members the problem's extension members, such as `errors`; never a standard member
      * @param array<string, string> $headers such as `Retry-After`
      */
@@ -150,7 +150,8 @@ final class FakeClient
             throw new LogicException(sprintf('A problem\'s extension members may not reuse a standard member: %s.', implode(', ', $clash)));
         }
         $type = str_contains($type, ':') ? $type : ApiException::TYPE_BASE . $type;
-        $problem = ['type' => $type, 'title' => $title, 'status' => $status, ...($detail === null ? [] : ['detail' => $detail]), ...$members];
+        // The site leaves out a detail that is empty, as it does a null one.
+        $problem = ['type' => $type, 'title' => $title, 'status' => $status, ...($detail === null || $detail === '' ? [] : ['detail' => $detail]), ...$members];
         $this->answers[$operation->value][] = ['status' => $status, 'body' => $problem, 'headers' => $headers, 'problem' => true];
 
         return $this;
