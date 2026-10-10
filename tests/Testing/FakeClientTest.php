@@ -8,12 +8,15 @@ use Appsolutely\Sdk\Api\Operation;
 use Appsolutely\Sdk\Exception\NotFoundException;
 use Appsolutely\Sdk\Exception\RateLimitedException;
 use Appsolutely\Sdk\Exception\UnarrangedCallException;
+use Appsolutely\Sdk\Exception\UnauthenticatedException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Exception\ValidationFailedException;
 use Appsolutely\Sdk\Model\Article;
 use Appsolutely\Sdk\Testing\FakeClient;
 use Appsolutely\Sdk\Tests\Resource\ContentTest;
 use Appsolutely\Sdk\Tests\Resource\MemberTest;
+use LogicException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -106,22 +109,75 @@ final class FakeClientTest extends TestCase
 
     public function testARefusalIsThrownAsTheSitesProblemWouldBe(): void
     {
-        $fake = (new FakeClient())->refuse(Operation::UpdateArticle, 'validation-failed', 422, detail: 'The title is too long.', members: ['errors' => ['title' => ['Too long.']]]);
+        $fake = (new FakeClient())->refuse(Operation::UpdateArticle, 'validation-failed', 422, 'The request is invalid.', detail: 'The title is too long.', members: ['errors' => ['title' => ['Too long.']]]);
 
         try {
             $fake->api()->articles()->update('art-1', ['title' => str_repeat('x', 300)]);
             self::fail('The refusal was not thrown.');
         } catch (ValidationFailedException $exception) {
             self::assertSame('https://appsolutely.io/problems/validation-failed', $exception->type);
+            self::assertSame('The request is invalid.', $exception->title);
             self::assertSame('The title is too long.', $exception->detail);
             self::assertSame(['title' => ['Too long.']], $exception->errors);
             self::assertSame($fake->lastCall(Operation::UpdateArticle)->requestId, $exception->requestId);
         }
     }
 
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function standardMembers(): iterable
+    {
+        foreach (['type', 'title', 'status', 'detail', 'instance'] as $member) {
+            yield $member => [$member];
+        }
+    }
+
+    #[DataProvider('standardMembers')]
+    public function testARefusalCannotReuseAStandardMemberAsAnExtension(string $member): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage($member);
+
+        (new FakeClient())->refuse(Operation::GetOrder, 'not-found', 404, 'Not found.', members: [$member => 'x']);
+    }
+
+    public function testARefused401CarriesTheBearerChallengeTheSiteSends(): void
+    {
+        $fake = (new FakeClient())
+            ->refuse(Operation::GetOrder, 'unauthenticated', 401, 'Unauthenticated.')
+            ->refuse(Operation::GetApiVersion, 'unauthenticated', 401, 'Unauthenticated.');
+
+        try {
+            $fake->api()->orders()->get('ord-1');
+            self::fail('The refusal was not thrown.');
+        } catch (UnauthenticatedException $exception) {
+            self::assertSame('Bearer error="invalid_token"', $exception->challenge);
+        }
+
+        try {
+            $fake->api()->version();
+            self::fail('The refusal was not thrown.');
+        } catch (UnauthenticatedException $exception) {
+            self::assertSame('Bearer', $exception->challenge);
+        }
+    }
+
+    public function testAnArrangedChallengeIsKept(): void
+    {
+        $fake = (new FakeClient())->refuse(Operation::GetOrder, 'unauthenticated', 401, 'Unauthenticated.', headers: ['www-authenticate' => 'Bearer realm="site"']);
+
+        try {
+            $fake->api()->orders()->get('ord-1');
+            self::fail('The refusal was not thrown.');
+        } catch (UnauthenticatedException $exception) {
+            self::assertSame('Bearer realm="site"', $exception->challenge);
+        }
+    }
+
     public function testARefusalIsNotRetried(): void
     {
-        $fake = (new FakeClient())->refuse(Operation::GetOrder, 'rate-limited', 429, headers: ['Retry-After' => '1']);
+        $fake = (new FakeClient())->refuse(Operation::GetOrder, 'rate-limited', 429, 'Too many requests.', headers: ['Retry-After' => '1']);
 
         try {
             $fake->api()->orders()->get('ord-1');
@@ -135,7 +191,7 @@ final class FakeClientTest extends TestCase
     public function testAnswersAreQueuedPerOperation(): void
     {
         $fake = (new FakeClient())
-            ->refuse(Operation::GetMeOrder, 'not-found', 404)
+            ->refuse(Operation::GetMeOrder, 'not-found', 404, 'Not found.')
             ->answer(Operation::GetMeOrder, \Appsolutely\Sdk\Tests\Resource\RecordsTest::order('ord-2'));
         $orders = $fake->forMember()->api()->me()->orders();
 
