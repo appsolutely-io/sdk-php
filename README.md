@@ -132,19 +132,19 @@ The same client reads the member's UserInfo claims (`userInfo($accessToken, $mem
 
 ## Calling the Site API
 
-`$client->api()` calls the site's API as its administrator, with the token from `Config`; `$client->forMember($accessToken)->api()` makes the same calls as a signed-in member, with the access token their sign-in returned. Paths are the ones the site's API document names:
+`$client->api()` calls the site's API as its administrator, with the token from `Config`; `$client->forMember($accessToken)->api()` calls it as a signed-in member, with the access token their sign-in returned. Each has `raw()`, the untyped calls underneath, for an operation the site has and this client was not written against; paths are the ones the site's API document names:
 
 ```php
 use Appsolutely\Sdk\Exception\ApiException;
 use Appsolutely\Sdk\Exception\NotFoundException;
 use Appsolutely\Sdk\Exception\ValidationFailedException;
 
-$article = $client->api()->get('/api/v1/articles/' . rawurlencode($id))->data;
+$article = $client->api()->raw()->get('/api/v1/articles/' . rawurlencode($id))->data;
 
-$me = $client->forMember($tokens->accessToken)->api()->get('/api/v1/me')->data;
+$me = $client->forMember($tokens->accessToken)->api()->raw()->get('/api/v1/me')->data;
 
 try {
-    $client->api()->patch('/api/v1/articles/' . rawurlencode($id), ['title' => $title]);
+    $client->api()->raw()->patch('/api/v1/articles/' . rawurlencode($id), ['title' => $title]);
 } catch (ValidationFailedException $exception) {
     $errors = $exception->errors;          // ['title' => ['The title field is required.']]
 } catch (NotFoundException) {
@@ -157,11 +157,11 @@ Every call sends `Accept: application/json, application/problem+json`, the SDK's
 A list answers a page, `{"data": [...], "next_cursor": "..."}`. `paginate()` walks every item, asking for each next page only when iteration reaches it and stopping at the page without a cursor; `page()` fetches one page when you keep the cursor yourself, say between requests:
 
 ```php
-foreach ($client->api()->paginate('/api/v1/orders', ['status' => 'paid'], limit: 100) as $order) {
+foreach ($client->api()->raw()->paginate('/api/v1/orders', ['status' => 'paid'], limit: 100) as $order) {
     // every paid order, 100 per request
 }
 
-$page = $client->api()->page('/api/v1/orders', ['status' => 'paid'], cursor: $savedCursor);
+$page = $client->api()->raw()->page('/api/v1/orders', ['status' => 'paid'], cursor: $savedCursor);
 $savedCursor = $page->nextCursor;      // null on the last page
 ```
 
@@ -174,7 +174,7 @@ A refusal is thrown as an `Exception\ApiException` built from the site's RFC 945
 Some writes, such as creating an article or filing a member's address, accept an `Idempotency-Key`. Send them with `postIdempotent()`: the client generates a UUID v4 key (or takes yours, 1 to 255 printable ASCII characters, one per operation) and sends the same key on every retry, so a retry after a lost answer is answered with the first answer instead of creating a second record:
 
 ```php
-$response = $client->forMember($accessToken)->api()->postIdempotent('/api/v1/me/addresses', $address);
+$response = $client->forMember($accessToken)->api()->raw()->postIdempotent('/api/v1/me/addresses', $address);
 $response->replayed;          // true when this is the stored answer to an earlier attempt
 $response->idempotencyKey;    // the key that was sent
 ```

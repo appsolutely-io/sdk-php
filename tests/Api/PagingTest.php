@@ -23,7 +23,7 @@ final class PagingTest extends TestCase
     {
         $provider = self::pages([[['id' => 'a'], ['id' => 'b']], 'cursor-2']);
 
-        $page = $provider->client()->api()->page('/api/v1/articles', ['status' => 'published'], limit: 2);
+        $page = $provider->client()->api()->raw()->page('/api/v1/articles', ['status' => 'published'], limit: 2);
 
         self::assertSame([['id' => 'a'], ['id' => 'b']], $page->items);
         self::assertSame('cursor-2', $page->nextCursor);
@@ -35,7 +35,7 @@ final class PagingTest extends TestCase
     {
         $provider = self::pages([[['id' => 'a']], null]);
 
-        $page = $provider->client()->api()->page('/api/v1/articles');
+        $page = $provider->client()->api()->raw()->page('/api/v1/articles');
 
         self::assertNull($page->nextCursor);
         self::assertFalse($page->hasMore());
@@ -47,7 +47,7 @@ final class PagingTest extends TestCase
         $provider = self::pages([[['id' => 'a'], ['id' => 'b']], 'c/2+=='], [[['id' => 'c']], 'c3'], [[], null]);
 
         $ids = [];
-        foreach ($provider->client()->api()->paginate('/api/v1/articles', ['status' => 'published'], limit: 2) as $article) {
+        foreach ($provider->client()->api()->raw()->paginate('/api/v1/articles', ['status' => 'published'], limit: 2) as $article) {
             $ids[] = $article['id'];
         }
 
@@ -60,7 +60,7 @@ final class PagingTest extends TestCase
     {
         $provider = self::pages([[['id' => 'a'], ['id' => 'b']], 'c2'], [[['id' => 'c']], null]);
 
-        $paginator = $provider->client()->api()->paginate('/api/v1/articles');
+        $paginator = $provider->client()->api()->raw()->paginate('/api/v1/articles');
         self::assertSame([], $provider->siteRequests());
 
         foreach ($paginator as $article) {
@@ -75,18 +75,29 @@ final class PagingTest extends TestCase
         $provider = self::pages([[['id' => 'a']], 'c2'], [[['id' => 'b']], null]);
 
         $cursors = [];
-        foreach ($provider->client()->api()->paginate('/api/v1/articles')->pages() as $page) {
+        foreach ($provider->client()->api()->raw()->paginate('/api/v1/articles')->pages() as $page) {
             $cursors[] = $page->nextCursor;
         }
 
         self::assertSame(['c2', null], $cursors);
     }
 
+    public function testOnePageIsFetchedAtACursorKeptFromAnEarlierRun(): void
+    {
+        $provider = self::pages([[['id' => 'b']], null]);
+
+        $page = $provider->client()->api()->raw()->paginate('/api/v1/articles', limit: 2)->page('kept-cursor');
+
+        self::assertSame([['id' => 'b']], $page->items);
+        self::assertCount(1, $provider->siteRequests());
+        self::assertSame('limit=2&cursor=kept-cursor', $provider->siteRequests()[0]->getUri()->getQuery());
+    }
+
     public function testItemsCanBeMappedLazily(): void
     {
         $provider = self::pages([[['id' => 'a']], 'c2'], [[['id' => 'b']], null]);
 
-        $ids = iterator_to_array($provider->client()->api()->paginate('/api/v1/articles')->map(static fn(array $item): mixed => $item['id']), false);
+        $ids = iterator_to_array($provider->client()->api()->raw()->paginate('/api/v1/articles')->map(static fn(array $item): mixed => $item['id']), false);
 
         self::assertSame(['a', 'b'], $ids);
     }
@@ -95,7 +106,7 @@ final class PagingTest extends TestCase
     {
         $provider = self::pages([[], null]);
 
-        iterator_to_array($provider->client()->forMember('member-token')->api()->paginate('/api/v1/me/orders'));
+        iterator_to_array($provider->client()->forMember('member-token')->api()->raw()->paginate('/api/v1/me/orders'));
 
         self::assertSame('Bearer member-token', $provider->siteRequests()[0]->getHeaderLine('Authorization'));
     }
@@ -114,7 +125,7 @@ final class PagingTest extends TestCase
     public function testALimitOutsideOneToAHundredIsRefusedBeforeAnyRequest(int $limit): void
     {
         $provider = self::pages([[], null]);
-        $api = $provider->client()->api();
+        $api = $provider->client()->api()->raw();
 
         foreach ([static fn() => $api->paginate('/api/v1/articles', limit: $limit), static fn() => $api->page('/api/v1/articles', limit: $limit)] as $call) {
             try {
@@ -143,15 +154,15 @@ final class PagingTest extends TestCase
     {
         $this->expectException(InvalidArgumentValueException::class);
 
-        (new FakeProvider())->client()->api()->paginate('/api/v1/articles', [$name => 'x']);
+        (new FakeProvider())->client()->api()->raw()->paginate('/api/v1/articles', [$name => 'x']);
     }
 
     public function testTheLimitsAtTheEdgesAreAccepted(): void
     {
         $provider = self::pages([[], null], [[], null]);
 
-        $provider->client()->api()->page('/api/v1/articles', limit: 1);
-        $provider->client()->api()->page('/api/v1/articles', limit: 100);
+        $provider->client()->api()->raw()->page('/api/v1/articles', limit: 1);
+        $provider->client()->api()->raw()->page('/api/v1/articles', limit: 100);
 
         self::assertCount(2, $provider->siteRequests());
     }
@@ -178,7 +189,7 @@ final class PagingTest extends TestCase
 
         $this->expectException(UnexpectedResponseException::class);
 
-        $provider->client()->api()->page('/api/v1/articles');
+        $provider->client()->api()->raw()->page('/api/v1/articles');
     }
 
     public function testASiteThatHandsBackTheSameCursorDoesNotLoopForever(): void
@@ -187,7 +198,7 @@ final class PagingTest extends TestCase
 
         $this->expectException(UnexpectedResponseException::class);
 
-        iterator_to_array($provider->client()->api()->paginate('/api/v1/articles'), false);
+        iterator_to_array($provider->client()->api()->raw()->paginate('/api/v1/articles'), false);
     }
 
     public function testARefusedCursorIsThrown(): void
@@ -196,7 +207,7 @@ final class PagingTest extends TestCase
         $provider->site = static fn(): ResponseInterface => $provider->problem(422, 'invalid-cursor');
 
         try {
-            $provider->client()->api()->page('/api/v1/articles', cursor: 'stale');
+            $provider->client()->api()->raw()->page('/api/v1/articles', cursor: 'stale');
             self::fail('The refusal was not thrown.');
         } catch (ApiException $exception) {
             self::assertTrue($exception->hasType('invalid-cursor'));

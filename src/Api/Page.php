@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Api;
 
+use Appsolutely\Sdk\Exception\UnexpectedResponseException;
+use Appsolutely\Sdk\Http\Json;
+use Appsolutely\Sdk\Support\Untrusted;
 use Closure;
 
 /**
@@ -24,6 +27,35 @@ final readonly class Page
         public ?string $nextCursor,
         public ApiResponse $response,
     ) {}
+
+    /**
+     * The page a GET answered, as `{data, next_cursor}` with every item an
+     * object; an empty `next_cursor` is read as none.
+     *
+     * @internal
+     *
+     * @return self<array<string, mixed>>
+     */
+    public static function fromResponse(ApiResponse $response, string $path): self
+    {
+        $data = $response->data;
+        $items = is_array($data) && !array_is_list($data) ? ($data['data'] ?? null) : null;
+        $next = is_array($data) ? ($data['next_cursor'] ?? null) : null;
+
+        if (!is_array($items) || !array_is_list($items) || ($next !== null && !is_string($next))) {
+            throw new UnexpectedResponseException(sprintf('GET %s did not answer a page of the form {data, next_cursor}.', Untrusted::text($path, Untrusted::MAX_LONG_LENGTH)), $response->status);
+        }
+
+        $objects = [];
+        foreach ($items as $item) {
+            if (!is_array($item) || ($item !== [] && array_is_list($item))) {
+                throw new UnexpectedResponseException(sprintf('GET %s answered a page whose items are not all objects.', Untrusted::text($path, Untrusted::MAX_LONG_LENGTH)), $response->status);
+            }
+            $objects[] = Json::stringKeys($item);
+        }
+
+        return new self($objects, $next === '' ? null : $next, $response);
+    }
 
     public function hasMore(): bool
     {
