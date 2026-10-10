@@ -18,6 +18,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Webhooks\Verifier` for Standard Webhooks v1 deliveries, including secret rotation with secrets of 24 to 64 bytes and a timestamp tolerance of five minutes by default, configurable from 1 to 3600 seconds, returning a typed `Webhooks\Event`.
 - `Webhooks\Deliveries` to acknowledge a retried or redelivered event without running its handler twice, with an optional namespace per endpoint so several endpoints can share one cache.
 - `Testing\WebhookFactory` to build deliveries signed exactly as Appsolutely signs them.
+- `Webhooks\Events\TypedEvent::from()` to read a verified `Webhooks\Event` into a typed event for every type the site sends: article, page, product, form, order, payment, refund, referral reward, subscription and account events and `webhook.ping`, with `Webhooks\EventType` naming each type. Times are UTC `DateTimeImmutable`, ids strings and amounts integer minor units beside their currency; fields the client does not name stay readable in `$extra`. An unknown type becomes `Events\UnknownEvent` rather than an exception, and a known type whose data does not have its shape throws the new `Exception\UnexpectedPayloadException`.
 
 ### Changed
 
