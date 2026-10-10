@@ -7,7 +7,6 @@ namespace Appsolutely\Sdk\Resource;
 use Appsolutely\Sdk\Api\Caller;
 use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\Operation;
-use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Model\MagicLinkToken;
 
 /**
@@ -65,6 +64,6 @@ final readonly class MagicLink
             'lost_second_factor' => $lostSecondFactor,
         ], static fn(mixed $value): bool => $value !== null);
 
-        return MagicLinkToken::from(Fields::of($this->caller->object(Operation::TokenMagicLink, body: $body), MagicLinkToken::SCHEMA));
+        return $this->caller->read(Operation::TokenMagicLink, MagicLinkToken::SCHEMA, MagicLinkToken::from(...), body: $body);
     }
 }

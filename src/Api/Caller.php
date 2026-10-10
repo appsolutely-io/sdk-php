@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Api;
 
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
+use Appsolutely\Sdk\Model\Fields;
+use Closure;
 use DateTimeInterface;
 use DateTimeZone;
 use LogicException;
@@ -93,6 +95,64 @@ final readonly class Caller
     public function onlyPage(Operation $operation, #[\SensitiveParameter] array $query = []): Page
     {
         return Page::fromResponse($this->send($operation, [], $query), $operation->path());
+    }
+
+    /**
+     * The model an operation answered, read from the schema the document
+     * gives it.
+     *
+     * @template T
+     *
+     * @param Closure(Fields): T $read
+     * @param array<string, string> $path
+     * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query
+     * @param array<string, mixed>|null $body
+     * @return T
+     */
+    public function read(Operation $operation, string $schema, Closure $read, array $path = [], #[\SensitiveParameter] array $query = [], #[\SensitiveParameter] ?array $body = null): mixed
+    {
+        return $read(Fields::of($this->object($operation, $path, $query, $body), $schema));
+    }
+
+    /**
+     * Every item of a cursor list as a model, a page at a time.
+     *
+     * @template T
+     *
+     * @param Closure(Fields): T $read
+     * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query the list's filters
+     * @param array<string, string> $path
+     * @return Paginator<T>
+     */
+    public function list(Operation $operation, string $schema, Closure $read, #[\SensitiveParameter] array $query, int $limit, array $path = []): Paginator
+    {
+        return $this->paginate($operation, $path, $query, $limit)->map(static fn(array $item): mixed => $read(Fields::of($item, $schema)));
+    }
+
+    /**
+     * A write sent with an Idempotency-Key, and the model it answered.
+     *
+     * @template T
+     *
+     * @param Closure(Fields): T $read
+     * @param array<string, string> $path
+     * @param array<string, mixed> $body
+     * @return KeyedResult<T>
+     */
+    public function keyed(Operation $operation, string $schema, Closure $read, array $path, #[\SensitiveParameter] array $body, ?string $idempotencyKey): KeyedResult
+    {
+        if (!$operation->takesIdempotencyKey()) {
+            throw new LogicException(sprintf('%s takes no Idempotency-Key.', $operation->value));
+        }
+
+        $response = $this->send($operation, $path, [], $body, $idempotencyKey);
+
+        return new KeyedResult(
+            $read(Fields::of(self::objectOf($response, $operation), $schema)),
+            (string) $response->idempotencyKey,
+            $response->replayed,
+            $response,
+        );
     }
 
     /**

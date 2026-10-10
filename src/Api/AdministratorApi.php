@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Api;
 
 use Appsolutely\Sdk\Model\ApiVersion;
-use Appsolutely\Sdk\Model\Fields;
+use Appsolutely\Sdk\Resource\Articles;
 use Appsolutely\Sdk\Resource\MagicLink;
+use Appsolutely\Sdk\Resource\Pages;
+use Appsolutely\Sdk\Resource\Products;
 
 /**
  * The Site API as the site's administrator, from Client::api(): a typed
@@ -16,6 +18,8 @@ use Appsolutely\Sdk\Resource\MagicLink;
  */
 final readonly class AdministratorApi
 {
+    private Caller $administrator;
+
     private Caller $anyone;
 
     /**
@@ -23,6 +27,7 @@ final readonly class AdministratorApi
      */
     public function __construct(private SiteApi $api)
     {
+        $this->administrator = new Caller($api, Audience::Administrator);
         $this->anyone = new Caller($api->withoutToken(), Audience::Anyone);
     }
 
@@ -41,7 +46,7 @@ final readonly class AdministratorApi
     #[Endpoint(Operation::GetApiVersion)]
     public function version(): ApiVersion
     {
-        return ApiVersion::from(Fields::of($this->anyone->object(Operation::GetApiVersion), ApiVersion::SCHEMA));
+        return $this->anyone->read(Operation::GetApiVersion, ApiVersion::SCHEMA, ApiVersion::from(...));
     }
 
     /**
@@ -58,5 +63,20 @@ final readonly class AdministratorApi
     public function magicLink(): MagicLink
     {
         return new MagicLink($this->anyone);
+    }
+
+    public function pages(): Pages
+    {
+        return new Pages($this->administrator);
+    }
+
+    public function articles(): Articles
+    {
+        return new Articles($this->administrator);
+    }
+
+    public function products(): Products
+    {
+        return new Products($this->administrator);
     }
 }
