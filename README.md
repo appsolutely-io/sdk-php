@@ -1,6 +1,6 @@
 # Appsolutely PHP SDK
 
-A framework-free PHP client for relying parties of Appsolutely: OpenID Connect sign-in, the machine token for the party's own API calls (the calls themselves are not wrapped yet), and verified Standard Webhooks deliveries.
+A framework-free PHP client for relying parties of Appsolutely: OpenID Connect sign-in and verified Standard Webhooks deliveries.
 
 Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://github.com/appsolutely-io/sdk-laravel), which wires this client into the container, Socialite and the router.
 
@@ -67,9 +67,7 @@ $client = new Client(new Config(
 
 ### The cache
 
-In production, pass your application's shared PSR-16 cache (Redis, Memcached, APCu or your framework's cache). Without one, the client falls back to a cache in memory that lives as long as the PHP process; under PHP-FPM that is a single request, so every request fetches the discovery document and the signing keys again and asks for a new machine token. The fallback exists so the client works anywhere, not for production.
-
-The cache holds the machine tokens from `machineToken()` until shortly before they expire. They are live bearer credentials for your party's API calls: protect the cache like a credential store, and do not share it with applications that should not act as your party.
+In production, pass your application's shared PSR-16 cache (Redis, Memcached, APCu or your framework's cache). Without one, the client falls back to a cache in memory that lives as long as the PHP process; under PHP-FPM that is a single request, so every request fetches the discovery document and the signing keys again. The fallback exists so the client works anywhere, not for production.
 
 ## Signing a member in with OpenID Connect
 
@@ -123,7 +121,7 @@ $_SESSION['appsolutely_tokens'] = [
 
 ### Other calls
 
-The same client reads the member's UserInfo claims (`userInfo($accessToken, $memberId)`), revokes a token (`revoke()`) and obtains a cached `client_credentials` token for the party's own API calls (`machineToken()`). OAuth errors become `Exception\OAuthException` with the error code in `$exception->error`. Every exception an integrator may catch lives in the `Appsolutely\Sdk\Exception` namespace and implements `Exception\AppsolutelyException`. A refused argument is an `Exception\InvalidArgumentValueException`, or a subclass naming what was refused (`InvalidConfigException` for a `Config` value, `InvalidSecretException` for a webhook signing secret).
+The same client reads the member's UserInfo claims (`userInfo($accessToken, $memberId)`) and revokes a token (`revoke()`). OAuth errors become `Exception\OAuthException` with the error code in `$exception->error`. Every exception an integrator may catch lives in the `Appsolutely\Sdk\Exception` namespace and implements `Exception\AppsolutelyException`. A refused argument is an `Exception\InvalidArgumentValueException`, or a subclass naming what was refused (`InvalidConfigException` for a `Config` value, `InvalidSecretException` for a webhook signing secret).
 
 ## Verifying webhook deliveries
 

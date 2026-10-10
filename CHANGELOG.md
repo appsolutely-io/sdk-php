@@ -10,7 +10,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `Client` and `Config`, built on PSR-18/17 HTTP, PSR-16 cache, PSR-20 clock and PSR-3 logger interfaces, with an HTTP client discovered when none is given.
-- OpenID Connect sign-in through `Client::oidc()`: discovery and the signing keys cached per `Cache-Control` for a day at most, an authorization URL with `state`, `nonce`, PKCE S256 and an optional `max_age` whose `auth_time` is then checked, callback validation including the RFC 9207 `iss` parameter, the code exchange, ID token verification against the provider's RS256/ES256 keys, userinfo, RFC 7009 revocation and a cached `client_credentials` machine token for the party's API calls (the calls themselves are not wrapped yet).
+- OpenID Connect sign-in through `Client::oidc()`: discovery and the signing keys cached per `Cache-Control` for a day at most, an authorization URL with `state`, `nonce`, PKCE S256 and an optional `max_age` whose `auth_time` is then checked, callback validation including the RFC 9207 `iss` parameter, the code exchange, ID token verification against the provider's RS256/ES256 keys, userinfo and RFC 7009 revocation.
 - Token refresh that holds every refreshed ID token to the original authentication (OpenID Connect Core section 12.2): the original ID token is required, the result always carries the ID token to keep for the next refresh (the original when the provider sends none), and a refreshed token without `auth_time` keeps the original's in `IdToken::$authTime`.
 - `IdToken::toArray()` and `IdToken::fromTrustedStorage()` to keep the ID token in a session stored as JSON; the latter trusts the integrator's own storage and verifies nothing.
 - `Exception\OAuthException` carrying the OAuth error code returned by the provider.
@@ -26,6 +26,10 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ProviderMetadata::$userinfoEndpoint` is renamed `$userInfoEndpoint`, cased like `userInfo()`.
 - `ProviderMetadata` can only be built through `fromArray()`, and `ProviderMetadata::fromArray()` and `Config::clientSecret()` are internal.
 - The User-Agent sends `dev` as the SDK version when Composer reports no real one.
+
+### Removed
+
+- **BREAKING:** `OpenIdClient::machineToken()` and the `client_credentials` grant behind it. Neither credential the client sends to a site comes from the token endpoint: server-side calls use the administrator token issued on the site, and calls made as a member use that member's access token.
 
 ### Security
 
