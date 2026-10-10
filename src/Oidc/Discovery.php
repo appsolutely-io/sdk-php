@@ -61,7 +61,7 @@ final readonly class Discovery
      * identical to the one the client was configured with, or a document
      * served from one host could speak for another.
      *
-     * @param array<string, mixed> $document
+     * @param array<array-key, mixed> $document
      */
     private function validated(array $document): ProviderMetadata
     {

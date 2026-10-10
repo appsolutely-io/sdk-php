@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests;
 
+use Appsolutely\Sdk\Tests\Support\SourceTokens;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
 
 /**
- * The package is framework-free and speaks for one relying party: its source
- * names no Laravel (Illuminate) symbol, which only the Laravel bridge may use,
- * and no tenant, a server-side concept a relying party never sees.
+ * The package is framework-free and speaks to one site: its source names no
+ * Laravel (Illuminate) symbol, which only the Laravel bridge may use, and no
+ * hosting-layer concept, which a site's own client never sees.
  *
  * The source tree is scanned rather than a no-dev install exercised: the
  * package requires nothing from Illuminate, so with or without dev
@@ -26,11 +24,8 @@ final class FrameworkIndependenceTest extends TestCase
      */
     public static function sourceFiles(): iterable
     {
-        $root = dirname(__DIR__) . '/src';
-
-        /** @var SplFileInfo $file */
-        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
-            yield substr($file->getPathname(), strlen($root) + 1) => [$file->getPathname()];
+        foreach (SourceTokens::files() as $file => $path) {
+            yield $file => [$path];
         }
     }
 
@@ -41,8 +36,11 @@ final class FrameworkIndependenceTest extends TestCase
     }
 
     #[DataProvider('sourceFiles')]
-    public function testASourceFileNamesNoTenant(string $path): void
+    public function testASourceFileNamesNoHostingLayerConcept(string $path): void
     {
-        self::assertDoesNotMatchRegularExpression('/tenant/i', (string) file_get_contents($path));
+        // Built from pieces so this file does not carry the word it forbids.
+        $word = 'ten' . 'ant';
+
+        self::assertDoesNotMatchRegularExpression('/' . $word . '/i', (string) file_get_contents($path));
     }
 }

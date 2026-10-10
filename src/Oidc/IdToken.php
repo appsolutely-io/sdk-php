@@ -24,7 +24,7 @@ final readonly class IdToken
     /**
      * @internal only the verifier and OpenIdClient::refresh() create one, so holding an IdToken means its checks passed
      *
-     * @param array<string, mixed> $claims
+     * @param array<array-key, mixed> $claims
      * @param int|float|null $originalAuthTime the auth_time to keep when the claims carry none
      */
     public function __construct(
@@ -44,7 +44,7 @@ final readonly class IdToken
      * with fromTrustedStorage(). It holds the raw ID token, so store it
      * where the refresh token is stored, never in a cookie or a URL.
      *
-     * @return array{raw: string, claims: array<string, mixed>, auth_time: int|float|null}
+     * @return array{raw: string, claims: array<array-key, mixed>, auth_time: int|float|null}
      */
     public function toArray(): array
     {
@@ -73,7 +73,6 @@ final readonly class IdToken
             throw self::notStored();
         }
 
-        $claims = Json::stringKeys($claims);
         $subject = $claims['sub'] ?? null;
         $authTime = $stored['auth_time'];
         if (!is_string($subject) || $subject === '' || ($authTime !== null && !is_int($authTime) && !is_float($authTime))) {

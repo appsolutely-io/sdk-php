@@ -6,10 +6,8 @@ namespace Appsolutely\Sdk\Tests;
 
 use Appsolutely\Sdk\Exception\AppsolutelyException;
 use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
+use Appsolutely\Sdk\Tests\Support\SourceTokens;
 use PHPUnit\Framework\TestCase;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
 use Throwable;
 
 /**
@@ -63,12 +61,7 @@ final class ExceptionsTest extends TestCase
     private static function exceptionClasses(): array
     {
         $exceptions = [];
-        $root = dirname(__DIR__) . '/src';
-
-        /** @var SplFileInfo $file */
-        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
-            $relative = substr($file->getPathname(), strlen($root) + 1, -strlen('.php'));
-            $class = 'Appsolutely\\Sdk\\' . str_replace('/', '\\', $relative);
+        foreach (SourceTokens::classNames() as $class) {
             if ((class_exists($class) || interface_exists($class)) && is_subclass_of($class, Throwable::class)) {
                 $exceptions[] = $class;
             }

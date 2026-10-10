@@ -14,7 +14,7 @@ use DateTimeImmutable;
 final readonly class Event
 {
     /**
-     * @param array<string, mixed> $data
+     * @param array<array-key, mixed> $data
      */
     public function __construct(
         public string $id,
@@ -59,6 +59,6 @@ final readonly class Event
             throw new WebhookVerificationException('The event envelope\'s timestamp is not an ISO 8601 date-time.');
         }
 
-        return new self($id, $type, $occurredAt, $version, $mode, Json::stringKeys($data));
+        return new self($id, $type, $occurredAt, $version, $mode, $data);
     }
 }

@@ -1,0 +1,3597 @@
+openapi: 3.1.0
+info:
+  title: 'Laravel public API'
+  version: v1
+  description: 'The public developer API of this install, major version v1 (current). Every path here is stable for the life of the version: fields are added, never removed or retyped, and a breaking change arrives as a new version while this one keeps serving.'
+servers:
+  - url: /
+tags:
+  - name: account-states
+  - name: articles
+  - name: form-entries
+  - name: magic-link
+  - name: me
+  - name: me-addresses
+  - name: me-billing-entry
+  - name: me-entitlements
+  - name: me-orders
+  - name: me-push-devices
+  - name: me-referral
+  - name: orders
+  - name: pages
+  - name: products
+  - name: sync.articles
+  - name: sync.form-entries
+  - name: sync.me-addresses
+  - name: sync.me-orders
+  - name: sync.orders
+  - name: sync.pages
+  - name: sync.products
+  - name: version
+  - name: webhook-deliveries
+paths:
+  /api/v1:
+    get:
+      operationId: getApiVersion
+      tags:
+        - version
+      summary: 'The lifecycle of this API version'
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiVersion' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+  /api/v1/account-states:
+    get:
+      operationId: listAccountStates
+      tags:
+        - account-states
+      summary: 'List account states'
+      parameters:
+        - name: 'subjects[]'
+          in: query
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+              maxLength: 191
+            minItems: 1
+            maxItems: 100
+          style: form
+          explode: true
+      responses:
+        200:
+          description: 'A page of records'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountStatePage' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  /api/v1/articles:
+    get:
+      operationId: listArticles
+      tags:
+        - articles
+      summary: 'List articles'
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        200:
+          description: 'A page of records'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArticlePage' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+    post:
+      operationId: createArticle
+      tags:
+        - articles
+      summary: 'Create one of articles'
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: 'Send a fresh key per operation and the same key with every retry of it: a retry is answered with the first answer instead of running again.'
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+            pattern: '^[\x20-\x7E]+$'
+      responses:
+        201:
+          description: 'The record created'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Article' }
+          headers:
+            Location:
+              description: 'Where the created resource is read back.'
+              schema: { type: string, format: uri }
+            Idempotent-Replayed:
+              description: 'Sent, as `true`, only when this is the stored answer to an earlier request with the same `Idempotency-Key`, given instead of running it again.'
+              schema: { type: string, enum: ['true'] }
+        400:
+          description: 'An Idempotency-Key is 1 to 255 printable ASCII characters.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        409:
+          description: 'The request first sent with this Idempotency-Key has not finished; retry after it has.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'Sent only with the refusal of a request whose first attempt with this `Idempotency-Key` has not finished: how many seconds to wait before retrying.'
+              schema: { type: integer, minimum: 1 }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation. Or: This Idempotency-Key was sent with a different request."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        500:
+          description: 'The outcome is unknown; read the current state, then retry with a new key.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Idempotent-Replayed:
+              description: 'Sent, as `true`, only when this is the stored answer to an earlier request with the same `Idempotency-Key`, given instead of running it again.'
+              schema: { type: string, enum: ['true'] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreArticlePayload'
+      security:
+        - bearerAuth: []
+  '/api/v1/articles/{id}':
+    get:
+      operationId: getArticle
+      tags:
+        - articles
+      summary: 'Read one of articles'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Article' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        404:
+          description: 'No such record'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+    patch:
+      operationId: updateArticle
+      tags:
+        - articles
+      summary: 'Update one of articles'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Article' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        404:
+          description: 'No such record'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateArticlePayload'
+      security:
+        - bearerAuth: []
+  /api/v1/auth/magic-link:
+    post:
+      operationId: requestMagicLink
+      tags:
+        - magic-link
+      summary: 'Request magic link'
+      responses:
+        202:
+          description: Accepted
+        422:
+          description: 'The request did not pass validation.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MagicLinkPayload'
+  /api/v1/auth/magic-link/token:
+    post:
+      operationId: tokenMagicLink
+      tags:
+        - magic-link
+      summary: 'Token magic link'
+      responses:
+        201:
+          description: 'The record created'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MagicLinkToken' }
+        422:
+          description: 'The request did not pass validation.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MagicLinkTokenPayload'
+  /api/v1/form-entries:
+    get:
+      operationId: listFormEntries
+      tags:
+        - form-entries
+      summary: 'List form entries'
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        200:
+          description: 'A page of records'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FormEntryPage' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  '/api/v1/form-entries/{id}':
+    get:
+      operationId: getFormEntry
+      tags:
+        - form-entries
+      summary: 'Read one of form entries'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FormEntry' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        404:
+          description: 'No such record'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  /api/v1/me:
+    get:
+      operationId: getMe
+      tags:
+        - me
+      summary: 'Read one of me'
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      security:
+        - bearerAuth: []
+    patch:
+      operationId: updateMe
+      tags:
+        - me
+      summary: 'Update one of me'
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMePayload'
+      security:
+        - bearerAuth: []
+  /api/v1/me/addresses:
+    get:
+      operationId: listMeAddresses
+      tags:
+        - me-addresses
+      summary: 'List me addresses'
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        200:
+          description: 'A page of records'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserAddressPage' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      security:
+        - bearerAuth: []
+    post:
+      operationId: createMeAddress
+      tags:
+        - me-addresses
+      summary: 'Create one of me addresses'
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: 'Send a fresh key per operation and the same key with every retry of it: a retry is answered with the first answer instead of running again.'
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+            pattern: '^[\x20-\x7E]+$'
+      responses:
+        201:
+          description: 'The record created'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserAddress' }
+          headers:
+            Idempotent-Replayed:
+              description: 'Sent, as `true`, only when this is the stored answer to an earlier request with the same `Idempotency-Key`, given instead of running it again.'
+              schema: { type: string, enum: ['true'] }
+        400:
+          description: 'An Idempotency-Key is 1 to 255 printable ASCII characters.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        409:
+          description: 'The request first sent with this Idempotency-Key has not finished; retry after it has.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'Sent only with the refusal of a request whose first attempt with this `Idempotency-Key` has not finished: how many seconds to wait before retrying.'
+              schema: { type: integer, minimum: 1 }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation. Or: This Idempotency-Key was sent with a different request."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        500:
+          description: 'The outcome is unknown; read the current state, then retry with a new key.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Idempotent-Replayed:
+              description: 'Sent, as `true`, only when this is the stored answer to an earlier request with the same `Idempotency-Key`, given instead of running it again.'
+              schema: { type: string, enum: ['true'] }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreMeAddressPayload'
+      security:
+        - bearerAuth: []
+  '/api/v1/me/addresses/{id}':
+    delete:
+      operationId: deleteMeAddress
+      tags:
+        - me-addresses
+      summary: 'Destroy me addresses'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        204:
+          description: Done
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        404:
+          description: 'No such record'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      security:
+        - bearerAuth: []
+    patch:
+      operationId: updateMeAddress
+      tags:
+        - me-addresses
+      summary: 'Update one of me addresses'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserAddress' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        404:
+          description: 'No such record'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeAddressPayload'
+      security:
+        - bearerAuth: []
+  /api/v1/me/billing-entry:
+    get:
+      operationId: getMeBillingEntry
+      tags:
+        - me-billing-entry
+      summary: 'Read one of me billing entry'
+      parameters:
+        - name: store
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - app_store
+              - google_play
+              - direct
+        - name: storefront
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BillingEntry' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      security:
+        - bearerAuth: []
+  /api/v1/me/entitlements:
+    get:
+      operationId: listMeEntitlements
+      tags:
+        - me-entitlements
+      summary: 'List me entitlements'
+      responses:
+        200:
+          description: 'A page of records'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EntitlementPage' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      security:
+        - bearerAuth: []
+  /api/v1/me/orders:
+    get:
+      operationId: listMeOrders
+      tags:
+        - me-orders
+      summary: 'List me orders'
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        200:
+          description: 'A page of records'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderPage' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      security:
+        - bearerAuth: []
+  '/api/v1/me/orders/{id}':
+    get:
+      operationId: getMeOrder
+      tags:
+        - me-orders
+      summary: 'Read one of me orders'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        404:
+          description: 'No such record'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      security:
+        - bearerAuth: []
+  /api/v1/me/push-devices:
+    post:
+      operationId: createMePushDevice
+      tags:
+        - me-push-devices
+      summary: 'Create one of me push devices'
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PushDevice' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreMePushDevicePayload'
+      security:
+        - bearerAuth: []
+  /api/v1/me/push-devices/unregister:
+    post:
+      operationId: unregisterMePushDevice
+      tags:
+        - me-push-devices
+      summary: 'Unregister me push devices'
+      responses:
+        204:
+          description: Done
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnregisterMePushDevicePayload'
+      security:
+        - bearerAuth: []
+  /api/v1/me/referral:
+    get:
+      operationId: getMeReferral
+      tags:
+        - me-referral
+      summary: 'Read one of me referral'
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Referral' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      security:
+        - bearerAuth: []
+  /api/v1/me/referral/rewards:
+    get:
+      operationId: rewardsMeReferral
+      tags:
+        - me-referral
+      summary: 'Rewards me referral'
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+      responses:
+        200:
+          description: 'A page of records'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReferralRewardPage' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      security:
+        - bearerAuth: []
+  /api/v1/openapi.json:
+    get:
+      operationId: getOpenApiDocument
+      tags:
+        - version
+      summary: 'The OpenAPI document describing this version'
+      responses:
+        200:
+          description: 'The OpenAPI document of this version'
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+  /api/v1/orders:
+    get:
+      operationId: listOrders
+      tags:
+        - orders
+      summary: 'List orders'
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        200:
+          description: 'A page of records'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderPage' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  '/api/v1/orders/{id}':
+    get:
+      operationId: getOrder
+      tags:
+        - orders
+      summary: 'Read one of orders'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        404:
+          description: 'No such record'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  /api/v1/pages:
+    get:
+      operationId: listPages
+      tags:
+        - pages
+      summary: 'List pages'
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        200:
+          description: 'A page of records'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagePage' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  '/api/v1/pages/{id}':
+    get:
+      operationId: getPage
+      tags:
+        - pages
+      summary: 'Read one of pages'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Page' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        404:
+          description: 'No such record'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  /api/v1/products:
+    get:
+      operationId: listProducts
+      tags:
+        - products
+      summary: 'List products'
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        200:
+          description: 'A page of records'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductPage' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  '/api/v1/products/{id}':
+    get:
+      operationId: getProduct
+      tags:
+        - products
+      summary: 'Read one of products'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        404:
+          description: 'No such record'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  /api/v1/sync/articles:
+    get:
+      operationId: pullSync.article
+      tags:
+        - sync.articles
+      summary: 'Pull sync.articles'
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArticleSyncPull' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+    post:
+      operationId: pushSync.article
+      tags:
+        - sync.articles
+      summary: 'Push sync.articles'
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArticleSyncPush' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncPushPayload'
+      security:
+        - bearerAuth: []
+  /api/v1/sync/form-entries:
+    get:
+      operationId: pullSync.formEntry
+      tags:
+        - sync.form-entries
+      summary: 'Pull sync.form entries'
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FormEntrySyncPull' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  /api/v1/sync/me-addresses:
+    get:
+      operationId: pullSync.meAddress
+      tags:
+        - sync.me-addresses
+      summary: 'Pull sync.me addresses'
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserAddressSyncPull' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      security:
+        - bearerAuth: []
+    post:
+      operationId: pushSync.meAddress
+      tags:
+        - sync.me-addresses
+      summary: 'Push sync.me addresses'
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserAddressSyncPush' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncPushPayload'
+      security:
+        - bearerAuth: []
+  /api/v1/sync/me-orders:
+    get:
+      operationId: pullSync.meOrder
+      tags:
+        - sync.me-orders
+      summary: 'Pull sync.me orders'
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderSyncPull' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        503:
+          description: 'Could not tell whether this application may act. Try again shortly.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'How many seconds to wait before asking again.'
+              schema: { type: integer, minimum: 1 }
+      security:
+        - bearerAuth: []
+  /api/v1/sync/orders:
+    get:
+      operationId: pullSync.order
+      tags:
+        - sync.orders
+      summary: 'Pull sync.orders'
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderSyncPull' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  /api/v1/sync/pages:
+    get:
+      operationId: pullSync.page
+      tags:
+        - sync.pages
+      summary: 'Pull sync.pages'
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageSyncPull' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  /api/v1/sync/products:
+    get:
+      operationId: pullSync.product
+      tags:
+        - sync.products
+      summary: 'Pull sync.products'
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        200:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductSyncPull' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  '/api/v1/webhook-subscriptions/{subscription}/deliveries':
+    get:
+      operationId: listWebhookDeliveries
+      tags:
+        - webhook-deliveries
+      summary: 'List webhook deliveries'
+      parameters:
+        - name: subscription
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - pending
+              - succeeded
+              - failed
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+      responses:
+        200:
+          description: 'A page of records'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookDeliveryPage' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        404:
+          description: 'Not found.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+      security:
+        - bearerAuth: []
+  '/api/v1/webhook-subscriptions/{subscription}/deliveries/{event}/redeliver':
+    post:
+      operationId: redeliverWebhookDelivery
+      tags:
+        - webhook-deliveries
+      summary: 'Redeliver webhook deliveries'
+      parameters:
+        - name: subscription
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: event
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: 'Send a fresh key per operation and the same key with every retry of it: a retry is answered with the first answer instead of running again.'
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+            pattern: '^[\x20-\x7E]+$'
+      responses:
+        202:
+          description: 'One record'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookDelivery' }
+          headers:
+            Idempotent-Replayed:
+              description: 'Sent, as `true`, only when this is the stored answer to an earlier request with the same `Idempotency-Key`, given instead of running it again.'
+              schema: { type: string, enum: ['true'] }
+        400:
+          description: 'An Idempotency-Key is 1 to 255 printable ASCII characters.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        401:
+          description: 'The token is missing, malformed or expired'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        403:
+          description: 'The token lacks the ability this endpoint requires'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        404:
+          description: 'Not found.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Idempotent-Replayed:
+              description: 'Sent, as `true`, only when this is the stored answer to an earlier request with the same `Idempotency-Key`, given instead of running it again.'
+              schema: { type: string, enum: ['true'] }
+        409:
+          description: 'The webhook subscription is inactive. Or: The request first sent with this Idempotency-Key has not finished; retry after it has.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Retry-After:
+              description: 'Sent only with the refusal of a request whose first attempt with this `Idempotency-Key` has not finished: how many seconds to wait before retrying.'
+              schema: { type: integer, minimum: 1 }
+            Idempotent-Replayed:
+              description: 'Sent, as `true`, only when this is the stored answer to an earlier request with the same `Idempotency-Key`, given instead of running it again.'
+              schema: { type: string, enum: ['true'] }
+        422:
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: This Idempotency-Key was sent with a different request."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        429:
+          description: 'The rate-limit budget for this window is spent'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        500:
+          description: 'The outcome is unknown; read the current state, then retry with a new key.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+          headers:
+            Idempotent-Replayed:
+              description: 'Sent, as `true`, only when this is the stored answer to an earlier request with the same `Idempotency-Key`, given instead of running it again.'
+              schema: { type: string, enum: ['true'] }
+      security:
+        - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    AccountState:
+      type: object
+      properties:
+        subject:
+          type: string
+        sequence:
+          type: integer
+        status:
+          type: string
+        email:
+          oneOf:
+            - type: string
+            - type: 'null'
+        email_verified:
+          type: boolean
+        entitlements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entitlement'
+        totals:
+          description: 'Each entitlement key with the quantity the account holds of it.'
+          type: object
+          additionalProperties: true
+      required:
+        - subject
+        - sequence
+        - status
+        - email_verified
+        - entitlements
+        - totals
+    AccountStatePage:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountState'
+        next_cursor:
+          type: string
+          description: 'Send back unchanged as `cursor` for the next page. Absent on the last page.'
+    ApiVersion:
+      type: object
+      properties:
+        version:
+          type: string
+        status:
+          type: string
+        deprecation:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        sunset:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        successor:
+          oneOf:
+            - type: string
+            - type: 'null'
+        documentation:
+          oneOf:
+            - type: string
+            - type: 'null'
+      required:
+        - version
+        - status
+    Article:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        slug:
+          oneOf:
+            - type: string
+            - type: 'null'
+        description:
+          oneOf:
+            - type: string
+            - type: 'null'
+        keywords:
+          oneOf:
+            - type: string
+            - type: 'null'
+        cover:
+          description: 'The absolute URL the image is served at, built when the response is made, so it follows the address the site has then.'
+          oneOf:
+            - type: string
+            - type: 'null'
+        status:
+          type: integer
+        sort:
+          oneOf:
+            - type: integer
+            - type: 'null'
+        published_at:
+          type: string
+          format: date-time
+        expired_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArticleCategorySummary'
+      required:
+        - id
+        - title
+        - status
+        - published_at
+        - created_at
+        - updated_at
+        - categories
+    ArticleCategorySummary:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        slug:
+          oneOf:
+            - type: string
+            - type: 'null'
+      required:
+        - id
+        - title
+    ArticlePage:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Article'
+        next_cursor:
+          type: string
+          description: 'Send back unchanged as `cursor` for the next page. Absent on the last page.'
+    ArticleSyncPull:
+      type: object
+      properties:
+        upserts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Article'
+        tombstones:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncTombstone'
+        next_cursor:
+          type: string
+          description: 'The watermark to pull from next time, sent on every page, the last included.'
+        has_more:
+          type: boolean
+      required:
+        - upserts
+        - tombstones
+        - next_cursor
+        - has_more
+    ArticleSyncPush:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArticleSyncResult'
+      required:
+        - results
+    ArticleSyncResult:
+      type: object
+      properties:
+        mutation_id:
+          type: string
+        id:
+          oneOf:
+            - type: string
+            - type: 'null'
+        applied:
+          type: boolean
+        reason:
+          oneOf:
+            - type: string
+            - type: 'null'
+        errors:
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: 'null'
+        server_record:
+          oneOf:
+            - $ref: '#/components/schemas/Article'
+            - type: 'null'
+      required:
+        - mutation_id
+        - applied
+    BillingEntry:
+      type: object
+      properties:
+        available:
+          type: boolean
+        wording:
+          description: 'The label to show, in the request locale; sent only when available.'
+          oneOf:
+            - type: string
+            - type: 'null'
+        presentation:
+          description: 'How the store rules require the app to open the address; sent only when available.'
+          oneOf:
+            - type: string
+            - type: 'null'
+        needs_store_token:
+          description: 'Whether opening the address needs the token the store hands the app for it, because the store is told of each opening; sent only when available.'
+          oneOf:
+            - type: boolean
+            - type: 'null'
+        url:
+          description: 'The address to open; sent only when available.'
+          oneOf:
+            - type: string
+            - type: 'null'
+        expires_at:
+          description: 'When a single-use address stops opening; null when the address is fixed. Sent only when available.'
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      required:
+        - available
+    Entitlement:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        quantity:
+          type: integer
+        expires_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      required:
+        - key
+        - label
+        - quantity
+    EntitlementPage:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entitlement'
+        next_cursor:
+          type: string
+          description: 'Send back unchanged as `cursor` for the next page. Absent on the last page.'
+    FormEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        form_slug:
+          oneOf:
+            - type: string
+            - type: 'null'
+        name:
+          oneOf:
+            - type: string
+            - type: 'null'
+        first_name:
+          oneOf:
+            - type: string
+            - type: 'null'
+        last_name:
+          oneOf:
+            - type: string
+            - type: 'null'
+        email:
+          oneOf:
+            - type: string
+            - type: 'null'
+        mobile:
+          oneOf:
+            - type: string
+            - type: 'null'
+        data:
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: 'null'
+        is_spam:
+          type: boolean
+        submitted_at:
+          type: string
+          format: date-time
+        created_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        updated_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      required:
+        - id
+        - is_spam
+        - submitted_at
+    FormEntryPage:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormEntry'
+        next_cursor:
+          type: string
+          description: 'Send back unchanged as `cursor` for the next page. Absent on the last page.'
+    FormEntrySyncPull:
+      type: object
+      properties:
+        upserts:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormEntry'
+        tombstones:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncTombstone'
+        next_cursor:
+          type: string
+          description: 'The watermark to pull from next time, sent on every page, the last included.'
+        has_more:
+          type: boolean
+      required:
+        - upserts
+        - tombstones
+        - next_cursor
+        - has_more
+    MagicLinkPayload:
+      type: object
+      properties:
+        email:
+          type: string
+          maxLength: 255
+        abilities:
+          type: array
+          items:
+            type: string
+            enum:
+              - 'me:read'
+              - 'me:write'
+              - 'me-orders:read'
+              - 'me-addresses:read'
+              - 'me-addresses:write'
+              - 'me-entitlements:read'
+              - 'me-push-devices:write'
+              - 'me-checkout:write'
+              - 'me-store-purchases:write'
+              - 'me-referral:read'
+              - 'me-billing:read'
+          minItems: 1
+        device_name:
+          type: string
+          maxLength: 255
+        code_challenge:
+          type: string
+      required:
+        - email
+        - abilities
+        - device_name
+        - code_challenge
+    MagicLinkToken:
+      type: object
+      properties:
+        token:
+          type: string
+        abilities:
+          type: array
+          items:
+            type: string
+        expires_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      required:
+        - token
+        - abilities
+    MagicLinkTokenPayload:
+      type: object
+      properties:
+        link:
+          type: string
+          maxLength: 2048
+        code_verifier:
+          type: string
+        code:
+          type: string
+          maxLength: 16
+        recovery_code:
+          type: string
+          maxLength: 64
+        lost_second_factor:
+          type: boolean
+      required:
+        - link
+        - code_verifier
+    Member:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          oneOf:
+            - type: string
+            - type: 'null'
+        email:
+          oneOf:
+            - type: string
+            - type: 'null'
+        email_verified_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        created_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        updated_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      required:
+        - id
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        subject_reference:
+          oneOf:
+            - type: string
+            - type: 'null'
+        coupon_code:
+          oneOf:
+            - type: string
+            - type: 'null'
+        status:
+          description: 'Where the order has got to: one of `pending`, `paid`, `shipped`, `completed`, `cancelled`, `expired`.'
+          oneOf:
+            - type: string
+            - type: 'null'
+        mode:
+          type: string
+        subscription_start_state:
+          oneOf:
+            - type: string
+            - type: 'null'
+        subscription_start_refusal:
+          oneOf:
+            - type: string
+            - type: 'null'
+        summary:
+          oneOf:
+            - type: string
+            - type: 'null'
+        amount:
+          type: integer
+        currency:
+          type: string
+        discounted_amount:
+          type: integer
+        shipping_amount:
+          type: integer
+        tax_amount:
+          type: integer
+        tax_included:
+          type: boolean
+        total_amount:
+          type: integer
+        total_shown:
+          type: string
+        note:
+          oneOf:
+            - type: string
+            - type: 'null'
+        created_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        updated_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLineSummary'
+      required:
+        - id
+        - mode
+        - amount
+        - currency
+        - discounted_amount
+        - shipping_amount
+        - tax_amount
+        - tax_included
+        - total_amount
+        - total_shown
+        - updated_at
+        - items
+    OrderLineSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        product_id:
+          oneOf:
+            - type: string
+            - type: 'null'
+        quantity:
+          type: integer
+        price:
+          type: integer
+        currency:
+          type: string
+      required:
+        - id
+        - quantity
+        - price
+        - currency
+    OrderPage:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        next_cursor:
+          type: string
+          description: 'Send back unchanged as `cursor` for the next page. Absent on the last page.'
+    OrderSyncPull:
+      type: object
+      properties:
+        upserts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        tombstones:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncTombstone'
+        next_cursor:
+          type: string
+          description: 'The watermark to pull from next time, sent on every page, the last included.'
+        has_more:
+          type: boolean
+      required:
+        - upserts
+        - tombstones
+        - next_cursor
+        - has_more
+    Page:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          oneOf:
+            - type: string
+            - type: 'null'
+        title:
+          oneOf:
+            - type: string
+            - type: 'null'
+        slug:
+          oneOf:
+            - type: string
+            - type: 'null'
+        description:
+          oneOf:
+            - type: string
+            - type: 'null'
+        keywords:
+          oneOf:
+            - type: string
+            - type: 'null'
+        language:
+          oneOf:
+            - type: string
+            - type: 'null'
+        parent_id:
+          oneOf:
+            - type: string
+            - type: 'null'
+        status:
+          oneOf:
+            - type: integer
+            - type: 'null'
+        published_at:
+          type: string
+          format: date-time
+        expired_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        created_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - published_at
+        - updated_at
+    PagePage:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Page'
+        next_cursor:
+          type: string
+          description: 'Send back unchanged as `cursor` for the next page. Absent on the last page.'
+    PageSyncPull:
+      type: object
+      properties:
+        upserts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Page'
+        tombstones:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncTombstone'
+        next_cursor:
+          type: string
+          description: 'The watermark to pull from next time, sent on every page, the last included.'
+        has_more:
+          type: boolean
+      required:
+        - upserts
+        - tombstones
+        - next_cursor
+        - has_more
+    ProblemDetails:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          description: 'Branch on this. `https://appsolutely.io/problems/<slug>`, or `about:blank` for a bare HTTP status.'
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        errors:
+          type: object
+          description: 'On a validation failure: each refused field with its messages.'
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      additionalProperties: true
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        subtitle:
+          oneOf:
+            - type: string
+            - type: 'null'
+        slug:
+          oneOf:
+            - type: string
+            - type: 'null'
+        cover:
+          description: 'The absolute URL the image is served at, built when the response is made, so it follows the address the site has then.'
+          oneOf:
+            - type: string
+            - type: 'null'
+        description:
+          oneOf:
+            - type: string
+            - type: 'null'
+        keywords:
+          oneOf:
+            - type: string
+            - type: 'null'
+        price:
+          oneOf:
+            - type: integer
+            - type: 'null'
+        original_price:
+          oneOf:
+            - type: integer
+            - type: 'null'
+        currency:
+          oneOf:
+            - type: string
+            - type: 'null'
+        prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPriceSummary'
+        status:
+          type: integer
+        sort:
+          oneOf:
+            - type: integer
+            - type: 'null'
+        published_at:
+          type: string
+          format: date-time
+        expired_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        created_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - title
+        - prices
+        - status
+        - published_at
+        - updated_at
+    ProductPage:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        next_cursor:
+          type: string
+          description: 'Send back unchanged as `cursor` for the next page. Absent on the last page.'
+    ProductPriceSummary:
+      type: object
+      properties:
+        currency:
+          type: string
+        price:
+          type: integer
+        original_price:
+          oneOf:
+            - type: integer
+            - type: 'null'
+      required:
+        - currency
+        - price
+    ProductSyncPull:
+      type: object
+      properties:
+        upserts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        tombstones:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncTombstone'
+        next_cursor:
+          type: string
+          description: 'The watermark to pull from next time, sent on every page, the last included.'
+        has_more:
+          type: boolean
+      required:
+        - upserts
+        - tombstones
+        - next_cursor
+        - has_more
+    PushDevice:
+      type: object
+      properties:
+        token:
+          type: string
+        platform:
+          type: string
+        provider:
+          type: string
+        app_identifier:
+          oneOf:
+            - type: string
+            - type: 'null'
+        installation_id:
+          oneOf:
+            - type: string
+            - type: 'null'
+        last_used_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      required:
+        - token
+        - platform
+        - provider
+    Referral:
+      type: object
+      properties:
+        code:
+          type: string
+        programme:
+          type: string
+        discount:
+          description: 'What a friend using the code is given.'
+          $ref: '#/components/schemas/ReferralDiscount'
+        min_order_amount:
+          type: integer
+        reward:
+          description: "What the member earns for each friend's qualifying purchase."
+          $ref: '#/components/schemas/ReferralTerms'
+      required:
+        - code
+        - programme
+        - discount
+        - min_order_amount
+        - reward
+    ReferralDiscount:
+      type: object
+      properties:
+        type:
+          type: string
+        value:
+          type: integer
+        max_discount:
+          oneOf:
+            - type: integer
+            - type: 'null'
+        currency:
+          oneOf:
+            - type: string
+            - type: 'null'
+      required:
+        - type
+        - value
+    ReferralReward:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        state:
+          type: string
+        value:
+          type: integer
+        currency:
+          type: string
+        hold_until:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        code:
+          oneOf:
+            - type: string
+            - type: 'null'
+        expires_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        earned_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      required:
+        - id
+        - type
+        - state
+        - value
+        - currency
+    ReferralRewardPage:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReferralReward'
+        next_cursor:
+          type: string
+          description: 'Send back unchanged as `cursor` for the next page. Absent on the last page.'
+    ReferralTerms:
+      type: object
+      properties:
+        type:
+          type: string
+        value:
+          type: integer
+        currency:
+          type: string
+      required:
+        - type
+        - value
+        - currency
+    StoreArticlePayload:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        keywords:
+          type: string
+          maxLength: 255
+        content:
+          type: string
+        cover:
+          type: string
+          maxLength: 255
+        status:
+          type: integer
+          enum:
+            - 0
+            - 1
+        sort:
+          type: integer
+          minimum: 0
+        published_at:
+          type: string
+          format: date-time
+        expired_at:
+          type: string
+          format: date-time
+        categories:
+          type: array
+          items:
+            type: string
+      required:
+        - title
+        - content
+    StoreMeAddressPayload:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        mobile:
+          type: string
+          maxLength: 255
+        address:
+          type: string
+          maxLength: 255
+        address_extra:
+          type: string
+          maxLength: 255
+        town:
+          type: string
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 255
+        province:
+          type: string
+          maxLength: 255
+        postcode:
+          type: string
+          maxLength: 255
+        country:
+          type: string
+        note:
+          type: string
+          maxLength: 255
+        remark:
+          type: string
+          maxLength: 255
+        sort:
+          type: integer
+          minimum: 0
+          maximum: 255
+      required:
+        - name
+        - address
+    StoreMePushDevicePayload:
+      type: object
+      properties:
+        token:
+          type: string
+          maxLength: 512
+        platform:
+          type: string
+          enum:
+            - ios
+            - android
+            - web
+        provider:
+          type: string
+          enum:
+            - apns
+            - fcm
+        app_identifier:
+          type: string
+          maxLength: 255
+        installation_id:
+          type: string
+          maxLength: 255
+        metadata:
+          type: object
+          additionalProperties: true
+      required:
+        - token
+        - platform
+    SyncPushPayload:
+      type: object
+      properties:
+        mutations:
+          type: array
+          minItems: 1
+          maxItems: 100
+      required:
+        - mutations
+    SyncTombstone:
+      type: object
+      properties:
+        id:
+          type: string
+        deleted_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - deleted_at
+    UnregisterMePushDevicePayload:
+      type: object
+      properties:
+        token:
+          type: string
+          maxLength: 512
+      required:
+        - token
+    UpdateArticlePayload:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        keywords:
+          type: string
+          maxLength: 255
+        content:
+          type: string
+        cover:
+          type: string
+          maxLength: 255
+        status:
+          type: integer
+          enum:
+            - 0
+            - 1
+        sort:
+          type: integer
+          minimum: 0
+        published_at:
+          type: string
+          format: date-time
+        expired_at:
+          type: string
+          format: date-time
+        categories:
+          type: array
+          items:
+            type: string
+    UpdateMeAddressPayload:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        mobile:
+          type: string
+          maxLength: 255
+        address:
+          type: string
+          maxLength: 255
+        address_extra:
+          type: string
+          maxLength: 255
+        town:
+          type: string
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 255
+        province:
+          type: string
+          maxLength: 255
+        postcode:
+          type: string
+          maxLength: 255
+        country:
+          type: string
+        note:
+          type: string
+          maxLength: 255
+        remark:
+          type: string
+          maxLength: 255
+        sort:
+          type: integer
+          minimum: 0
+          maximum: 255
+    UpdateMePayload:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+      required:
+        - name
+    UserAddress:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          oneOf:
+            - type: string
+            - type: 'null'
+        mobile:
+          oneOf:
+            - type: string
+            - type: 'null'
+        address:
+          oneOf:
+            - type: string
+            - type: 'null'
+        address_extra:
+          oneOf:
+            - type: string
+            - type: 'null'
+        town:
+          oneOf:
+            - type: string
+            - type: 'null'
+        city:
+          oneOf:
+            - type: string
+            - type: 'null'
+        province:
+          oneOf:
+            - type: string
+            - type: 'null'
+        postcode:
+          oneOf:
+            - type: string
+            - type: 'null'
+        country:
+          oneOf:
+            - type: string
+            - type: 'null'
+        note:
+          oneOf:
+            - type: string
+            - type: 'null'
+        remark:
+          oneOf:
+            - type: string
+            - type: 'null'
+        sort:
+          oneOf:
+            - type: integer
+            - type: 'null'
+        created_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        updated_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      required:
+        - id
+    UserAddressPage:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAddress'
+        next_cursor:
+          type: string
+          description: 'Send back unchanged as `cursor` for the next page. Absent on the last page.'
+    UserAddressSyncPull:
+      type: object
+      properties:
+        upserts:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAddress'
+        tombstones:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncTombstone'
+        next_cursor:
+          type: string
+          description: 'The watermark to pull from next time, sent on every page, the last included.'
+        has_more:
+          type: boolean
+      required:
+        - upserts
+        - tombstones
+        - next_cursor
+        - has_more
+    UserAddressSyncPush:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAddressSyncResult'
+      required:
+        - results
+    UserAddressSyncResult:
+      type: object
+      properties:
+        mutation_id:
+          type: string
+        id:
+          oneOf:
+            - type: string
+            - type: 'null'
+        applied:
+          type: boolean
+        reason:
+          oneOf:
+            - type: string
+            - type: 'null'
+        errors:
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: 'null'
+        server_record:
+          oneOf:
+            - $ref: '#/components/schemas/UserAddress'
+            - type: 'null'
+      required:
+        - mutation_id
+        - applied
+    WebhookDelivery:
+      type: object
+      properties:
+        webhook_id:
+          description: "The delivery's `webhook-id` header: deduplicate on it, and name it to ask for a redelivery."
+          type: string
+        type:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+        attempts:
+          type: integer
+        last_response_status:
+          oneOf:
+            - type: integer
+            - type: 'null'
+        next_attempt_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        delivered_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        failed_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      required:
+        - webhook_id
+        - type
+        - occurred_at
+        - status
+        - attempts
+    WebhookDeliveryPage:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookDelivery'
+        next_cursor:
+          type: string
+          description: 'Send back unchanged as `cursor` for the next page. Absent on the last page.'
