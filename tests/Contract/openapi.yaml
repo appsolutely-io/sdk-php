@@ -53,6 +53,19 @@ paths:
       tags:
         - account-states
       summary: 'List account states'
+      parameters:
+        - name: 'subjects[]'
+          in: query
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+              maxLength: 191
+            minItems: 1
+            maxItems: 100
+          style: form
+          explode: true
       responses:
         200:
           description: 'A page of records'
@@ -70,7 +83,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetails' }
         422:
-          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`."
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetails' }
@@ -843,6 +856,23 @@ paths:
       tags:
         - me-billing-entry
       summary: 'Read one of me billing entry'
+      parameters:
+        - name: store
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - app_store
+              - google_play
+              - direct
+        - name: storefront
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
       responses:
         200:
           description: 'One record'
@@ -860,7 +890,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetails' }
         422:
-          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`."
+          description: "The mode of money is the credential's: a live credential reads and writes live money, a test credential test money. Send the request without `mode`. Or: The request did not pass validation."
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetails' }
@@ -2039,6 +2069,21 @@ paths:
           required: true
           schema:
             type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - pending
+              - succeeded
+              - failed
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
         - name: limit
           in: query
           required: false
@@ -2656,8 +2701,9 @@ components:
             - type: string
             - type: 'null'
         status:
+          description: 'Where the order has got to: one of `pending`, `paid`, `shipped`, `completed`, `cancelled`, `expired`.'
           oneOf:
-            - type: integer
+            - type: string
             - type: 'null'
         mode:
           type: string

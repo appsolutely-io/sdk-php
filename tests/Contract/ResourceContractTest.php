@@ -100,14 +100,10 @@ final class ResourceContractTest extends TestCase
      * so a document that changes, to agree with the site or otherwise, fails
      * until the entry is dropped or rewritten.
      *
-     * The document declares an order's `status` an integer; the site sends
-     * its order status as a string (`shipped`). It leaves an account's
-     * `totals` an open object; the site sends a quantity per key.
+     * The document leaves an account's `totals` an open object; the site
+     * sends a quantity per key.
      */
     private const array AS_THE_SITE_SENDS = [
-        'Order' => [
-            'status' => ['document' => ['oneOf' => [['type' => 'integer'], ['type' => 'null']]], 'site' => 'shipped'],
-        ],
         'AccountState' => [
             'totals' => ['document' => ['type' => 'object', 'additionalProperties' => true], 'site' => ['seats' => 3]],
         ],

@@ -18,7 +18,7 @@ final class Contract
      * the contract test reads. Written by `composer pin-contract`, together
      * with the copy of that document; never edit it by hand.
      */
-    public const string REVISION = '69006fca9128cebf49027ddb47d6849931fed8e4';
+    public const string REVISION = '983758f4f4c74bd4901b0448131288408e8d9410';
 
     private function __construct() {}
 }
