@@ -191,7 +191,19 @@ final class Fields
      */
     public function objects(string $name): array
     {
-        $value = $this->value($name) ?? throw $this->missing($name);
+        return $this->nullableObjects($name) ?? throw $this->missing($name);
+    }
+
+    /**
+     * @return list<self>|null
+     */
+    public function nullableObjects(string $name): ?array
+    {
+        $value = $this->value($name);
+        if ($value === null) {
+            return null;
+        }
+
         if (!is_array($value) || !array_is_list($value)) {
             throw $this->refused($name, 'is not a list');
         }

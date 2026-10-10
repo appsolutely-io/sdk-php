@@ -69,6 +69,7 @@ final class FieldsTest extends TestCase
         self::assertNull($fields->nullableTime('expired_at'));
         self::assertNull($fields->nullableObject('payment'));
         self::assertNull($fields->nullableMap('data'));
+        self::assertNull($fields->nullableObjects('items'));
     }
 
     public function testAMissingRequiredFieldNamesTheTypeAndThePath(): void

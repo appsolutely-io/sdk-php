@@ -10,6 +10,20 @@ namespace Appsolutely\Sdk\Webhooks;
  */
 final class EventType
 {
+    public const string ARTICLE_CREATED = 'article.created';
+    public const string ARTICLE_UPDATED = 'article.updated';
+    public const string ARTICLE_DELETED = 'article.deleted';
+
+    public const string PAGE_CREATED = 'page.created';
+    public const string PAGE_UPDATED = 'page.updated';
+    public const string PAGE_DELETED = 'page.deleted';
+
+    public const string FORM_SUBMITTED = 'form.submitted';
+
+    public const string PRODUCT_CREATED = 'product.created';
+    public const string PRODUCT_UPDATED = 'product.updated';
+    public const string PRODUCT_DELETED = 'product.deleted';
+
     /** An operator suspended the account. */
     public const string ACCOUNT_SUSPENDED = 'account.suspended';
 
