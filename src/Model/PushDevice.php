@@ -18,7 +18,7 @@ final readonly class PushDevice
      * @param string $token the push provider's device token
      * @param string $platform `ios`, `android` or `web`
      * @param string $provider `apns` or `fcm`
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         #[\SensitiveParameter]

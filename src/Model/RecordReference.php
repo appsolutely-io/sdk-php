@@ -12,7 +12,7 @@ final readonly class RecordReference
 {
     /**
      * @param string $type the kind of record, such as `Refund`
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public ?string $id,

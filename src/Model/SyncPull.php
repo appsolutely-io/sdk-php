@@ -26,7 +26,7 @@ final readonly class SyncPull
      * @param list<T> $upserts the records created or changed
      * @param list<SyncTombstone> $tombstones the records deleted
      * @param bool $hasMore whether more changes are waiting now; pull again from $nextCursor until it is false
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public array $upserts,

@@ -16,7 +16,7 @@ final readonly class ReferralDiscount
      * @param string $type such as `percent` or `fixed`
      * @param int $value a percentage, or an amount in the minor units of $currency
      * @param int|null $maxDiscount in the minor units of $currency
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $type,

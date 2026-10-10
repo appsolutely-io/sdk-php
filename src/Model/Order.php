@@ -27,7 +27,7 @@ final readonly class Order
      * @param string $totalShown what the buyer was told `$totalAmount` is: `final` for the whole charge, `before_provider_tax` for an amount a payment provider then added its own tax to, `priced_by_provider` for a price sent to a provider that ran its own checkout; only on `final` is it what the buyer paid
      * @param DateTimeImmutable|null $updatedAt null when the site holds no update time for the order
      * @param list<OrderLine> $items
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,

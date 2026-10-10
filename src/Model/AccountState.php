@@ -32,8 +32,8 @@ final readonly class AccountState
      * @param string $status one of the STATUS_ constants
      * @param string|null $email the address the account holds now; null once erased
      * @param list<Entitlement> $entitlements every live grant, then what another authority says the account holds
-     * @param array<string, int> $totals one number per entitlement key, as the site checks it; empty when there are none
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, int> $totals one number per entitlement key, as the site checks it; empty when there are none
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $subject,

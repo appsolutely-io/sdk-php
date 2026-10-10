@@ -17,7 +17,7 @@ final readonly class Referral
      * @param int $minOrderAmount the smallest order the discount applies to, in the minor units of the discount's currency
      * @param ReferralDiscount $discount what a referred friend gets off their order
      * @param ReferralTerms $reward what the member earns for a referral
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         #[\SensitiveParameter]

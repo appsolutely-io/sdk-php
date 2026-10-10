@@ -6,7 +6,6 @@ namespace Appsolutely\Sdk\Model;
 
 use Appsolutely\Sdk\Exception\UnexpectedPayloadException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
-use Appsolutely\Sdk\Http\Json;
 use Appsolutely\Sdk\Support\Untrusted;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -42,7 +41,7 @@ final class Fields
     private array $read = [];
 
     /**
-     * @param array<string, mixed> $object
+     * @param array<array-key, mixed> $object
      * @param string $source what the object came in, for a refusal: a schema name, or an event type
      * @param bool $delivery whether it is a webhook delivery's data rather than an API answer
      * @param \ArrayObject<int, string> $reads shared by an object and the objects nested in it
@@ -62,7 +61,7 @@ final class Fields
      * An object of a Site API answer; a field that breaks the schema is an
      * UnexpectedResponseException.
      *
-     * @param array<string, mixed> $object
+     * @param array<array-key, mixed> $object
      * @param string $schema the name of the document's schema the object follows
      */
     public static function of(#[\SensitiveParameter] array $object, string $schema): self
@@ -74,7 +73,7 @@ final class Fields
      * A verified delivery's `data`; a field that breaks the shape its type is
      * sent with is an UnexpectedPayloadException.
      *
-     * @param array<string, mixed> $data
+     * @param array<array-key, mixed> $data
      */
     public static function ofDelivery(#[\SensitiveParameter] array $data, string $type): self
     {
@@ -92,9 +91,10 @@ final class Fields
 
     /**
      * The members no reader asked for, as decoded: what the site added after
-     * this client was written.
+     * this client was written. A member named like a decimal integer has an
+     * integer key: PHP cannot hold such a key as a string.
      *
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public function extra(): array
     {
@@ -226,9 +226,10 @@ final class Fields
 
     /**
      * A free-form object, such as a form entry's answers, kept as decoded.
-     * `{}` and `[]` both decode to an empty array.
+     * `{}` and `[]` both decode to an empty array. A member named like a
+     * decimal integer has an integer key, as in extra().
      *
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public function map(string $name): array
     {
@@ -236,7 +237,7 @@ final class Fields
     }
 
     /**
-     * @return array<string, mixed>|null
+     * @return array<array-key, mixed>|null
      */
     public function nullableMap(string $name): ?array
     {
@@ -248,14 +249,14 @@ final class Fields
             $this->refuse($name, 'an object', $value);
         }
 
-        return Json::stringKeys($value);
+        return $value;
     }
 
     /**
      * An object of integers, such as an account's totals, which the site
      * sends as `{}` when there are none.
      *
-     * @return array<string, int>
+     * @return array<array-key, int>
      */
     public function intMap(string $name): array
     {
@@ -288,7 +289,7 @@ final class Fields
             $this->refuse($name, 'an object', $value);
         }
 
-        return new self(Json::stringKeys($value), $this->source, $this->delivery, $this->reads, $this->join($this->path, $name), $this->join($this->readPath, $name));
+        return new self($value, $this->source, $this->delivery, $this->reads, $this->join($this->path, $name), $this->join($this->readPath, $name));
     }
 
     /**
@@ -303,7 +304,7 @@ final class Fields
             if (!self::isObject($value)) {
                 $this->refuse($name . '[' . $index . ']', 'an object', $value);
             }
-            $objects[] = new self(Json::stringKeys($value), $this->source, $this->delivery, $this->reads, $this->join($this->path, $name) . '[' . $index . ']', $this->join($this->readPath, $name) . '[]');
+            $objects[] = new self($value, $this->source, $this->delivery, $this->reads, $this->join($this->path, $name) . '[' . $index . ']', $this->join($this->readPath, $name) . '[]');
         }
 
         return $objects;

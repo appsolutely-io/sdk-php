@@ -25,9 +25,9 @@ final readonly class SyncResult
      * @param string|null $id the record the mutation applied to
      * @param bool $applied whether the mutation changed the record
      * @param string|null $reason why it was not applied
-     * @param array<string, mixed>|null $errors the validation messages, keyed by field
+     * @param array<array-key, mixed>|null $errors the validation messages, keyed by field
      * @param T|null $serverRecord the record as the site now holds it
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $mutationId,

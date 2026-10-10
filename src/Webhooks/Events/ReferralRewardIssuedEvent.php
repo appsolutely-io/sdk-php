@@ -24,7 +24,7 @@ final readonly class ReferralRewardIssuedEvent extends TypedEvent
      * @param string|null $subject the referrer's account subject, null once the account is gone
      * @param string|null $referralCode the referrer's code the friend redeemed, null once it is gone
      * @param string|null $paymentReference the friend's payment that earned the reward
-     * @param array<string, mixed> $extra fields the site sent that this class does not name
+     * @param array<array-key, mixed> $extra fields the site sent that this class does not name
      */
     public function __construct(
         Event $envelope,

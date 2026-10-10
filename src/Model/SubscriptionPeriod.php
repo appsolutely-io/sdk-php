@@ -12,7 +12,7 @@ use DateTimeImmutable;
 final readonly class SubscriptionPeriod
 {
     /**
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public DateTimeImmutable $start,

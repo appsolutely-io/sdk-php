@@ -17,7 +17,7 @@ final readonly class Entitlement
 
     /**
      * @param DateTimeImmutable|null $expiresAt null when nothing on the site dates its end
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $key,

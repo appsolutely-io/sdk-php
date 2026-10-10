@@ -18,7 +18,7 @@ final readonly class BillingEntry
      * @param string|null $wording the label to show for the entry
      * @param string|null $presentation how to present it, such as `link`
      * @param string|null $url where the member manages their billing; it expires at $expiresAt
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public bool $available,
