@@ -58,13 +58,19 @@ final readonly class Paginator implements IteratorAggregate
     public function pages(): Generator
     {
         $cursor = null;
+        // Every cursor followed in this walk: a next cursor among them leads
+        // back to a page already given, and following it would never end.
+        $followed = [];
         do {
             $page = ($this->fetch)($cursor);
-            if ($page->nextCursor !== null && $page->nextCursor === $cursor) {
-                throw new UnexpectedResponseException('The site answered a page with the cursor that asked for it; following it would never end.', $page->response->status);
+            if ($page->nextCursor !== null && isset($followed[$page->nextCursor])) {
+                throw new UnexpectedResponseException('The site answered a page whose next cursor leads back to a page already given; following it would never end.', $page->response->status);
             }
             yield $page;
             $cursor = $page->nextCursor;
+            if ($cursor !== null) {
+                $followed[$cursor] = true;
+            }
         } while ($cursor !== null);
     }
 

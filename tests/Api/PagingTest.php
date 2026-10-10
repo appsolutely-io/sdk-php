@@ -201,6 +201,26 @@ final class PagingTest extends TestCase
         iterator_to_array($provider->client()->api()->raw()->paginate('/api/v1/articles'), false);
     }
 
+    public function testASiteWhoseCursorsLeadBackToAnEarlierPageDoesNotLoopForever(): void
+    {
+        $next = ['' => 'A', 'A' => 'B', 'B' => 'A'];
+        $provider = new FakeProvider();
+        $provider->site = static function (RequestInterface $request) use ($provider, $next): ResponseInterface {
+            parse_str($request->getUri()->getQuery(), $query);
+            $cursor = is_string($query['cursor'] ?? null) ? $query['cursor'] : '';
+
+            return $provider->json(['data' => [['id' => $cursor]], 'next_cursor' => $next[$cursor]]);
+        };
+
+        try {
+            iterator_to_array($provider->client()->api()->raw()->paginate('/api/v1/articles'), false);
+            self::fail('The cycle was followed to its end.');
+        } catch (UnexpectedResponseException) {
+        }
+
+        self::assertCount(3, $provider->siteRequests());
+    }
+
     public function testARefusedCursorIsThrown(): void
     {
         $provider = new FakeProvider();
