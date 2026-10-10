@@ -21,6 +21,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING:** `Config` describes one site: it takes the site's `baseUrl` first (its origin, held to the issuer's HTTPS rules and refused with a path), then the site's `issuer`, the OAuth client that signs its members in, and an optional `apiToken`, the administrator token for server-side calls, which is shown as `[redacted]` and refused when it holds a space or a control character.
 - `Exception\InvalidArgumentException` is renamed `Exception\InvalidArgumentValueException`, so an import is not mistaken for PHP's own class; `Webhooks\Verifier` and `Webhooks\Deliveries` throw it instead of `InvalidConfigException` for their own arguments.
 - `OpenIdClient::refresh()` requires the original ID token; it is no longer nullable.
 - `ProviderMetadata::$userinfoEndpoint` is renamed `$userInfoEndpoint`, cased like `userInfo()`.

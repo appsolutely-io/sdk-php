@@ -17,14 +17,16 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * An in-memory stand-in for an Appsolutely sign-in host, shaped like aio's
+ * An in-memory stand-in for a site's OpenID provider, shaped like the site's
  * discovery document, key set and token endpoint.
  */
 final class FakeProvider
 {
+    public const string BASE_URL = 'https://site.example.com';
     public const string ISSUER = 'https://login.example.com';
     public const string CLIENT_ID = 'client-123';
     public const string CLIENT_SECRET = 's3cret/with+chars';
+    public const string API_TOKEN = '7|admin-token-value';
 
     public readonly FrozenClock $clock;
     public readonly InMemoryCache $cache;
@@ -85,9 +87,11 @@ final class FakeProvider
     public function config(ClientAuthentication $authentication = ClientAuthentication::ClientSecretBasic, int $leeway = 60, ?LoggerInterface $logger = null): Config
     {
         return new Config(
+            baseUrl: self::BASE_URL,
             issuer: self::ISSUER,
             clientId: self::CLIENT_ID,
             clientSecret: self::CLIENT_SECRET,
+            apiToken: self::API_TOKEN,
             httpClient: $this->http,
             requestFactory: $this->factory,
             streamFactory: $this->factory,

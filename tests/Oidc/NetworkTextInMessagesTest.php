@@ -39,6 +39,7 @@ final class NetworkTextInMessagesTest extends TestCase
         };
         $config = $provider->config();
         $oidc = (new Client(new Config(
+            baseUrl: FakeProvider::BASE_URL,
             issuer: FakeProvider::ISSUER,
             clientId: FakeProvider::CLIENT_ID,
             clientSecret: FakeProvider::CLIENT_SECRET,
