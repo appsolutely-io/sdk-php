@@ -28,8 +28,8 @@
         "php-http/client-common": "^2.7",
         "php-http/message": "^1.16",
         "php-http/mock-client": "^1.6.1",
-        "phpstan/phpstan": "^2.1",
-        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpstan/phpstan": "^2.3.1",
+        "phpstan/phpstan-strict-rules": "^2.1",
         "phpunit/phpunit": "^12.5 || ^13.0",
         "standard-webhooks/standard-webhooks": "1.0.2",
         "symfony/yaml": "^7.3 || ^8.0"
