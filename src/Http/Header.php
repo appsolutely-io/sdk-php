@@ -24,5 +24,9 @@ final class Header
     public const string REQUEST_ID = 'X-Request-Id';
     public const string RETRY_AFTER = 'Retry-After';
     public const string USER_AGENT = 'User-Agent';
+    /** Standard Webhooks writes its three header names in lower case. */
+    public const string WEBHOOK_ID = 'webhook-id';
+    public const string WEBHOOK_SIGNATURE = 'webhook-signature';
+    public const string WEBHOOK_TIMESTAMP = 'webhook-timestamp';
     public const string WWW_AUTHENTICATE = 'WWW-Authenticate';
 }

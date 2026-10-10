@@ -7,6 +7,7 @@ namespace Appsolutely\Sdk\Webhooks;
 use Appsolutely\Sdk\Clock\SystemClock;
 use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Exception\WebhookVerificationException;
+use Appsolutely\Sdk\Http\Header;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -62,9 +63,9 @@ final readonly class Verifier
             $normalised[strtolower($name)] = is_array($value) ? implode(' ', $value) : $value;
         }
 
-        $id = $this->header($normalised, 'webhook-id');
-        $timestamp = $this->timestamp($this->header($normalised, 'webhook-timestamp'));
-        $signatures = $this->signatures($this->header($normalised, 'webhook-signature'));
+        $id = $this->header($normalised, Header::WEBHOOK_ID);
+        $timestamp = $this->timestamp($this->header($normalised, Header::WEBHOOK_TIMESTAMP));
+        $signatures = $this->signatures($this->header($normalised, Header::WEBHOOK_SIGNATURE));
 
         $matched = false;
         foreach ($this->secrets as $secret) {
@@ -104,9 +105,9 @@ final readonly class Verifier
         }
 
         return $this->verify($body->getContents(), [
-            'webhook-id' => $request->getHeader('webhook-id'),
-            'webhook-timestamp' => $request->getHeader('webhook-timestamp'),
-            'webhook-signature' => $request->getHeader('webhook-signature'),
+            Header::WEBHOOK_ID => $request->getHeader(Header::WEBHOOK_ID),
+            Header::WEBHOOK_TIMESTAMP => $request->getHeader(Header::WEBHOOK_TIMESTAMP),
+            Header::WEBHOOK_SIGNATURE => $request->getHeader(Header::WEBHOOK_SIGNATURE),
         ]);
     }
 

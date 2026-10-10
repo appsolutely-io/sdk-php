@@ -15,32 +15,342 @@ use SplFileInfo;
  * A header field's name is written once, in Http\Header; the code that sends
  * or reads the field names the constant, so a misspelling cannot hide in one
  * of several copies.
+ *
+ * The source is read as PHP tokens, so only a whole string literal in the
+ * place of a header name counts: a JSON member, an error message or a
+ * comment that mentions a header is not one.
  */
 final class HeaderTest extends TestCase
 {
-    public function testNoSourceFileOutsideHeaderSpellsAHeaderNameAsALiteral(): void
+    /**
+     * The calls that take a header name, by the arguments that may hold one:
+     * PSR-7's take it first; `header()`, PHP's own or a class's helper, may
+     * take it in any place.
+     */
+    private const array NAME_ARGUMENTS = [
+        'withheader' => [0],
+        'withaddedheader' => [0],
+        'withoutheader' => [0],
+        'getheader' => [0],
+        'getheaderline' => [0],
+        'hasheader' => [0],
+        'header' => null,
+    ];
+
+    public function testNoStringLiteralSpellsTheNameOfAHeaderConstant(): void
     {
-        $root = dirname(__DIR__, 2) . '/src';
-        $header = realpath($root . '/Http/Header.php');
         $names = array_values((new ReflectionClass(Header::class))->getConstants());
 
         $found = [];
-        /** @var SplFileInfo $file */
-        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
-            if ($file->getRealPath() === $header) {
-                continue;
+        foreach (self::sources() as $file => $tokens) {
+            foreach ($tokens as [$id, $text, $line]) {
+                if ($id === T_CONSTANT_ENCAPSED_STRING && in_array(self::unquote($text), $names, true)) {
+                    $found[] = sprintf('%s:%d %s', $file, $line, $text);
+                }
             }
-            $source = (string) file_get_contents($file->getPathname());
-            foreach ($names as $name) {
-                self::assertIsString($name);
-                foreach (["'" . $name . "'", '"' . $name . '"'] as $literal) {
-                    if (stripos($source, $literal) !== false) {
-                        $found[] = substr($file->getPathname(), strlen($root) + 1) . ': ' . $literal;
+        }
+
+        self::assertSame([], $found);
+    }
+
+    public function testEveryHeaderNameACallTakesIsAHeaderConstant(): void
+    {
+        $found = [];
+        foreach (self::sources() as $file => $tokens) {
+            foreach ($tokens as $index => [$id, $text]) {
+                $method = strtolower($text);
+                if ($id !== T_STRING || !array_key_exists($method, self::NAME_ARGUMENTS) || ($tokens[$index + 1][0] ?? null) !== '(' || ($tokens[$index - 1][0] ?? null) === T_FUNCTION) {
+                    continue;
+                }
+                foreach (self::arguments($tokens, $index + 1) as $position => $argument) {
+                    $positions = self::NAME_ARGUMENTS[$method];
+                    if (($positions === null || in_array($position, $positions, true)) && self::isLiteral($argument)) {
+                        $found[] = sprintf('%s:%d %s(%s)', $file, $argument[0][2], $text, $argument[0][1]);
                     }
                 }
             }
         }
 
         self::assertSame([], $found);
+    }
+
+    /**
+     * A header array is an array literal with a Header constant among its
+     * keys, or one assigned or passed as `headers`; its other keys, and a
+     * `$headers[...]` offset, are header names too.
+     */
+    public function testEveryKeyOfAHeaderArrayIsAHeaderConstant(): void
+    {
+        $found = [];
+        foreach (self::sources() as $file => $tokens) {
+            foreach (self::headerArrayKeys($tokens) as $key) {
+                $found[] = sprintf('%s:%d %s', $file, $key[2], $key[1]);
+            }
+        }
+
+        self::assertSame([], $found);
+    }
+
+    public function testTheRulesSeeTheHeaderNamesTheyAreMeantToRefuse(): void
+    {
+        $tokens = self::tokens(<<<'PHP'
+            <?php
+            $request->withHeader('X-Trace', 'v')->getHeaderLine("Accept");
+            $this->header($all, 'webhook-id');
+            $response->withHeader(Header::ACCEPT, 'application/json');
+            $headers = ['webhook-id' => $id];
+            $map = [Header::AUTHORIZATION => $token, 'X-Other' => 'v'];
+            $headers['X-Late'] = 'v';
+            send(headers: ['X-Named' => 'v']);
+            new SignedWebhook($id, $body, ['webhook-timestamp' => $time]);
+            $cache->get('key', ['X-Not-A-Header' => 'v']);
+            $transport->postForm($url, ['X-Not-A-Header' => 'v'], ['X-Form' => 'v']);
+            $json = ['location' => 'here', 'P-256' => $curve, 'validation-failed' => 1];
+            PHP);
+
+        $calls = [];
+        foreach ($tokens as $index => [$id, $text]) {
+            if ($id === T_STRING && array_key_exists(strtolower($text), self::NAME_ARGUMENTS) && ($tokens[$index + 1][0] ?? null) === '(') {
+                $positions = self::NAME_ARGUMENTS[strtolower($text)];
+                foreach (self::arguments($tokens, $index + 1) as $position => $argument) {
+                    if (($positions === null || in_array($position, $positions, true)) && self::isLiteral($argument)) {
+                        $calls[] = $argument[0][1];
+                    }
+                }
+            }
+        }
+
+        self::assertSame(["'X-Trace'", '"Accept"', "'webhook-id'"], $calls);
+        self::assertSame(["'webhook-id'", "'X-Other'", "'X-Late'", "'X-Named'", "'webhook-timestamp'", "'X-Form'"], array_map(static fn(array $key): string => $key[1], self::headerArrayKeys($tokens)));
+    }
+
+    /**
+     * Every source file but Header's, as tokens without whitespace and
+     * comments, by its path under src/.
+     *
+     * @return iterable<string, list<array{int|string, string, int}>>
+     */
+    private static function sources(): iterable
+    {
+        $root = dirname(__DIR__, 2) . '/src';
+        $header = realpath($root . '/Http/Header.php');
+
+        /** @var SplFileInfo $file */
+        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
+            if ($file->getRealPath() !== $header && $file->getExtension() === 'php') {
+                yield substr($file->getPathname(), strlen($root) + 1) => self::tokens((string) file_get_contents($file->getPathname()));
+            }
+        }
+    }
+
+    /**
+     * @return list<array{int|string, string, int}>
+     */
+    private static function tokens(string $source): array
+    {
+        $tokens = [];
+        $line = 1;
+        foreach (token_get_all($source) as $token) {
+            if (is_array($token)) {
+                $line = $token[2];
+                if (!in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT, T_OPEN_TAG], true)) {
+                    $tokens[] = [$token[0], $token[1], $line];
+                }
+            } else {
+                $tokens[] = [$token, $token, $line];
+            }
+        }
+
+        return $tokens;
+    }
+
+    /**
+     * The arguments of the call whose opening parenthesis is at $open, each
+     * as its tokens.
+     *
+     * @param list<array{int|string, string, int}> $tokens
+     * @return list<list<array{int|string, string, int}>>
+     */
+    private static function arguments(array $tokens, int $open): array
+    {
+        $arguments = [[]];
+        $depth = 0;
+        for ($index = $open + 1; $index < count($tokens); $index++) {
+            $id = $tokens[$index][0];
+            if (in_array($id, ['(', '[', '{', T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES], true)) {
+                $depth++;
+            } elseif (in_array($id, [')', ']', '}'], true)) {
+                if ($depth === 0) {
+                    break;
+                }
+                $depth--;
+            } elseif ($id === ',' && $depth === 0) {
+                $arguments[] = [];
+                continue;
+            }
+            $arguments[array_key_last($arguments)][] = $tokens[$index];
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * The string-literal keys of every header array, and the string-literal
+     * offsets of `$headers[...]`.
+     *
+     * @param list<array{int|string, string, int}> $tokens
+     * @return list<array{int|string, string, int}>
+     */
+    private static function headerArrayKeys(array $tokens): array
+    {
+        $parameters = self::headerParameters();
+        $found = [];
+        // One frame per open bracket: whether it opens an array literal and
+        // is a header array, its literal keys, the call it is the argument
+        // list of and the argument reached, and the element it interrupted.
+        $frames = [];
+        $element = [];
+        foreach ($tokens as $index => $token) {
+            $id = $token[0];
+            $before = $tokens[$index - 1][0] ?? null;
+            if (in_array($id, ['[', '(', '{', T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES], true)) {
+                $isArray = ($id === '[' && !in_array($before, [T_VARIABLE, ']', ')', '}', T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_CONSTANT_ENCAPSED_STRING], true))
+                    || ($id === '(' && $before === T_ARRAY);
+                $parent = $frames === [] ? null : $frames[array_key_last($frames)];
+                $isArgument = $parent !== null && $element === [] && in_array($parent['position'], $parameters[$parent['callee']] ?? [], true);
+                if ($id === '[' && $before === T_VARIABLE && preg_match('/headers$/i', $tokens[$index - 1][1]) === 1) {
+                    $offset = self::arguments($tokens, $index)[0];
+                    if (self::isLiteral($offset)) {
+                        $found[] = $offset[0];
+                    }
+                }
+                $frames[] = [
+                    'array' => $isArray,
+                    'headers' => $isArray && (self::isNamedHeaders($tokens, $index) || $isArgument),
+                    'keys' => [],
+                    'callee' => $id === '(' ? self::callee($tokens, $index) : '',
+                    'position' => 0,
+                    'element' => $element,
+                ];
+                $element = [];
+
+                continue;
+            }
+            if ($frames !== [] && in_array($id, [']', ')', '}'], true)) {
+                $frame = array_pop($frames);
+                if ($frame['headers']) {
+                    $found = [...$found, ...$frame['keys']];
+                }
+                $element = [...$frame['element'], $token];
+
+                continue;
+            }
+            $top = array_key_last($frames);
+            if ($top !== null && $id === ',') {
+                $frames[$top]['position']++;
+                $element = [];
+
+                continue;
+            }
+            if ($top !== null && $frames[$top]['array'] && $id === T_DOUBLE_ARROW && !in_array(T_DOUBLE_ARROW, array_column($element, 0), true)) {
+                if (self::isLiteral($element)) {
+                    $frames[$top]['keys'][] = $element[0];
+                } elseif (count($element) === 3 && $element[0][1] === 'Header' && $element[1][0] === T_DOUBLE_COLON) {
+                    $frames[$top]['headers'] = true;
+                }
+            }
+            $element[] = $token;
+        }
+
+        return $found;
+    }
+
+    /**
+     * The name of the call whose argument list opens at $index, lower case,
+     * as `new <class>` for a constructor; empty when it is no call.
+     *
+     * @param list<array{int|string, string, int}> $tokens
+     */
+    private static function callee(array $tokens, int $index): string
+    {
+        $name = $tokens[$index - 1] ?? null;
+        if ($name === null || !in_array($name[0], [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED], true)) {
+            return '';
+        }
+        $short = strtolower(substr((string) strrchr('\\' . $name[1], '\\'), 1));
+
+        return ($tokens[$index - 2][0] ?? null) === T_NEW ? 'new ' . $short : $short;
+    }
+
+    /**
+     * The places of the parameters named `headers` (or ending so) of the
+     * methods in src/, by method name in lower case, or `new <class>` for a
+     * constructor: an array literal written there is a header array. A call
+     * is matched by name alone, so a place counts only when every method of
+     * that name has a header parameter there; `get()` does not, as a cache's
+     * `get()` takes a default value in that place.
+     *
+     * @return array<string, list<int>>
+     */
+    private static function headerParameters(): array
+    {
+        $root = dirname(__DIR__, 2) . '/src';
+        $places = [];
+
+        /** @var SplFileInfo $file */
+        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
+            $class = 'Appsolutely\\Sdk\\' . str_replace('/', '\\', substr($file->getPathname(), strlen($root) + 1, -strlen('.php')));
+            if (!class_exists($class)) {
+                continue;
+            }
+            $reflection = new ReflectionClass($class);
+            foreach ($reflection->getMethods() as $method) {
+                if ($method->getDeclaringClass()->getName() !== $class) {
+                    continue;
+                }
+                $name = $method->isConstructor() ? 'new ' . strtolower($reflection->getShortName()) : strtolower($method->getName());
+                $own = [];
+                foreach ($method->getParameters() as $parameter) {
+                    if (preg_match('/headers$/i', $parameter->getName()) === 1 && (string) $parameter->getType() === 'array') {
+                        $own[] = $parameter->getPosition();
+                    }
+                }
+                $places[$name] = array_key_exists($name, $places) ? array_values(array_intersect($places[$name], $own)) : $own;
+            }
+        }
+
+        return array_filter($places, static fn(array $positions): bool => $positions !== []);
+    }
+
+    /**
+     * Whether the bracket at $index opens what is assigned to `$headers`
+     * (or a variable ending so) or passed as the named argument `headers`.
+     *
+     * @param list<array{int|string, string, int}> $tokens
+     */
+    private static function isNamedHeaders(array $tokens, int $index): bool
+    {
+        $operator = $tokens[$index - 1] ?? null;
+        $name = $tokens[$index - 2] ?? null;
+        if ($operator === null || $name === null) {
+            return false;
+        }
+
+        return ($operator[0] === '=' && $name[0] === T_VARIABLE && preg_match('/headers$/i', $name[1]) === 1)
+            || ($operator[0] === ':' && $name[0] === T_STRING && $name[1] === 'headers');
+    }
+
+    /**
+     * @param list<array{int|string, string, int}> $tokens
+     * @phpstan-assert-if-true non-empty-list<array{int|string, string, int}> $tokens
+     */
+    private static function isLiteral(array $tokens): bool
+    {
+        return count($tokens) === 1 && $tokens[0][0] === T_CONSTANT_ENCAPSED_STRING;
+    }
+
+    private static function unquote(string $literal): string
+    {
+        return substr($literal, 1, -1);
     }
 }
