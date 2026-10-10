@@ -7,6 +7,7 @@ namespace Appsolutely\Sdk\Exception;
 use Appsolutely\Sdk\Api\RateLimit;
 use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\Json;
+use Appsolutely\Sdk\Http\MediaType;
 use Appsolutely\Sdk\Http\RetryAfter;
 use Appsolutely\Sdk\Support\Untrusted;
 use DateTimeInterface;
@@ -78,7 +79,7 @@ class ApiException extends RuntimeException implements AppsolutelyException
         $status = $response->getStatusCode();
         $body = (string) $response->getBody();
         $mediaType = strtolower(trim(explode(';', $response->getHeaderLine(Header::CONTENT_TYPE))[0]));
-        $problem = $mediaType === 'application/problem+json' ? Json::decodeObject($body) : null;
+        $problem = $mediaType === MediaType::PROBLEM_JSON ? Json::decodeObject($body) : null;
         $members = $problem ?? [];
 
         $type = self::nonEmptyString($members['type'] ?? null) ?? self::ABOUT_BLANK;
