@@ -18,6 +18,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Webhooks\Verifier` for Standard Webhooks v1 deliveries, including secret rotation with secrets of 24 to 64 bytes and a timestamp tolerance of five minutes by default, configurable from 1 to 3600 seconds, returning a typed `Webhooks\Event`.
 - `Webhooks\Deliveries` to acknowledge a retried or redelivered event without running its handler twice, with an optional namespace per endpoint so several endpoints can share one cache.
 - `Testing\WebhookFactory` to build deliveries signed exactly as Appsolutely signs them.
+- `Api\RateLimit` and `Api\RateLimitQuota`: the `RateLimit-Policy` and `RateLimit` fields of draft-ietf-httpapi-ratelimit-headers-11 read as Structured Field lists and joined by quota name (`quota`, `window`, `remaining`, `reset`), with `exhausted()` naming the spent quota that turns over last. A field that does not parse is ignored whole, never failing the call.
 
 ### Changed
 
