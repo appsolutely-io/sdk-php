@@ -60,7 +60,14 @@ function write(string $path, string $contents): void
 
 $root = dirname(__DIR__);
 $arguments = [];
-foreach (array_slice($argv, 1) as $argument) {
+$given = $_SERVER['argv'] ?? null;
+if (!is_array($given)) {
+    fail('Run it from the command line: composer pin-contract -- <site-software checkout> <ref>');
+}
+foreach (array_slice($given, 1) as $argument) {
+    if (!is_string($argument)) {
+        continue;
+    }
     if (str_starts_with($argument, '--root=')) {
         $root = substr($argument, strlen('--root='));
     } else {
