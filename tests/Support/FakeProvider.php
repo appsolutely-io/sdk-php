@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Support;
 
+use Appsolutely\Sdk\Api\RetryPolicy;
 use Appsolutely\Sdk\Cache\InMemoryCache;
 use Appsolutely\Sdk\Client;
 use Appsolutely\Sdk\Config;
@@ -30,6 +31,7 @@ final class FakeProvider
     public const string API_TOKEN = '7|admin-token-value';
 
     public readonly FrozenClock $clock;
+    public readonly RecordingSleeper $sleeper;
     public readonly InMemoryCache $cache;
     public readonly MockClient $http;
     public readonly Psr17Factory $factory;
@@ -70,6 +72,7 @@ final class FakeProvider
     {
         $this->clock = $clock ?? new FrozenClock();
         $this->cache = new InMemoryCache($this->clock);
+        $this->sleeper = new RecordingSleeper($this->clock);
         $this->factory = new Psr17Factory();
         $this->http = new MockClient($this->factory);
         $this->rsa = SigningKey::rsa('rsa-1');
@@ -108,10 +111,11 @@ final class FakeProvider
             logger: $logger,
             clientAuthentication: $authentication,
             clockLeeway: $leeway,
+            retryPolicy: new RetryPolicy(sleeper: $this->sleeper),
         );
     }
 
-    public function client(?string $apiToken = self::API_TOKEN): Client
+    public function client(?string $apiToken = self::API_TOKEN, ?RetryPolicy $retryPolicy = null, ?LoggerInterface $logger = null): Client
     {
         return new Client(new Config(
             baseUrl: self::BASE_URL,
@@ -124,6 +128,8 @@ final class FakeProvider
             streamFactory: $this->factory,
             cache: $this->cache,
             clock: $this->clock,
+            logger: $logger,
+            retryPolicy: $retryPolicy ?? new RetryPolicy(sleeper: $this->sleeper),
         ));
     }
 
