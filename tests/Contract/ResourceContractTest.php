@@ -37,9 +37,10 @@ use Throwable;
  * Holds the typed client to the pinned Site API document: every operation
  * has exactly one method, every method names an operation and path the
  * document has and sits on the client of the operation's audience, every
- * method sends exactly the query parameters its operation documents and
- * cannot leave out a required one, and every model reads only fields its
- * schema defines and every field the schema requires.
+ * request a method sends, on every page, carries the query parameters its
+ * operation documents and no others and cannot leave out a required one,
+ * and every model reads only fields its schema defines and every field the
+ * schema requires.
  */
 final class ResourceContractTest extends TestCase
 {
@@ -118,15 +119,23 @@ final class ResourceContractTest extends TestCase
     ];
 
     /**
-     * The query names a method sends are learnt by calling it, every
-     * argument given and a list walked to its second page, against an HTTP
-     * client that keeps each request as it went over the wire; the names are
-     * read from the raw query, so a list's must carry its brackets.
+     * The query name a cursor list carries from its second page on.
+     */
+    private const string CURSOR = 'cursor';
+
+    /**
+     * The query names a method sends are learnt by calling it against an
+     * HTTP client that keeps each request as it went over the wire, once with
+     * every argument given and once with only the required ones; a list is
+     * walked to its second page. Each request is held to the document on its
+     * own, so a later page that drops a filter the first page sent fails. The
+     * names are read from the raw query, so a list's must carry its brackets.
      */
     #[DataProvider('documentedOperations')]
     public function testEveryMethodSendsTheQueryItsOperationDocuments(string $id): void
     {
         $endpoint = self::endpointOf($id);
+        $paged = $endpoint['operation']->isCursorList();
         $documented = [];
         foreach (Document::operations()[$id]['parameters'] as $parameter) {
             if (($parameter['in'] ?? null) === 'query' && is_string($parameter['name'] ?? null)) {
@@ -135,17 +144,28 @@ final class ResourceContractTest extends TestCase
         }
 
         $full = self::drive($endpoint, optional: true);
-        $sent = array_values(array_unique(array_merge([], ...$full)));
-        $names = array_keys($documented);
-        sort($sent);
-        sort($names);
-        self::assertSame($names, $sent, sprintf('%s sends the query %s; the document gives %s %s.', $endpoint['method'], self::shown($sent), $id, self::shown($names)));
+        foreach ($full as $request => $query) {
+            $sent = self::names($query);
+            $expected = [];
+            foreach (array_keys($documented) as $name) {
+                if (!$paged || $name !== self::CURSOR || $request > 0) {
+                    $expected[] = $name;
+                }
+            }
+            sort($expected);
+            self::assertSame($expected, $sent, sprintf('%s sends the query %s in request %d when every argument is given; the document gives %s %s.', $endpoint['method'], self::shown($sent), $request + 1, $id, self::shown($expected)));
+        }
 
         foreach (self::drive($endpoint, optional: false) as $request => $query) {
+            $sent = self::names($query);
+            self::assertSame([], array_values(array_diff($sent, array_keys($documented))), sprintf('%s sends the query %s in request %d when only its required arguments are given; the document gives %s %s.', $endpoint['method'], self::shown($sent), $request + 1, $id, self::shown(array_keys($documented))));
             foreach ($documented as $name => $parameter) {
                 if (($parameter['required'] ?? false) === true) {
-                    self::assertContains($name, $query, sprintf('%s leaves out "%s", which %s requires, from request %d when only its required arguments are given.', $endpoint['method'], $name, $id, $request + 1));
+                    self::assertContains($name, $sent, sprintf('%s leaves out "%s", which %s requires, from request %d when only its required arguments are given.', $endpoint['method'], $name, $id, $request + 1));
                 }
+            }
+            if ($paged) {
+                self::assertSame($request > 0, in_array(self::CURSOR, $sent, true), sprintf('%s sends "%s" in request %d; a list sends it from its second page on.', $endpoint['method'], self::CURSOR, $request + 1));
             }
         }
 
@@ -154,7 +174,9 @@ final class ResourceContractTest extends TestCase
                 continue;
             }
             self::assertStringEndsWith('[]', $name, sprintf('%s types "%s" an array, whose name the SDK sends with brackets.', $id, $name));
-            self::assertCount(count(Document::list(self::argument('string[]'))), array_keys($full[0], $name, true), sprintf('%s does not send each value of "%s" under that name.', $endpoint['method'], $name));
+            foreach ($full as $request => $query) {
+                self::assertCount(count(Document::list(self::argument('string[]'))), array_keys($query, $name, true), sprintf('%s does not send each value of "%s" under that name in request %d.', $endpoint['method'], $name, $request + 1));
+            }
         }
     }
 
@@ -329,8 +351,14 @@ final class ResourceContractTest extends TestCase
      * Calls a method against a site that answers every request in memory
      * and returns the query names of each request it sent, in order and
      * with repeats. Every argument is given when `$optional`, only the
-     * required ones otherwise. A list is walked: its first page names a next
-     * one, so the cursor goes out too.
+     * required ones otherwise.
+     *
+     * Every answer is a readable page. A list's first page names a next one
+     * and its second names none, so the walk reaches the second page and
+     * ends there; a list that throws on the way, or sends any other number
+     * of requests, fails. Any other method sends one request, and may then
+     * throw on reading a page where it expects its own answer: that is the
+     * expected end of its run, as only what it sent is asked.
      *
      * @param array{operation: Operation, method: string, roots: list<class-string>} $endpoint
      * @return non-empty-list<list<string>>
@@ -384,16 +412,17 @@ final class ResourceContractTest extends TestCase
             $arguments[$parameter->getName()] = self::ARGUMENTS[$parameter->getName()] ?? self::argument($type->getName() === 'array' ? 'string[]' : $type->getName());
         }
 
+        $paged = $endpoint['operation']->isCursorList();
+        $result = null;
         $failure = null;
         try {
             $result = $method->invokeArgs(self::reach($root, $class), $arguments);
-            if ($result instanceof Paginator) {
+            if ($paged && $result instanceof Paginator) {
                 foreach ($result as $item) {
                     // Walked only for the requests it sends.
                 }
             }
         } catch (Throwable $thrown) {
-            // An answer the method cannot read is expected: only what it sent is asked.
             $failure = $thrown;
         }
 
@@ -401,8 +430,27 @@ final class ResourceContractTest extends TestCase
         if ($queries === []) {
             self::fail(sprintf('%s sent no request: %s', $endpoint['method'], $failure === null ? 'it returned without one.' : $failure::class . ': ' . $failure->getMessage()));
         }
+        if ($paged) {
+            self::assertNull($failure, sprintf('%s threw after %d request(s), before its list was walked to the end: %s', $endpoint['method'], count($queries), $failure === null ? '' : $failure::class . ': ' . $failure->getMessage()));
+            self::assertInstanceOf(Paginator::class, $result, sprintf('%s calls %s, a cursor list, without returning a Paginator.', $endpoint['method'], $endpoint['operation']->value));
+        }
+        self::assertCount($paged ? 2 : 1, $queries, sprintf('%s sent %d request(s); a list walked to its second page sends 2, any other method 1.', $endpoint['method'], count($queries)));
 
         return $queries;
+    }
+
+    /**
+     * The distinct names of one request's query, sorted.
+     *
+     * @param list<string> $query
+     * @return list<string>
+     */
+    private static function names(array $query): array
+    {
+        $names = array_values(array_unique($query));
+        sort($names);
+
+        return $names;
     }
 
     /**
