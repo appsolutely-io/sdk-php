@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk;
 
+use Appsolutely\Sdk\Api\MemberApi;
 use Appsolutely\Sdk\Api\SiteApi;
 use Appsolutely\Sdk\Exception\NotSerializableException;
 
@@ -16,11 +17,14 @@ final readonly class MemberClient
     /**
      * @internal obtain it from Client::forMember()
      */
-    public function __construct(private SiteApi $api) {}
+    public function __construct(private SiteApi $site) {}
 
-    public function api(): SiteApi
+    /**
+     * The Site API as this member.
+     */
+    public function api(): MemberApi
     {
-        return $this->api;
+        return new MemberApi($this->site);
     }
 
     /**

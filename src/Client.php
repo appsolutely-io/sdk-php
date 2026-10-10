@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk;
 
+use Appsolutely\Sdk\Api\AdministratorApi;
 use Appsolutely\Sdk\Api\SiteApi;
 use Appsolutely\Sdk\Cache\InMemoryCache;
 use Appsolutely\Sdk\Clock\SystemClock;
@@ -25,7 +26,9 @@ final readonly class Client
 {
     private OpenIdClient $oidc;
 
-    private SiteApi $api;
+    private SiteApi $site;
+
+    private AdministratorApi $api;
 
     public function __construct(Config $config)
     {
@@ -53,7 +56,8 @@ final readonly class Client
             $clock,
             $logger,
         );
-        $this->api = new SiteApi($http, $config->baseUrl, $config->apiToken(), $clock, $config->retryPolicy, $logger);
+        $this->site = new SiteApi($http, $config->baseUrl, $config->apiToken(), $clock, $config->retryPolicy, $logger);
+        $this->api = new AdministratorApi($this->site);
     }
 
     /**
@@ -80,10 +84,11 @@ final readonly class Client
     }
 
     /**
-     * Site API calls carrying the administrator token, or no credential when
-     * the Config holds none.
+     * The Site API as the administrator, with the token from Config (or no
+     * credential when the Config holds none); the operations anyone may
+     * call are here too, sent without a credential.
      */
-    public function api(): SiteApi
+    public function api(): AdministratorApi
     {
         return $this->api;
     }
@@ -94,6 +99,6 @@ final readonly class Client
      */
     public function forMember(#[\SensitiveParameter] string $accessToken): MemberClient
     {
-        return new MemberClient($this->api->withToken($accessToken));
+        return new MemberClient($this->site->withToken($accessToken));
     }
 }

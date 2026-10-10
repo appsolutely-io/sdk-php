@@ -34,7 +34,7 @@ final class RetryTest extends TestCase
     {
         $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->json(['id' => 'addr-1'], 201, ['Idempotent-Replayed' => 'true']));
 
-        $response = $provider->client()->forMember('member-token')->api()->postIdempotent('/api/v1/me/addresses', ['line1' => '1 Main St']);
+        $response = $provider->client()->forMember('member-token')->api()->raw()->postIdempotent('/api/v1/me/addresses', ['line1' => '1 Main St']);
 
         $request = $provider->siteRequests()[0];
         self::assertMatchesRegularExpression(self::UUID_V4, $request->getHeaderLine('Idempotency-Key'));
@@ -48,7 +48,7 @@ final class RetryTest extends TestCase
     {
         $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->json(['id' => 'a-1'], 201));
 
-        $response = $provider->client()->api()->postIdempotent('/api/v1/articles', ['title' => 'T'], idempotencyKey: 'order 42: create article');
+        $response = $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', ['title' => 'T'], idempotencyKey: 'order 42: create article');
 
         self::assertSame('order 42: create article', $provider->siteRequests()[0]->getHeaderLine('Idempotency-Key'));
         self::assertSame('order 42: create article', $response->idempotencyKey);
@@ -58,7 +58,7 @@ final class RetryTest extends TestCase
     public function testEveryKeyedWriteGetsAKeyOfItsOwn(): void
     {
         $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->json([], 201));
-        $api = $provider->client()->api();
+        $api = $provider->client()->api()->raw();
 
         $api->postIdempotent('/api/v1/articles', ['title' => 'A']);
         $api->postIdempotent('/api/v1/articles', ['title' => 'A']);
@@ -88,7 +88,7 @@ final class RetryTest extends TestCase
         $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->json([], 201));
 
         try {
-            $provider->client()->api()->postIdempotent('/api/v1/articles', [], idempotencyKey: $key);
+            $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', [], idempotencyKey: $key);
             self::fail('The key was accepted.');
         } catch (InvalidArgumentValueException) {
             self::assertSame([], $provider->siteRequests());
@@ -102,7 +102,7 @@ final class RetryTest extends TestCase
             static fn(FakeProvider $provider): ResponseInterface => $provider->json(['id' => 'a-1'], 201),
         );
 
-        $response = $provider->client()->api()->postIdempotent('/api/v1/articles', ['title' => 'T']);
+        $response = $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', ['title' => 'T']);
 
         [$first, $second] = $provider->siteRequests();
         self::assertSame($first->getHeaderLine('Idempotency-Key'), $second->getHeaderLine('Idempotency-Key'));
@@ -122,7 +122,7 @@ final class RetryTest extends TestCase
             static fn(FakeProvider $provider): ResponseInterface => $provider->json(['id' => 'a-1'], 201, ['Idempotent-Replayed' => 'true']),
         );
 
-        $response = $provider->client()->api()->postIdempotent('/api/v1/articles', ['title' => 'T'], idempotencyKey: 'k-1');
+        $response = $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', ['title' => 'T'], idempotencyKey: 'k-1');
 
         self::assertSame([2.0], $provider->sleeper->sleeps);
         self::assertSame(['k-1', 'k-1'], array_map(static fn(RequestInterface $request): string => $request->getHeaderLine('Idempotency-Key'), $provider->siteRequests()));
@@ -136,7 +136,7 @@ final class RetryTest extends TestCase
             static fn(FakeProvider $provider): ResponseInterface => $provider->json([], 201),
         );
 
-        $provider->client()->api()->postIdempotent('/api/v1/articles', []);
+        $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', []);
 
         self::assertSame([3.0], $provider->sleeper->sleeps);
     }
@@ -148,7 +148,7 @@ final class RetryTest extends TestCase
             static fn(FakeProvider $provider): ResponseInterface => $provider->json([]),
         );
 
-        $provider->client()->api()->get('/api/v1/articles/a-1');
+        $provider->client()->api()->raw()->get('/api/v1/articles/a-1');
 
         self::assertSame([5.0], $provider->sleeper->sleeps);
     }
@@ -160,7 +160,7 @@ final class RetryTest extends TestCase
             static fn(FakeProvider $provider): ResponseInterface => $provider->json([], 201),
         );
 
-        $provider->client()->api()->postIdempotent('/api/v1/articles', []);
+        $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', []);
 
         self::assertSame([1.0], $provider->sleeper->sleeps);
         self::assertCount(2, $provider->siteRequests());
@@ -173,7 +173,7 @@ final class RetryTest extends TestCase
             static fn(FakeProvider $provider): ResponseInterface => $provider->json(['data' => []]),
         );
 
-        $page = $provider->client()->api()->page('/api/v1/articles');
+        $page = $provider->client()->api()->raw()->page('/api/v1/articles');
 
         self::assertSame([], $page->items);
         self::assertCount(2, $provider->siteRequests());
@@ -204,7 +204,7 @@ final class RetryTest extends TestCase
         $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->problem($status, $slug, headers: ['Retry-After' => '1']));
 
         try {
-            $provider->client()->api()->postIdempotent('/api/v1/articles', []);
+            $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', []);
             self::fail('No exception was thrown.');
         } catch (ApiException $exception) {
             self::assertTrue($exception->hasType($slug));
@@ -218,7 +218,7 @@ final class RetryTest extends TestCase
         $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->problem(503, 'standing-unavailable'));
 
         try {
-            $provider->client(retryPolicy: new RetryPolicy(maxRetries: 3, sleeper: $provider->sleeper))->api()->postIdempotent('/api/v1/articles', []);
+            $provider->client(retryPolicy: new RetryPolicy(maxRetries: 3, sleeper: $provider->sleeper))->api()->raw()->postIdempotent('/api/v1/articles', []);
             self::fail('No exception was thrown.');
         } catch (ServiceUnavailableException) {
         }
@@ -238,7 +238,7 @@ final class RetryTest extends TestCase
 
         $this->expectException(TransportException::class);
 
-        $provider->client()->api()->postIdempotent('/api/v1/articles', []);
+        $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', []);
     }
 
     public function testRetriesCanBeTurnedOff(): void
@@ -246,7 +246,7 @@ final class RetryTest extends TestCase
         $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->problem(503, 'standing-unavailable', headers: ['Retry-After' => '1']));
 
         try {
-            $provider->client(retryPolicy: RetryPolicy::none())->api()->postIdempotent('/api/v1/articles', []);
+            $provider->client(retryPolicy: RetryPolicy::none())->api()->raw()->postIdempotent('/api/v1/articles', []);
             self::fail('No exception was thrown.');
         } catch (ServiceUnavailableException) {
         }
@@ -259,7 +259,7 @@ final class RetryTest extends TestCase
         $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->problem(429, 'too-many-requests', headers: ['Retry-After' => '3600']));
 
         try {
-            $provider->client()->api()->postIdempotent('/api/v1/articles', []);
+            $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', []);
             self::fail('No exception was thrown.');
         } catch (RateLimitedException $exception) {
             self::assertSame(3600, $exception->retryAfter);
@@ -286,7 +286,7 @@ final class RetryTest extends TestCase
     public function testAWriteWithoutAKeyIsNeverRetried(string $method): void
     {
         $provider = self::answering(static fn(): never => throw new class ('connection reset') extends RuntimeException implements ClientExceptionInterface {});
-        $api = $provider->client()->api();
+        $api = $provider->client()->api()->raw();
 
         try {
             match ($method) {
@@ -309,7 +309,7 @@ final class RetryTest extends TestCase
         $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->problem(503, 'standing-unavailable', headers: ['Retry-After' => '1']));
 
         try {
-            $provider->client()->api()->post('/api/v1/articles', []);
+            $provider->client()->api()->raw()->post('/api/v1/articles', []);
             self::fail('No exception was thrown.');
         } catch (ServiceUnavailableException) {
         }
@@ -325,7 +325,7 @@ final class RetryTest extends TestCase
             static fn(FakeProvider $provider): ResponseInterface => $provider->json([], 201),
         );
 
-        $provider->client(logger: $logger)->api()->postIdempotent('/api/v1/articles', [], idempotencyKey: 'secret-ish-key');
+        $provider->client(logger: $logger)->api()->raw()->postIdempotent('/api/v1/articles', [], idempotencyKey: 'secret-ish-key');
 
         self::assertCount(1, $logger->records);
         self::assertStringContainsString('409', $logger->records[0]['message']);
@@ -337,7 +337,7 @@ final class RetryTest extends TestCase
         $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->problem(409, 'idempotency-request-in-flight', headers: ['Retry-After' => '1']));
 
         try {
-            $provider->client()->api()->get('/api/v1/articles/a-1');
+            $provider->client()->api()->raw()->get('/api/v1/articles/a-1');
             self::fail('No exception was thrown.');
         } catch (ConflictException) {
         }
