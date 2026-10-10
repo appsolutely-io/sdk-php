@@ -182,9 +182,9 @@ enum Operation: string
 
     /**
      * Whether it is a list answered a page at a time, as `{data, next_cursor}`
-     * with `limit` and `cursor`. Two lists are answered as one page that
-     * never has a cursor, and a sync pull pages a change feed by its own
-     * rules.
+     * with `limit` and `cursor`. A list the site answers whole, as one page
+     * that never has a cursor, is not one, and nor is a sync pull, which
+     * pages a change feed by its own rules.
      */
     public function isCursorList(): bool
     {
