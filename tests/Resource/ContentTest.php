@@ -8,6 +8,7 @@ use Appsolutely\Sdk\Exception\NotFoundException;
 use Appsolutely\Sdk\Exception\ValidationFailedException;
 use Appsolutely\Sdk\Model\Article;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
+use Appsolutely\Sdk\Tests\Support\SiteFixture;
 use DateTimeImmutable;
 use DateTimeZone;
 use PHPUnit\Framework\TestCase;
@@ -22,21 +23,7 @@ final class ContentTest extends TestCase
      */
     public static function article(string $id = 'art-1'): array
     {
-        return [
-            'id' => $id,
-            'title' => 'Hello',
-            'slug' => 'hello',
-            'description' => null,
-            'keywords' => null,
-            'cover' => null,
-            'status' => 1,
-            'sort' => 3,
-            'published_at' => '2026-10-08T12:34:56Z',
-            'expired_at' => null,
-            'created_at' => '2026-10-01T08:00:00Z',
-            'updated_at' => '2026-10-08T12:34:56Z',
-            'categories' => [['id' => 'cat-1', 'title' => 'News', 'slug' => 'news']],
-        ];
+        return SiteFixture::record('article', ['id' => $id]);
     }
 
     /**
@@ -44,21 +31,7 @@ final class ContentTest extends TestCase
      */
     public static function page(string $id = 'page-1'): array
     {
-        return [
-            'id' => $id,
-            'name' => 'home',
-            'title' => 'Home',
-            'slug' => '/',
-            'description' => null,
-            'keywords' => null,
-            'language' => 'en',
-            'parent_id' => null,
-            'status' => 1,
-            'published_at' => '2026-10-08T12:34:56Z',
-            'expired_at' => null,
-            'created_at' => null,
-            'updated_at' => '2026-10-08T12:34:56Z',
-        ];
+        return SiteFixture::record('page', ['id' => $id]);
     }
 
     /**
@@ -66,26 +39,7 @@ final class ContentTest extends TestCase
      */
     public static function product(string $id = 'prod-1'): array
     {
-        return [
-            'id' => $id,
-            'type' => 'virtual',
-            'title' => 'Plan',
-            'subtitle' => null,
-            'slug' => 'plan',
-            'cover' => null,
-            'description' => null,
-            'keywords' => null,
-            'price' => 1999,
-            'original_price' => 2999,
-            'currency' => 'USD',
-            'prices' => [['currency' => 'USD', 'price' => 1999, 'original_price' => 2999], ['currency' => 'JPY', 'price' => 3000, 'original_price' => null]],
-            'status' => 1,
-            'sort' => null,
-            'published_at' => '2026-10-08T12:34:56Z',
-            'expired_at' => null,
-            'created_at' => null,
-            'updated_at' => '2026-10-08T12:34:56Z',
-        ];
+        return SiteFixture::record('product', ['id' => $id]);
     }
 
     public function testArticlesAreListedPageByPageAsModels(): void
@@ -110,15 +64,15 @@ final class ContentTest extends TestCase
 
         self::assertSame('GET /api/v1/articles/a%2F1', $site->line());
         self::assertSame('a/1', $article->id);
-        self::assertSame('Hello', $article->title);
-        self::assertSame('hello', $article->slug);
-        self::assertNull($article->description);
+        self::assertSame('Release notes', $article->title);
+        self::assertSame('release-notes', $article->slug);
+        self::assertNull($article->keywords);
         self::assertSame(1, $article->status);
-        self::assertSame(3, $article->sort);
-        self::assertEquals(new DateTimeImmutable('2026-10-08T12:34:56', new DateTimeZone('UTC')), $article->publishedAt);
+        self::assertNull($article->sort);
+        self::assertEquals(new DateTimeImmutable('2026-10-01T09:00:00', new DateTimeZone('UTC')), $article->publishedAt);
         self::assertNull($article->expiredAt);
-        self::assertSame('2026-10-01T08:00:00+00:00', $article->createdAt->format(DATE_ATOM));
-        self::assertSame('cat-1', $article->categories[0]->id);
+        self::assertSame('2026-09-30T16:20:00+00:00', $article->createdAt->format(DATE_ATOM));
+        self::assertSame('2b4d6f8a-1c3e-4a5b-8d7f-9e0a1b2c3d4e', $article->categories[0]->id);
         self::assertSame('News', $article->categories[0]->title);
         self::assertSame('news', $article->categories[0]->slug);
         self::assertSame('x', $article->attributes['added_later']);
@@ -187,13 +141,13 @@ final class ContentTest extends TestCase
         self::assertSame('GET /api/v1/pages?limit=25', $site->line(0));
         self::assertSame('GET /api/v1/pages/page-2', $site->line(1));
         self::assertSame('page-1', $listed[0]->id);
-        self::assertSame('home', $page->name);
-        self::assertSame('Home', $page->title);
+        self::assertSame('About', $page->name);
+        self::assertSame('About us', $page->title);
         self::assertSame('en', $page->language);
         self::assertNull($page->parentId);
         self::assertSame(1, $page->status);
-        self::assertNull($page->createdAt);
-        self::assertSame('2026-10-08T12:34:56+00:00', $page->updatedAt->format(DATE_ATOM));
+        self::assertSame('2026-08-30T10:00:00+00:00', $page->createdAt?->format(DATE_ATOM));
+        self::assertSame('2026-10-08T11:59:58+00:00', $page->updatedAt->format(DATE_ATOM));
     }
 
     public function testProductsAreListedAndReadWithTheirPricesInMinorUnits(): void
@@ -208,13 +162,13 @@ final class ContentTest extends TestCase
         self::assertSame('c2', $first->nextCursor);
         self::assertSame('prod-1', $first->items[0]->id);
         self::assertSame('GET /api/v1/products/prod-2', $site->line(1));
-        self::assertSame('virtual', $product->type);
-        self::assertSame(1999, $product->price);
-        self::assertSame(2999, $product->originalPrice);
+        self::assertSame('subscription', $product->type);
+        self::assertSame(1900, $product->price);
+        self::assertNull($product->originalPrice);
         self::assertSame('USD', $product->currency);
-        self::assertSame('JPY', $product->prices[1]->currency);
-        self::assertSame(3000, $product->prices[1]->price);
-        self::assertNull($product->prices[1]->originalPrice);
+        self::assertSame('EUR', $product->prices[1]->currency);
+        self::assertSame(1700, $product->prices[1]->price);
+        self::assertSame(1900, $product->prices[1]->originalPrice);
         self::assertSame(1, $product->status);
     }
 

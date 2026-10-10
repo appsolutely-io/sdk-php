@@ -68,8 +68,8 @@ final class SyncTest extends TestCase
 
         self::assertSame('fe-1', $sync->formEntries()->pull()->upserts[0]->id);
         self::assertSame(2659, $sync->orders()->pull()->upserts[0]->totalAmount);
-        self::assertSame('home', $sync->pages()->pull()->upserts[0]->name);
-        self::assertSame('virtual', $sync->products()->pull()->upserts[0]->type);
+        self::assertSame('About', $sync->pages()->pull()->upserts[0]->name);
+        self::assertSame('subscription', $sync->products()->pull()->upserts[0]->type);
     }
 
     public function testAPushSendsTheBatchAndReadsEachMutationsResult(): void

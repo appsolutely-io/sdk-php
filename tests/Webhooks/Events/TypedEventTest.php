@@ -6,6 +6,7 @@ namespace Appsolutely\Sdk\Tests\Webhooks\Events;
 
 use Appsolutely\Sdk\Exception\UnexpectedPayloadException;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
+use Appsolutely\Sdk\Tests\Support\SiteFixture;
 use Appsolutely\Sdk\Webhooks\Data\Order;
 use Appsolutely\Sdk\Webhooks\Events\AccountEvent;
 use Appsolutely\Sdk\Webhooks\Events\ArticleEvent;
@@ -33,14 +34,18 @@ use StandardWebhooks\Webhook;
  * writes it: the fields, their order, null where the site sends null, times
  * as RFC 3339 UTC to the second, ids as strings and amounts as integer minor
  * units. Record events carry the record exactly as the site's REST API
- * serves it, built from the same payload definition. The fixture's bytes go
- * into a body that is signed with the Standard Webhooks reference library
- * and verified, so every case runs the path a real delivery takes.
+ * serves it, built from the same payload definition, so they read the
+ * record fixtures the API tests read (SiteFixture), with whatever the event
+ * adds beside the record. The fixture's bytes go into a body that is signed
+ * with the Standard Webhooks reference library and verified, so every case
+ * runs the path a real delivery takes.
  */
 final class TypedEventTest extends TestCase
 {
     private const string SECRET = 'whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw';
     private const string ID = 'msg_01k6zq3n5m8r2t4v6w8y0a2c4e';
+    private const string SUBJECT = '5f0c2a9e8b7d41c3a6e2f9b1d0c8a7e65f4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d';
+    private const array PAYMENT = ['reference' => 'PAY-8F3K2M9Q4T7W', 'amount' => 1900, 'currency' => 'USD'];
 
     private static function deliver(string $type, string $data, string $mode = 'production'): TypedEvent
     {
@@ -96,7 +101,7 @@ final class TypedEventTest extends TestCase
     #[DataProvider('accountTypes')]
     public function testEveryAccountEventCarriesTheAccountsWholeState(string $type): void
     {
-        $event = self::deliver($type, self::fixture('account-state'));
+        $event = self::deliver($type, SiteFixture::json('account-state'));
 
         self::assertInstanceOf(AccountEvent::class, $event);
         $state = $event->state;
@@ -157,7 +162,7 @@ final class TypedEventTest extends TestCase
     #[DataProvider('articleTypes')]
     public function testEveryArticleEventCarriesTheArticle(string $type): void
     {
-        $event = self::deliver($type, self::fixture('article'));
+        $event = self::deliver($type, SiteFixture::json('article'));
 
         self::assertInstanceOf(ArticleEvent::class, $event);
         $article = $event->article;
@@ -197,7 +202,7 @@ final class TypedEventTest extends TestCase
     #[DataProvider('pageTypes')]
     public function testEveryPageEventCarriesThePage(string $type): void
     {
-        $event = self::deliver($type, self::fixture('page'));
+        $event = self::deliver($type, SiteFixture::json('page'));
 
         self::assertInstanceOf(PageEvent::class, $event);
         $page = $event->page;
@@ -225,7 +230,7 @@ final class TypedEventTest extends TestCase
     #[DataProvider('productTypes')]
     public function testEveryProductEventCarriesTheProductWithItsPrices(string $type): void
     {
-        $event = self::deliver($type, self::fixture('product'));
+        $event = self::deliver($type, SiteFixture::json('product'));
 
         self::assertInstanceOf(ProductEvent::class, $event);
         $product = $event->product;
@@ -246,7 +251,7 @@ final class TypedEventTest extends TestCase
 
     public function testAFormSubmissionCarriesTheEntryAndItsForm(): void
     {
-        $event = self::deliver(EventType::FORM_SUBMITTED, self::fixture('form-entry'));
+        $event = self::deliver(EventType::FORM_SUBMITTED, SiteFixture::json('form-entry', ['form' => ['name' => 'Contact', 'slug' => 'contact']]));
 
         self::assertInstanceOf(FormSubmittedEvent::class, $event);
         $entry = $event->entry;
@@ -305,7 +310,7 @@ final class TypedEventTest extends TestCase
     #[DataProvider('orderTypes')]
     public function testEveryOrderEventCarriesTheOrderWithItsLines(string $type): void
     {
-        $event = self::deliver($type, self::fixture('order'));
+        $event = self::deliver($type, SiteFixture::json('order'));
 
         self::assertInstanceOf(OrderEvent::class, $event);
         self::assertTheOrder($event->order, 'shipped');
@@ -313,7 +318,7 @@ final class TypedEventTest extends TestCase
 
     public function testAPaidOrderNamesTheSettlingPaymentAndTheBuyer(): void
     {
-        $event = self::deliver(EventType::ORDER_PAID, self::fixture('order-paid'));
+        $event = self::deliver(EventType::ORDER_PAID, SiteFixture::json('order', ['status' => 'paid', 'payment' => self::PAYMENT, 'subject' => self::SUBJECT]));
 
         self::assertInstanceOf(OrderPaidEvent::class, $event);
         self::assertTheOrder($event->order, 'paid');
@@ -326,7 +331,7 @@ final class TypedEventTest extends TestCase
 
     public function testAGuestsPaidOrderHasNoSubject(): void
     {
-        $data = substr(self::fixture('order'), 0, -1) . ',"payment":null,"subject":null}';
+        $data = SiteFixture::json('order', ['status' => 'paid', 'payment' => null, 'subject' => null]);
         $event = self::deliver(EventType::ORDER_PAID, $data);
 
         self::assertInstanceOf(OrderPaidEvent::class, $event);
@@ -346,7 +351,7 @@ final class TypedEventTest extends TestCase
     #[DataProvider('paymentReturnedTypes')]
     public function testMoneyComingBackNamesTheOrderAndThePayment(string $type): void
     {
-        $event = self::deliver($type, self::fixture('order-payment'));
+        $event = self::deliver($type, SiteFixture::json('order', ['status' => 'cancelled', 'payment' => self::PAYMENT]));
 
         self::assertInstanceOf(PaymentReturnedEvent::class, $event);
         self::assertTheOrder($event->order, 'cancelled');
@@ -412,7 +417,7 @@ final class TypedEventTest extends TestCase
         $this->expectException(UnexpectedPayloadException::class);
         $this->expectExceptionMessage('The payment.refunded delivery\'s data.payment.amount is not an integer.');
 
-        self::deliver(EventType::PAYMENT_REFUNDED, str_replace('"amount":1900,"currency":"USD"}', '"amount":"19.00","currency":"USD"}', self::fixture('order-payment')));
+        self::deliver(EventType::PAYMENT_REFUNDED, SiteFixture::json('order', ['status' => 'cancelled', 'payment' => [...self::PAYMENT, 'amount' => '19.00']]));
     }
 
     /**

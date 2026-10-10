@@ -6,6 +6,7 @@ namespace Appsolutely\Sdk\Tests\Resource;
 
 use Appsolutely\Sdk\Exception\ConflictException;
 use Appsolutely\Sdk\Exception\NotFoundException;
+use Appsolutely\Sdk\Tests\Support\SiteFixture;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -49,20 +50,7 @@ final class RecordsTest extends TestCase
      */
     public static function formEntry(string $id = 'fe-1'): array
     {
-        return [
-            'id' => $id,
-            'form_slug' => 'contact',
-            'name' => 'Ada Lovelace',
-            'first_name' => 'Ada',
-            'last_name' => 'Lovelace',
-            'email' => 'ada@example.com',
-            'mobile' => null,
-            'data' => ['message' => 'Hello', 'topics' => ['a', 'b']],
-            'is_spam' => false,
-            'submitted_at' => '2026-10-08T12:34:56Z',
-            'created_at' => null,
-            'updated_at' => null,
-        ];
+        return SiteFixture::record('form-entry', ['id' => $id]);
     }
 
     /**
@@ -124,22 +112,14 @@ final class RecordsTest extends TestCase
         self::assertSame('contact', $entry->formSlug);
         self::assertSame('Ada', $entry->firstName);
         self::assertSame('ada@example.com', $entry->email);
-        self::assertSame(['message' => 'Hello', 'topics' => ['a', 'b']], $entry->data);
+        self::assertSame(['message' => 'Hello', 'topics' => ['billing']], $entry->data);
         self::assertFalse($entry->isSpam);
-        self::assertSame('2026-10-08T12:34:56+00:00', $entry->submittedAt->format(DATE_ATOM));
+        self::assertSame('2026-10-08T11:59:57+00:00', $entry->submittedAt->format(DATE_ATOM));
     }
 
     public function testAccountStatesAreReadForTheSubjectsNamedInOnePage(): void
     {
-        $site = (new SiteRecorder())->json(['data' => [[
-            'subject' => 'member-42',
-            'sequence' => 7,
-            'status' => 'active',
-            'email' => 'ada@example.com',
-            'email_verified' => true,
-            'entitlements' => [['key' => 'pro', 'label' => 'Pro', 'quantity' => 1, 'expires_at' => '2027-01-01T00:00:00Z']],
-            'totals' => ['orders' => 3],
-        ]]]);
+        $site = (new SiteRecorder())->json(['data' => [SiteFixture::record('account-state', ['subject' => 'member-42'])]]);
 
         $page = $site->provider->client()->api()->accountStates()->list(['member-42', 'member-43']);
 
@@ -147,12 +127,13 @@ final class RecordsTest extends TestCase
         self::assertFalse($page->hasMore());
         $state = $page->items[0];
         self::assertSame('member-42', $state->subject);
-        self::assertSame(7, $state->sequence);
+        self::assertSame(42, $state->sequence);
         self::assertSame('active', $state->status);
         self::assertTrue($state->emailVerified);
-        self::assertSame('pro', $state->entitlements[0]->key);
-        self::assertSame('2027-01-01T00:00:00+00:00', $state->entitlements[0]->expiresAt?->format(DATE_ATOM));
-        self::assertSame(['orders' => 3], $state->totals);
+        self::assertSame('seats', $state->entitlements[0]->key);
+        self::assertSame('2026-10-22T00:00:00+00:00', $state->entitlements[0]->expiresAt?->format(DATE_ATOM));
+        self::assertNull($state->entitlements[1]->expiresAt);
+        self::assertSame(['seats' => 3, 'reports.export' => 1], $state->totals);
     }
 
     public function testASubscriptionsDeliveriesAreListedByStatusAndTime(): void
