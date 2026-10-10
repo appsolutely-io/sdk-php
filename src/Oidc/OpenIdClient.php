@@ -260,7 +260,7 @@ final readonly class OpenIdClient
      * section 5.3.2 requires the client to check that both describe the same
      * member, since the access token alone does not say whose it is.
      *
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public function userInfo(#[\SensitiveParameter] string $accessToken, ?string $expectedSubject = null): array
     {
@@ -308,7 +308,7 @@ final readonly class OpenIdClient
 
     /**
      * @param array<string, string> $fields
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     private function tokenRequest(#[\SensitiveParameter] array $fields): array
     {
@@ -339,7 +339,7 @@ final readonly class OpenIdClient
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     private function successfulJson(ResponseInterface $response, string $endpoint): array
     {
@@ -356,7 +356,7 @@ final readonly class OpenIdClient
     /**
      * RFC 6749 section 5.1.
      *
-     * @param array<string, mixed> $fields
+     * @param array<array-key, mixed> $fields
      */
     private function tokenSet(#[\SensitiveParameter] array $fields, ?string $nonce, bool $idTokenRequired, ?int $maxAge = null): TokenSet
     {

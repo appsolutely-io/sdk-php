@@ -55,9 +55,11 @@ final readonly class AdministratorApi
     }
 
     /**
-     * The OpenAPI document the site serves for this version, as decoded JSON.
+     * The OpenAPI document the site serves for this version, as decoded JSON:
+     * a member named like a decimal integer, such as a response's `200`,
+     * has an integer key.
      *
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     #[Endpoint(Operation::GetOpenApiDocument)]
     public function openApiDocument(): array

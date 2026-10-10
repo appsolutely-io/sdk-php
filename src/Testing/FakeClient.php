@@ -198,7 +198,7 @@ final class FakeClient
         $this->calls[] = new RecordedCall(
             $operation,
             $parameters,
-            self::stringKeys($query),
+            $query,
             is_array($decoded) ? $decoded : null,
             $key === '' ? null : $key,
             $requestId,
@@ -256,19 +256,5 @@ final class FakeClient
         }
 
         return null;
-    }
-
-    /**
-     * @param array<mixed> $values
-     * @return array<string, mixed>
-     */
-    private static function stringKeys(array $values): array
-    {
-        $strings = [];
-        foreach ($values as $key => $value) {
-            $strings[(string) $key] = $value;
-        }
-
-        return $strings;
     }
 }

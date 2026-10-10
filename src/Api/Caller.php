@@ -68,7 +68,7 @@ final readonly class Caller
      * @param array<string, string> $path
      * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query
      * @param array<string, mixed>|null $body
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public function object(Operation $operation, array $path = [], #[\SensitiveParameter] array $query = [], #[\SensitiveParameter] ?array $body = null): array
     {
@@ -80,7 +80,7 @@ final readonly class Caller
      *
      * @param array<string, string> $path
      * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query the list's filters
-     * @return Paginator<array<string, mixed>>
+     * @return Paginator<array<array-key, mixed>>
      */
     public function paginate(Operation $operation, array $path, #[\SensitiveParameter] array $query, int $limit): Paginator
     {
@@ -170,7 +170,7 @@ final readonly class Caller
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public static function objectOf(ApiResponse $response, Operation $operation): array
     {
@@ -179,7 +179,6 @@ final readonly class Caller
             throw new UnexpectedResponseException(sprintf('%s answered %d without a JSON object.', $operation->value, $response->status), $response->status);
         }
 
-        /** @var array<string, mixed> $data the decoded answer's keys are made strings */
         return $data;
     }
 

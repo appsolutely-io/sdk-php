@@ -128,7 +128,7 @@ final readonly class IdTokenVerifier
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param array<array-key, mixed> $claims
      * @param list<string> $audiences
      */
     private function verifyClaims(array $claims, array $audiences, ?string $nonce, #[\SensitiveParameter] ?string $accessToken, ?int $maxAge): void

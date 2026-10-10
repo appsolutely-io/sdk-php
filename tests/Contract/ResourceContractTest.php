@@ -366,8 +366,8 @@ final class ResourceContractTest extends TestCase
      * The schema at a read path (`items[].price`), or null when the
      * document defines nothing there.
      *
-     * @param array<string, mixed> $schema
-     * @return array<string, mixed>|null
+     * @param array<array-key, mixed> $schema
+     * @return array<array-key, mixed>|null
      */
     private static function schemaAt(array $schema, string $path): ?array
     {
@@ -392,7 +392,7 @@ final class ResourceContractTest extends TestCase
      * The required fields of an object schema and, for each nested object
      * the reads went into, of that object too.
      *
-     * @param array<string, mixed> $schema
+     * @param array<array-key, mixed> $schema
      * @param list<string> $reads
      * @return list<string>
      */
@@ -424,8 +424,8 @@ final class ResourceContractTest extends TestCase
     /**
      * The non-null alternative of a `oneOf: [T, null]`, or the schema itself.
      *
-     * @param array<string, mixed> $schema
-     * @return array<string, mixed>
+     * @param array<array-key, mixed> $schema
+     * @return array<array-key, mixed>
      */
     private static function nonNull(array $schema): array
     {
@@ -443,7 +443,7 @@ final class ResourceContractTest extends TestCase
      * A sample object of a named schema, with the fields the document types
      * otherwise than the site sends them sampled as the site sends them.
      *
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     private static function sampleOf(string $name): array
     {
@@ -455,7 +455,7 @@ final class ResourceContractTest extends TestCase
      * the document is shown to still declare what the override was written
      * against.
      *
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     private static function siteOverridesOf(string $name): array
     {
@@ -480,7 +480,7 @@ final class ResourceContractTest extends TestCase
      * A value of the schema with every property present, so a model's
      * every read lands on something of the documented type.
      *
-     * @param array<string, mixed> $schema
+     * @param array<array-key, mixed> $schema
      */
     private static function sample(array $schema): mixed
     {

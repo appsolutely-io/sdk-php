@@ -83,7 +83,7 @@ final class OperationCatalogueTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $operation
+     * @param array<array-key, mixed> $operation
      */
     private static function successStatus(array $operation): int
     {
@@ -94,7 +94,7 @@ final class OperationCatalogueTest extends TestCase
     }
 
     /**
-     * @param list<array<string, mixed>> $parameters
+     * @param list<array<array-key, mixed>> $parameters
      */
     private static function takesIdempotencyKey(array $parameters): bool
     {
@@ -111,7 +111,7 @@ final class OperationCatalogueTest extends TestCase
     /**
      * A list answered as `{data, next_cursor}` that takes a cursor.
      *
-     * @param array{method: string, path: string, operation: array<string, mixed>, parameters: list<array<string, mixed>>} $documented
+     * @param array{method: string, path: string, operation: array<array-key, mixed>, parameters: list<array<array-key, mixed>>} $documented
      */
     private static function isCursorList(array $documented): bool
     {
@@ -138,7 +138,7 @@ final class OperationCatalogueTest extends TestCase
      * resources named `me-*`) and the administrator for the rest, as the
      * site mounts them in two audience groups.
      *
-     * @param array{method: string, path: string, operation: array<string, mixed>, parameters: list<array<string, mixed>>} $documented
+     * @param array{method: string, path: string, operation: array<array-key, mixed>, parameters: list<array<array-key, mixed>>} $documented
      */
     private static function audience(array $documented): Audience
     {
