@@ -29,7 +29,7 @@ final class SiteApiTest extends TestCase
     {
         $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->json(['version' => 'v1']));
 
-        $response = $provider->client()->api()->get('/api/v1/articles/a-1');
+        $response = $provider->client()->api()->raw()->get('/api/v1/articles/a-1');
 
         $request = self::onlyRequest($provider);
         self::assertSame('GET', $request->getMethod());
@@ -45,7 +45,7 @@ final class SiteApiTest extends TestCase
     public function testEachCallGetsAFreshRequestIdUnlessTheCallerGivesOne(): void
     {
         $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->json([]));
-        $api = $provider->client()->api();
+        $api = $provider->client()->api()->raw();
 
         $api->get('/api/v1/version');
         $api->get('/api/v1/version');
@@ -74,14 +74,14 @@ final class SiteApiTest extends TestCase
 
         $this->expectException(InvalidArgumentValueException::class);
 
-        $provider->client()->api()->get('/api/v1/version', requestId: $requestId);
+        $provider->client()->api()->raw()->get('/api/v1/version', requestId: $requestId);
     }
 
     public function testWithoutAnAdministratorTokenACallCarriesNoCredential(): void
     {
         $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->json([]));
 
-        $provider->client(apiToken: null)->api()->get('/api/v1/version');
+        $provider->client(apiToken: null)->api()->raw()->get('/api/v1/version');
 
         self::assertFalse(self::onlyRequest($provider)->hasHeader('Authorization'));
     }
@@ -91,8 +91,8 @@ final class SiteApiTest extends TestCase
         $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->json([]));
         $client = $provider->client();
 
-        $client->forMember('member-access-token')->api()->get('/api/v1/me');
-        $client->api()->get('/api/v1/orders');
+        $client->forMember('member-access-token')->api()->raw()->get('/api/v1/me');
+        $client->api()->raw()->get('/api/v1/orders');
 
         [$asMember, $asAdministrator] = $provider->siteRequests();
         self::assertSame('Bearer member-access-token', $asMember->getHeaderLine('Authorization'));
@@ -130,7 +130,7 @@ final class SiteApiTest extends TestCase
             httpClient: $config->httpClient,
             requestFactory: $config->requestFactory,
             streamFactory: $config->streamFactory,
-        )))->api()->get('/api/v1/version');
+        )))->api()->raw()->get('/api/v1/version');
 
         self::assertSame(FakeProvider::BASE_URL . '/api/v1/version', (string) self::onlyRequest($provider)->getUri());
     }
@@ -139,9 +139,18 @@ final class SiteApiTest extends TestCase
     {
         $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->json([]));
 
-        $provider->client()->api()->get('/api/v1/orders', ['status' => 'paid', 'since' => null, 'q' => 'a b&c', 'mine' => true, 'archived' => false, 'n' => 3]);
+        $provider->client()->api()->raw()->get('/api/v1/orders', ['status' => 'paid', 'since' => null, 'q' => 'a b&c', 'mine' => true, 'archived' => false, 'n' => 3]);
 
         self::assertSame('status=paid&q=a%20b%26c&mine=true&archived=false&n=3', self::onlyRequest($provider)->getUri()->getQuery());
+    }
+
+    public function testAListInTheQueryIsSentOncePerValueAsAnArrayParameter(): void
+    {
+        $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->json([]));
+
+        $provider->client()->api()->raw()->get('/api/v1/account-states', ['subjects' => ['m-1', 'm 2&3'], 'none' => []]);
+
+        self::assertSame('subjects%5B%5D=m-1&subjects%5B%5D=m%202%263', self::onlyRequest($provider)->getUri()->getQuery());
     }
 
     /**
@@ -165,7 +174,7 @@ final class SiteApiTest extends TestCase
         $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->json([]));
 
         try {
-            $provider->client()->api()->get($path);
+            $provider->client()->api()->raw()->get($path);
             self::fail('The path was accepted.');
         } catch (InvalidArgumentValueException) {
             self::assertSame([], $provider->siteRequests());
@@ -175,7 +184,7 @@ final class SiteApiTest extends TestCase
     public function testAWriteSendsItsBodyAsJson(): void
     {
         $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->json(['id' => 'a-1'], 201, ['Location' => FakeProvider::BASE_URL . '/api/v1/articles/a-1']));
-        $api = $provider->client()->api();
+        $api = $provider->client()->api()->raw();
 
         $created = $api->post('/api/v1/articles', ['title' => 'Hello / world', 'body' => 'é']);
         $api->patch('/api/v1/articles/a-1', []);
@@ -203,7 +212,7 @@ final class SiteApiTest extends TestCase
             'RateLimit' => '"api:authenticated";r=119;t=42',
         ]));
 
-        $response = $provider->client()->api()->get('/api/v1/articles/a-1');
+        $response = $provider->client()->api()->raw()->get('/api/v1/articles/a-1');
 
         self::assertSame('answered-id', $response->requestId);
         self::assertSame(119, $response->rateLimit->quota('api:authenticated')?->remaining);
@@ -216,7 +225,7 @@ final class SiteApiTest extends TestCase
     {
         $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->factory->createResponse(204));
 
-        $response = $provider->client()->api()->delete('/api/v1/articles/a-1');
+        $response = $provider->client()->api()->raw()->delete('/api/v1/articles/a-1');
 
         self::assertSame(204, $response->status);
         self::assertNull($response->data);
@@ -228,7 +237,7 @@ final class SiteApiTest extends TestCase
 
         $this->expectException(UnexpectedResponseException::class);
 
-        $provider->client()->api()->get('/api/v1/version');
+        $provider->client()->api()->raw()->get('/api/v1/version');
     }
 
     public function testARefusalBecomesItsExceptionWithTheRequestIdSent(): void
@@ -236,7 +245,7 @@ final class SiteApiTest extends TestCase
         $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->problem(404, 'not-found'));
 
         try {
-            $provider->client()->api()->get('/api/v1/articles/missing', requestId: 'trace-9');
+            $provider->client()->api()->raw()->get('/api/v1/articles/missing', requestId: 'trace-9');
             self::fail('The refusal was not thrown.');
         } catch (NotFoundException $exception) {
             self::assertSame('trace-9', $exception->requestId);
@@ -249,7 +258,7 @@ final class SiteApiTest extends TestCase
         $client = (new FakeProvider())->client();
         $member = $client->forMember('member-access-token');
 
-        foreach ([$client, $client->api(), $member, $member->api()] as $object) {
+        foreach ([$client, $client->api(), $client->api()->raw(), $member, $member->api(), $member->api()->raw()] as $object) {
             ob_start();
             var_dump($object);
             $dumped = (string) ob_get_clean() . print_r($object, true);
@@ -264,7 +273,7 @@ final class SiteApiTest extends TestCase
         $client = (new FakeProvider())->client();
         $member = $client->forMember('member-access-token');
 
-        foreach ([$client->api(), $member, $member->api()] as $object) {
+        foreach ([$client->api(), $client->api()->raw(), $member, $member->api(), $member->api()->raw()] as $object) {
             try {
                 serialize($object);
                 self::fail(get_debug_type($object) . ' was serialized.');

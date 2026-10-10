@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests;
 
 use Appsolutely\Sdk\Cache\InMemoryCache;
-use Appsolutely\Sdk\Webhooks\Data\Entitlement;
+use Appsolutely\Sdk\Model\Entitlement;
+use Appsolutely\Sdk\Webhooks\Data\Entitlement as WebhookEntitlement;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -42,10 +43,11 @@ final class SensitiveParametersTest extends TestCase
 
     /**
      * Named like a secret, yet not one: a PSR-16 cache key, a key id, the
-     * name of an entitlement.
+     * name of what an entitlement grants.
      */
     private const array NOT_SENSITIVE = [
         [Entitlement::class, '__construct', 'key'],
+        [WebhookEntitlement::class, '__construct', 'key'],
         [InMemoryCache::class, 'get', 'key'],
         [InMemoryCache::class, 'set', 'key'],
         [InMemoryCache::class, 'delete', 'key'],

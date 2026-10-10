@@ -22,7 +22,7 @@ use IteratorAggregate;
 final readonly class Paginator implements IteratorAggregate
 {
     /**
-     * @internal obtain it from SiteApi::paginate()
+     * @internal obtain it from SiteApi::paginate() or a resource's list()
      *
      * @param Closure(string|null): Page<T> $fetch
      */
@@ -36,6 +36,17 @@ final readonly class Paginator implements IteratorAggregate
         foreach ($this->pages() as $page) {
             yield from $page->items;
         }
+    }
+
+    /**
+     * One page: the first, or the one a cursor this list issued (a page's
+     * nextCursor, kept from an earlier run) asks for. One request.
+     *
+     * @return Page<T>
+     */
+    public function page(?string $cursor = null): Page
+    {
+        return ($this->fetch)($cursor);
     }
 
     /**

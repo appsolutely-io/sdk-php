@@ -73,7 +73,18 @@ final readonly class SiteApi
     }
 
     /**
-     * @param array<string, string|int|bool|null> $query a null value is left out, a boolean is sent as `true` or `false`
+     * The same calls carrying no credential, for the operations anyone may
+     * call: a token sent where none is needed only adds to what can leak.
+     *
+     * @internal
+     */
+    public function withoutToken(): self
+    {
+        return new self($this->http, $this->origin, null, $this->clock, $this->retryPolicy, $this->logger);
+    }
+
+    /**
+     * @param array<string, string|int|bool|list<string>|null> $query a null value is left out, a boolean is sent as `true` or `false`, a list as `name[]` once per value
      * @param string|null $requestId sent as X-Request-Id; a fresh UUID when none is given
      */
     public function get(string $path, #[\SensitiveParameter] array $query = [], ?string $requestId = null): ApiResponse
@@ -84,7 +95,7 @@ final readonly class SiteApi
     /**
      * One page of a list.
      *
-     * @param array<string, string|int|bool|null> $query the list's filters, the same for every page
+     * @param array<string, string|int|bool|list<string>|null> $query the list's filters, the same for every page
      * @param string|null $cursor the previous page's nextCursor, unchanged; null for the first page
      * @return Page<array<string, mixed>>
      */
@@ -98,7 +109,7 @@ final readonly class SiteApi
     /**
      * Every item of a list, fetched page by page as iteration reaches it.
      *
-     * @param array<string, string|int|bool|null> $query the list's filters, sent with every page
+     * @param array<string, string|int|bool|list<string>|null> $query the list's filters, sent with every page
      * @return Paginator<array<string, mixed>>
      */
     public function paginate(string $path, #[\SensitiveParameter] array $query = [], int $limit = self::DEFAULT_LIMIT): Paginator
@@ -155,7 +166,7 @@ final readonly class SiteApi
     }
 
     /**
-     * @param array<string, string|int|bool|null> $query
+     * @param array<string, string|int|bool|list<string>|null> $query
      */
     public function delete(string $path, #[\SensitiveParameter] array $query = [], ?string $requestId = null): ApiResponse
     {
@@ -189,33 +200,16 @@ final readonly class SiteApi
     }
 
     /**
-     * @param array<string, string|int|bool|null> $query
+     * @param array<string, string|int|bool|list<string>|null> $query
      * @return Page<array<string, mixed>>
      */
     private function fetchPage(string $path, #[\SensitiveParameter] array $query, int $limit, ?string $cursor, ?string $requestId): Page
     {
-        $response = $this->call('GET', $path, [...$query, 'limit' => $limit, 'cursor' => $cursor], null, $requestId, retryable: true);
-        $data = $response->data;
-        $items = is_array($data) && !array_is_list($data) ? ($data['data'] ?? null) : null;
-        $next = is_array($data) ? ($data['next_cursor'] ?? null) : null;
-
-        if (!is_array($items) || !array_is_list($items) || ($next !== null && !is_string($next))) {
-            throw new UnexpectedResponseException(sprintf('GET %s did not answer a page of the form {data, next_cursor}.', Untrusted::text($path, Untrusted::MAX_LONG_LENGTH)), $response->status);
-        }
-
-        $objects = [];
-        foreach ($items as $item) {
-            if (!is_array($item) || ($item !== [] && array_is_list($item))) {
-                throw new UnexpectedResponseException(sprintf('GET %s answered a page whose items are not all objects.', Untrusted::text($path, Untrusted::MAX_LONG_LENGTH)), $response->status);
-            }
-            $objects[] = Json::stringKeys($item);
-        }
-
-        return new Page($objects, $next === '' ? null : $next, $response);
+        return Page::fromResponse($this->call('GET', $path, [...$query, 'limit' => $limit, 'cursor' => $cursor], null, $requestId, retryable: true), $path);
     }
 
     /**
-     * @param array<string, string|int|bool|null> $query
+     * @param array<string, string|int|bool|list<string>|null> $query
      */
     private static function assertPaging(#[\SensitiveParameter] array $query, int $limit): void
     {
@@ -231,7 +225,7 @@ final readonly class SiteApi
     }
 
     /**
-     * @param array<string, string|int|bool|null> $query
+     * @param array<string, string|int|bool|list<string>|null> $query
      * @param array<string, mixed>|null $body
      */
     private function call(
@@ -357,7 +351,7 @@ final readonly class SiteApi
      * host (`//host`, a scheme) or that URL parsers read differently is
      * refused: the request carries the token.
      *
-     * @param array<string, string|int|bool|null> $query
+     * @param array<string, string|int|bool|list<string>|null> $query
      */
     private function url(string $path, #[\SensitiveParameter] array $query): string
     {
@@ -365,14 +359,16 @@ final readonly class SiteApi
             throw new InvalidArgumentValueException(sprintf('A Site API path is absolute, without a query, a fragment, whitespace or a backslash, such as "/api/v1/articles"; got "%s".', Untrusted::text($path, Untrusted::MAX_LONG_LENGTH)));
         }
 
-        $parameters = [];
+        $pairs = [];
         foreach ($query as $name => $value) {
-            if ($value !== null) {
-                $parameters[$name] = is_bool($value) ? ($value ? 'true' : 'false') : (string) $value;
+            foreach (is_array($value) ? $value : [$value] as $member) {
+                if ($member !== null) {
+                    $pairs[] = rawurlencode(is_array($value) ? $name . '[]' : $name) . '=' . rawurlencode(is_bool($member) ? ($member ? 'true' : 'false') : (string) $member);
+                }
             }
         }
 
-        return $this->origin . $path . ($parameters === [] ? '' : '?' . http_build_query($parameters, '', '&', PHP_QUERY_RFC3986));
+        return $this->origin . $path . ($pairs === [] ? '' : '?' . implode('&', $pairs));
     }
 
     /**
