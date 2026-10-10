@@ -45,6 +45,7 @@ abstract readonly class TypedEvent
             in_array($type, OrderEvent::TYPES, true) => OrderEvent::read($envelope, $fields),
             in_array($type, OrderPaidEvent::TYPES, true) => OrderPaidEvent::read($envelope, $fields),
             in_array($type, PaymentReturnedEvent::TYPES, true) => PaymentReturnedEvent::read($envelope, $fields),
+            in_array($type, SubscriptionEvent::TYPES, true) => SubscriptionEvent::read($envelope, $fields),
             in_array($type, RefundEvent::TYPES, true) => RefundEvent::read($envelope, $fields),
             in_array($type, ReferralRewardIssuedEvent::TYPES, true) => ReferralRewardIssuedEvent::read($envelope, $fields),
             in_array($type, ProductEvent::TYPES, true) => ProductEvent::read($envelope, $fields),

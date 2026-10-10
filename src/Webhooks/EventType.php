@@ -45,6 +45,21 @@ final class EventType
     /** All of one payment's money is gone, a lost chargeback taking part of it. */
     public const string PAYMENT_REVERSED = 'payment.reversed';
 
+    public const string SUBSCRIPTION_STARTED = 'subscription.started';
+    public const string SUBSCRIPTION_RENEWED = 'subscription.renewed';
+    public const string SUBSCRIPTION_PAYMENT_DUE = 'subscription.payment_due';
+    public const string SUBSCRIPTION_PAYMENT_FAILED = 'subscription.payment_failed';
+
+    /** The member's bank is waiting on them to confirm the renewal; not a failed payment. */
+    public const string SUBSCRIPTION_AUTHENTICATION_REQUIRED = 'subscription.authentication_required';
+
+    public const string SUBSCRIPTION_CANCEL_SCHEDULED = 'subscription.cancel_scheduled';
+
+    /** A scheduled stop was withdrawn. */
+    public const string SUBSCRIPTION_RESUMED = 'subscription.resumed';
+
+    public const string SUBSCRIPTION_ENDED = 'subscription.ended';
+
     public const string REFUND_REQUESTED = 'refund.requested';
     public const string REFUND_PROCESSED = 'refund.processed';
 

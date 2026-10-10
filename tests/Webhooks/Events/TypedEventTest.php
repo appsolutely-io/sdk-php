@@ -18,12 +18,14 @@ use Appsolutely\Sdk\Webhooks\Events\PingEvent;
 use Appsolutely\Sdk\Webhooks\Events\ProductEvent;
 use Appsolutely\Sdk\Webhooks\Events\ReferralRewardIssuedEvent;
 use Appsolutely\Sdk\Webhooks\Events\RefundEvent;
+use Appsolutely\Sdk\Webhooks\Events\SubscriptionEvent;
 use Appsolutely\Sdk\Webhooks\Events\TypedEvent;
 use Appsolutely\Sdk\Webhooks\Events\UnknownEvent;
 use Appsolutely\Sdk\Webhooks\EventType;
 use Appsolutely\Sdk\Webhooks\Verifier;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 use StandardWebhooks\Webhook;
 
 /**
@@ -411,6 +413,116 @@ final class TypedEventTest extends TestCase
         $this->expectExceptionMessage('The payment.refunded delivery\'s data.payment.amount is not an integer.');
 
         self::deliver(EventType::PAYMENT_REFUNDED, str_replace('"amount":1900,"currency":"USD"}', '"amount":"19.00","currency":"USD"}', self::fixture('order-payment')));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function subscriptionTypes(): iterable
+    {
+        return self::each(SubscriptionEvent::TYPES);
+    }
+
+    #[DataProvider('subscriptionTypes')]
+    public function testEverySubscriptionEventCarriesTheSubscription(string $type): void
+    {
+        $event = self::deliver($type, self::fixture('subscription'));
+
+        self::assertInstanceOf(SubscriptionEvent::class, $event);
+        $subscription = $event->subscription;
+        self::assertSame('4f6a8c0e-2b4d-4f6a-8c0e-2b4d6f8a0c2e', $subscription->id);
+        self::assertSame('Subscription', $subscription->type);
+        self::assertSame('active', $subscription->status);
+        self::assertSame('production', $subscription->mode);
+        self::assertFalse($subscription->cancelAtPeriodEnd);
+        self::assertNull($subscription->transitionCause);
+        self::assertNull($subscription->recoveryReason);
+        self::assertSame('2026-10-08T00:00:00+00:00', $subscription->currentPeriodStart?->format(DATE_RFC3339));
+        self::assertSame('2026-11-08T00:00:00+00:00', $subscription->currentPeriodEnd?->format(DATE_RFC3339));
+        self::assertNull($subscription->trialEndsAt);
+        self::assertNull($subscription->endedAt);
+        self::assertNull($subscription->subjectReference);
+        self::assertNull($subscription->pendingPeriod);
+        self::assertSame([], $subscription->extra);
+        self::assertNull($event->period);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function periodTypes(): iterable
+    {
+        return self::each([EventType::SUBSCRIPTION_STARTED, EventType::SUBSCRIPTION_RENEWED]);
+    }
+
+    #[DataProvider('periodTypes')]
+    public function testAStartOrRenewalNamesThePeriodTheMemberIsNowIn(string $type): void
+    {
+        $event = self::deliver($type, self::fixture('subscription-period'));
+
+        self::assertInstanceOf(SubscriptionEvent::class, $event);
+        self::assertNotNull($event->period);
+        self::assertSame('2026-10-08T00:00:00+00:00', $event->period->start->format(DATE_RFC3339));
+        self::assertSame('2026-11-08T00:00:00+00:00', $event->period->end->format(DATE_RFC3339));
+        self::assertSame([], $event->subscription->extra);
+    }
+
+    public function testAPeriodAwaitingAnAnswerHasAStartAndAStatusButNoEnd(): void
+    {
+        $data = str_replace('"pending_period":null', '"pending_period":{"start":"2026-11-08T00:00:00Z","status":"pending"}', self::fixture('subscription'));
+        $event = self::deliver(EventType::SUBSCRIPTION_PAYMENT_DUE, $data);
+
+        self::assertInstanceOf(SubscriptionEvent::class, $event);
+        self::assertNotNull($event->subscription->pendingPeriod);
+        self::assertSame('2026-11-08T00:00:00+00:00', $event->subscription->pendingPeriod->start->format(DATE_RFC3339));
+        self::assertSame('pending', $event->subscription->pendingPeriod->status);
+    }
+
+    /**
+     * The site's catalogue of event types, and the test delivery. A type
+     * added here without a typed family would reach integrators as an
+     * UnknownEvent.
+     */
+    public function testEveryTypeTheSiteSendsBelongsToExactlyOneTypedFamily(): void
+    {
+        $sent = [
+            'article.created', 'article.updated', 'article.deleted',
+            'page.created', 'page.updated', 'page.deleted',
+            'form.submitted',
+            'order.paid', 'order.completed', 'order.shipped', 'order.cancelled', 'order.status_updated',
+            'order.expired', 'order.revived', 'order.payment_arrived_late',
+            'subscription.started', 'subscription.renewed', 'subscription.payment_due', 'subscription.payment_failed',
+            'subscription.authentication_required', 'subscription.cancel_scheduled', 'subscription.resumed', 'subscription.ended',
+            'refund.requested', 'refund.processed',
+            'order.refunded', 'payment.refunded', 'payment.reversed',
+            'referral.reward_issued',
+            'product.created', 'product.updated', 'product.deleted',
+            'account.suspended', 'account.reinstated', 'account.erased', 'account.entitlements_changed', 'account.email_changed',
+            'webhook.ping',
+        ];
+
+        $named = array_values((new ReflectionClass(EventType::class))->getConstants());
+        sort($named);
+        $expected = $sent;
+        sort($expected);
+        self::assertSame($expected, $named);
+
+        $families = array_merge(
+            ArticleEvent::TYPES,
+            PageEvent::TYPES,
+            FormSubmittedEvent::TYPES,
+            OrderEvent::TYPES,
+            OrderPaidEvent::TYPES,
+            PaymentReturnedEvent::TYPES,
+            RefundEvent::TYPES,
+            ReferralRewardIssuedEvent::TYPES,
+            SubscriptionEvent::TYPES,
+            ProductEvent::TYPES,
+            AccountEvent::TYPES,
+            [EventType::WEBHOOK_PING],
+        );
+        sort($families);
+        self::assertSame($expected, $families);
     }
 
     public function testAnUnknownTypeIsAGenericEventWithItsDataStillReadable(): void
