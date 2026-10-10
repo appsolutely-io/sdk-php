@@ -17,7 +17,13 @@ use ReflectionClass;
  *
  * The source is read as PHP tokens, so only a whole string literal counts:
  * an error message or a comment that mentions a header is not one, and a
- * JSON member named like a header (`location`) is not one either.
+ * JSON member named like a header (`location`) is not one either. A member
+ * is a literal that is an array key (`'location' => ...`), an offset
+ * (`$data['location']`), a name handed to a Fields reader by position or
+ * under the reader's own parameter name (`$json->string(name: 'location')`),
+ * or the key array_key_exists() or key_exists() looks for. A literal in
+ * its own case is refused even there; in another case it is refused
+ * anywhere else, such as `in_array('accept', $names)` or a comparison.
  *
  * Out of reach: a header array built away from where it is used and held
  * in a variable that is neither named `...headers` nor assigned an array
@@ -106,12 +112,16 @@ final class HeaderTest extends TestCase
             $late = strtolower($name) === 'retry-after';
             $where = $json->nullableString('location');
             $rest = $json->except('accept', 'id');
+            $named = $json?->string(name: 'location');
+            $mislabelled = $json->string(label: 'accept');
             $member = ['accept' => 1, 'Location' => 2];
             $read = $data['location'];
+            $has = array_key_exists('location', $data) || key_exists(array: $data, key: 'accept');
+            $sent = in_array('accept', $names, true);
             $near = 'locations';
             PHP);
 
-        self::assertSame(["'Content-Type'", "'retry-after'", "'Location'"], array_map(static fn(array $literal): string => $literal[1], self::spelledHeaderNames($tokens)));
+        self::assertSame(["'Content-Type'", "'retry-after'", "'accept'", "'Location'", "'accept'"], array_map(static fn(array $literal): string => $literal[1], self::spelledHeaderNames($tokens)));
     }
 
     public function testTheCallRuleSeesTheHeaderNameInEachPlaceACallTakesOne(): void
@@ -181,7 +191,8 @@ final class HeaderTest extends TestCase
     /**
      * The string literals that spell the name of a Header constant: in its
      * own case anywhere, in another case anywhere but as a JSON member,
-     * which is an array key, an offset or a name handed to a Fields reader.
+     * which is an array key, an offset, a name handed to a Fields reader or
+     * the key array_key_exists() looks for.
      *
      * @param list<Token> $tokens
      * @return list<Token>
@@ -209,34 +220,57 @@ final class HeaderTest extends TestCase
     }
 
     /**
-     * The places of the string literals handed to a Fields reader as the
-     * name of a member, such as `$json->string('location')`.
+     * The places of the string literals handed as the name of a member: to
+     * a Fields reader, such as `$json->string('location')` or
+     * `$json->string(name: 'location')`, in any place by position and under
+     * the reader's own parameter name when named; and as the key that
+     * array_key_exists() or key_exists() looks for in decoded data, first by
+     * position or named `key`.
      *
      * @param list<Token> $tokens
      * @return list<int>
      */
     private static function jsonMemberNames(array $tokens): array
     {
+        // By method or function in lower case: the name of the parameter
+        // that takes the member, and whether it takes every positional
+        // argument (a variadic one) or only the first.
         $readers = [];
         foreach ((new ReflectionClass(Fields::class))->getMethods() as $method) {
             $first = $method->getParameters()[0] ?? null;
             if (!$method->isStatic() && $first !== null && in_array($first->getName(), ['name', 'names'], true)) {
-                $readers[] = strtolower($method->getName());
+                $readers['->' . strtolower($method->getName())] = [$first->getName(), $first->isVariadic()];
             }
+        }
+        foreach (['array_key_exists', 'key_exists'] as $function) {
+            $readers[$function] = ['key', false];
         }
 
         $places = [];
         foreach ($tokens as $index => [$id, $text]) {
-            if ($id !== T_STRING || !in_array(strtolower($text), $readers, true) || !in_array($tokens[$index - 1][0] ?? null, [T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR], true) || ($tokens[$index + 1][0] ?? null) !== '(') {
+            if (!in_array($id, [T_STRING, T_NAME_FULLY_QUALIFIED], true) || ($tokens[$index + 1][0] ?? null) !== '(') {
                 continue;
             }
-            for ($at = $index + 2; ($tokens[$at][0] ?? ')') !== ')'; $at += 2) {
-                if ($tokens[$at][0] === T_CONSTANT_ENCAPSED_STRING && in_array($tokens[$at + 1][0] ?? null, [',', ')'], true)) {
-                    $places[] = $at;
+            $before = $tokens[$index - 1][0] ?? null;
+            $called = in_array($before, [T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR], true)
+                ? '->' . strtolower($text)
+                : (in_array($before, [T_FUNCTION, T_DOUBLE_COLON, T_NEW], true) ? null : strtolower(ltrim($text, '\\')));
+            if ($called === null || !isset($readers[$called])) {
+                continue;
+            }
+            [$parameter, $variadic] = $readers[$called];
+            for ($at = $index + 2, $position = 0; ($tokens[$at][0] ?? ')') !== ')'; $position++) {
+                // A label may be a reserved word (`array:`), which is not a T_STRING.
+                $named = preg_match('/^[a-z_]\w*$/i', $tokens[$at][1]) === 1 && ($tokens[$at + 1][0] ?? null) === ':';
+                $value = $named ? $at + 2 : $at;
+                $isMember = $named ? $tokens[$at][1] === $parameter : ($variadic || $position === 0);
+                if ($isMember && ($tokens[$value][0] ?? null) === T_CONSTANT_ENCAPSED_STRING && in_array($tokens[$value + 1][0] ?? null, [',', ')'], true)) {
+                    $places[] = $value;
                 }
-                if (($tokens[$at + 1][0] ?? null) !== ',') {
+                if (($tokens[$value + 1][0] ?? null) !== ',') {
                     break;
                 }
+                $at = $value + 2;
             }
         }
 
