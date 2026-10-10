@@ -33,7 +33,7 @@ final class FakeClientTest extends TestCase
         $article = $fake->client()->api()->articles()->get('art-1');
 
         self::assertSame('art-1', $article->id);
-        self::assertSame('2026-10-08T12:34:56+00:00', $article->publishedAt->format(DATE_ATOM));
+        self::assertSame('2026-10-01T09:00:00+00:00', $article->publishedAt->format(DATE_ATOM));
         $call = $fake->lastCall(Operation::GetArticle);
         self::assertSame(['id' => 'art-1'], $call->pathParameters);
         self::assertSame([], $call->query);
