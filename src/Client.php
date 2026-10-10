@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk;
 
+use Appsolutely\Sdk\Api\SiteApi;
 use Appsolutely\Sdk\Cache\InMemoryCache;
 use Appsolutely\Sdk\Clock\SystemClock;
 use Appsolutely\Sdk\Exception\InvalidConfigException;
@@ -16,11 +17,15 @@ use Http\Discovery\Psr18ClientDiscovery;
 use Psr\Log\NullLogger;
 
 /**
- * The entry point: one Config in, every part of the API out.
+ * The entry point: one Config in, every part of the site's API out. Calls
+ * made through it carry the administrator token; forMember() gives the same
+ * calls as a signed-in member.
  */
 final readonly class Client
 {
     private OpenIdClient $oidc;
+
+    private SiteApi $api;
 
     public function __construct(Config $config)
     {
@@ -47,6 +52,7 @@ final readonly class Client
             $clock,
             $config->logger ?? new NullLogger(),
         );
+        $this->api = new SiteApi($http, $config->baseUrl, $config->apiToken(), $clock);
     }
 
     /**
@@ -56,7 +62,7 @@ final readonly class Client
      */
     public function __serialize(): array
     {
-        throw new NotSerializableException('A Client holds the client secret and is not serialized; build it again from its Config.');
+        throw new NotSerializableException('A Client holds the client secret and the administrator token and is not serialized; build it again from its Config.');
     }
 
     /**
@@ -64,11 +70,29 @@ final readonly class Client
      */
     public function __unserialize(array $data): void
     {
-        throw new NotSerializableException('A Client holds the client secret and is not unserialized; build it again from its Config.');
+        throw new NotSerializableException('A Client holds the client secret and the administrator token and is not unserialized; build it again from its Config.');
     }
 
     public function oidc(): OpenIdClient
     {
         return $this->oidc;
+    }
+
+    /**
+     * Site API calls carrying the administrator token, or no credential when
+     * the Config holds none.
+     */
+    public function api(): SiteApi
+    {
+        return $this->api;
+    }
+
+    /**
+     * The client acting as a signed-in member, with the access token the
+     * member's sign-in (or its latest refresh) returned.
+     */
+    public function forMember(#[\SensitiveParameter] string $accessToken): MemberClient
+    {
+        return new MemberClient($this->api->withToken($accessToken));
     }
 }
