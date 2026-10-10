@@ -9,23 +9,37 @@ use Appsolutely\Sdk\Api\Audience;
 use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\MemberApi;
 use Appsolutely\Sdk\Api\Operation;
+use Appsolutely\Sdk\Api\Paginator;
+use Appsolutely\Sdk\Api\RetryPolicy;
+use Appsolutely\Sdk\Client;
+use Appsolutely\Sdk\Config;
+use Appsolutely\Sdk\Http\Header;
+use Appsolutely\Sdk\Http\MediaType;
 use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Model\SyncPull;
 use Appsolutely\Sdk\Model\SyncPush;
 use Appsolutely\Sdk\Model\SyncResult;
 use Appsolutely\Sdk\Tests\Support\SourceTokens;
+use DateTimeImmutable;
+use DateTimeInterface;
+use Http\Discovery\Psr17FactoryDiscovery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionNamedType;
+use Throwable;
 
 /**
  * Holds the typed client to the pinned Site API document: every operation
  * has exactly one method, every method names an operation and path the
- * document has and sits on the client of the operation's audience, and
- * every model reads only fields its schema defines and every field the
- * schema requires.
+ * document has and sits on the client of the operation's audience, every
+ * method sends exactly the query parameters its operation documents and
+ * cannot leave out a required one, and every model reads only fields its
+ * schema defines and every field the schema requires.
  */
 final class ResourceContractTest extends TestCase
 {
@@ -89,6 +103,58 @@ final class ResourceContractTest extends TestCase
 
             $names = array_map(static fn(\ReflectionParameter $parameter): string => $parameter->getName(), (new ReflectionMethod(...explode('::', $endpoint['method'], 2)))->getParameters());
             self::assertContains('idempotencyKey', $names, sprintf('%s sends %s, which takes an Idempotency-Key, without accepting the caller\'s.', $endpoint['method'], $endpoint['operation']->value));
+        }
+    }
+
+    /**
+     * Arguments a method checks before it sends, by parameter name; every
+     * other argument is its type's plain sample (see argument()).
+     */
+    private const array ARGUMENTS = [
+        'order' => 'asc',
+        'store' => 'app_store',
+        'storefront' => 'US',
+        'status' => 'failed',
+    ];
+
+    /**
+     * The query names a method sends are learnt by calling it, every
+     * argument given and a list walked to its second page, against an HTTP
+     * client that keeps each request as it went over the wire; the names are
+     * read from the raw query, so a list's must carry its brackets.
+     */
+    #[DataProvider('documentedOperations')]
+    public function testEveryMethodSendsTheQueryItsOperationDocuments(string $id): void
+    {
+        $endpoint = self::endpointOf($id);
+        $documented = [];
+        foreach (Document::operations()[$id]['parameters'] as $parameter) {
+            if (($parameter['in'] ?? null) === 'query' && is_string($parameter['name'] ?? null)) {
+                $documented[$parameter['name']] = $parameter;
+            }
+        }
+
+        $full = self::drive($endpoint, optional: true);
+        $sent = array_values(array_unique(array_merge([], ...$full)));
+        $names = array_keys($documented);
+        sort($sent);
+        sort($names);
+        self::assertSame($names, $sent, sprintf('%s sends the query %s; the document gives %s %s.', $endpoint['method'], self::shown($sent), $id, self::shown($names)));
+
+        foreach (self::drive($endpoint, optional: false) as $request => $query) {
+            foreach ($documented as $name => $parameter) {
+                if (($parameter['required'] ?? false) === true) {
+                    self::assertContains($name, $query, sprintf('%s leaves out "%s", which %s requires, from request %d when only its required arguments are given.', $endpoint['method'], $name, $id, $request + 1));
+                }
+            }
+        }
+
+        foreach ($documented as $name => $parameter) {
+            if ((Document::map($parameter['schema'] ?? null)['type'] ?? null) !== 'array') {
+                continue;
+            }
+            self::assertStringEndsWith('[]', $name, sprintf('%s types "%s" an array, whose name the SDK sends with brackets.', $id, $name));
+            self::assertCount(count(Document::list(self::argument('string[]'))), array_keys($full[0], $name, true), sprintf('%s does not send each value of "%s" under that name.', $endpoint['method'], $name));
         }
     }
 
@@ -244,6 +310,152 @@ final class ResourceContractTest extends TestCase
         }
 
         return $endpoints;
+    }
+
+    /**
+     * @return array{operation: Operation, method: string, roots: list<class-string>}
+     */
+    private static function endpointOf(string $id): array
+    {
+        foreach (self::endpoints() as $endpoint) {
+            if ($endpoint['operation']->value === $id) {
+                return $endpoint;
+            }
+        }
+        self::fail(sprintf('%s has no SDK method.', $id));
+    }
+
+    /**
+     * Calls a method against a site that answers every request in memory
+     * and returns the query names of each request it sent, in order and
+     * with repeats. Every argument is given when `$optional`, only the
+     * required ones otherwise. A list is walked: its first page names a next
+     * one, so the cursor goes out too.
+     *
+     * @param array{operation: Operation, method: string, roots: list<class-string>} $endpoint
+     * @return non-empty-list<list<string>>
+     */
+    private static function drive(array $endpoint, bool $optional): array
+    {
+        $site = new class ($endpoint['operation']->successStatus()) implements ClientInterface {
+            /** @var list<list<string>> */
+            public array $queries = [];
+
+            public function __construct(private readonly int $status) {}
+
+            public function sendRequest(RequestInterface $request): ResponseInterface
+            {
+                $names = [];
+                $query = $request->getUri()->getQuery();
+                foreach ($query === '' ? [] : explode('&', $query) as $pair) {
+                    $names[] = rawurldecode(explode('=', $pair, 2)[0]);
+                }
+                $page = $this->queries === [] ? ['data' => [], 'next_cursor' => 'next-page'] : ['data' => []];
+                $this->queries[] = $names;
+
+                return Psr17FactoryDiscovery::findResponseFactory()->createResponse($this->status)
+                    ->withHeader(Header::CONTENT_TYPE, MediaType::JSON)
+                    ->withBody(Psr17FactoryDiscovery::findStreamFactory()->createStream(json_encode($page, JSON_THROW_ON_ERROR)));
+            }
+        };
+        $client = new Client(new Config(
+            baseUrl: 'https://site.test',
+            issuer: 'https://site.test',
+            clientId: 'contract-client',
+            clientSecret: 'contract-client-secret',
+            apiToken: 'contract-administrator-token',
+            httpClient: $site,
+            requestFactory: Psr17FactoryDiscovery::findRequestFactory(),
+            streamFactory: Psr17FactoryDiscovery::findStreamFactory(),
+            retryPolicy: RetryPolicy::none(),
+        ));
+
+        [$class, $name] = explode('::', $endpoint['method'], 2);
+        self::assertTrue(class_exists($class));
+        $root = ($endpoint['roots'][0] ?? null) === MemberApi::class ? $client->forMember('contract-member-token')->api() : $client->api();
+        $method = new ReflectionMethod($class, $name);
+        $arguments = [];
+        foreach ($method->getParameters() as $parameter) {
+            if (!$optional && $parameter->isOptional()) {
+                break;
+            }
+            $type = $parameter->getType();
+            self::assertInstanceOf(ReflectionNamedType::class, $type, sprintf('%s takes $%s, of no single type to sample.', $endpoint['method'], $parameter->getName()));
+            $arguments[$parameter->getName()] = self::ARGUMENTS[$parameter->getName()] ?? self::argument($type->getName() === 'array' ? 'string[]' : $type->getName());
+        }
+
+        $failure = null;
+        try {
+            $result = $method->invokeArgs(self::reach($root, $class), $arguments);
+            if ($result instanceof Paginator) {
+                foreach ($result as $item) {
+                    // Walked only for the requests it sends.
+                }
+            }
+        } catch (Throwable $thrown) {
+            // An answer the method cannot read is expected: only what it sent is asked.
+            $failure = $thrown;
+        }
+
+        $queries = $site->queries;
+        if ($queries === []) {
+            self::fail(sprintf('%s sent no request: %s', $endpoint['method'], $failure === null ? 'it returned without one.' : $failure::class . ': ' . $failure->getMessage()));
+        }
+
+        return $queries;
+    }
+
+    /**
+     * A plain sample of a type: what a method is called with when
+     * ARGUMENTS gives nothing by the parameter's name.
+     */
+    private static function argument(string $type): mixed
+    {
+        return match ($type) {
+            'string' => 'x',
+            'int' => 2,
+            'bool' => true,
+            'string[]' => ['x', 'y'],
+            DateTimeInterface::class => new DateTimeImmutable('2026-10-08T12:34:56Z'),
+            default => self::fail(sprintf('No sample of %s to call a method with; add one to argument() or ARGUMENTS.', $type)),
+        };
+    }
+
+    /**
+     * The resource group of a class reached from a client through public
+     * methods that take nothing and return one.
+     *
+     * @param class-string $class
+     */
+    private static function reach(object $root, string $class): object
+    {
+        $seen = [];
+        $queue = [$root];
+        while ($queue !== []) {
+            $group = array_shift($queue);
+            if ($group instanceof $class) {
+                return $group;
+            }
+            $seen[$group::class] = true;
+            foreach ((new ReflectionClass($group))->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+                $type = $method->getReturnType();
+                if ($method->isStatic() || $method->getNumberOfRequiredParameters() > 0 || !$type instanceof ReflectionNamedType || !str_starts_with($type->getName(), SourceTokens::ROOT_NAMESPACE . 'Resource\\') || isset($seen[$type->getName()])) {
+                    continue;
+                }
+                $next = $method->invoke($group);
+                self::assertIsObject($next);
+                $queue[] = $next;
+            }
+        }
+        self::fail(sprintf('%s is not reached from %s.', $class, $root::class));
+    }
+
+    /**
+     * @param list<string> $names
+     */
+    private static function shown(array $names): string
+    {
+        return $names === [] ? 'none' : '"' . implode('", "', $names) . '"';
     }
 
     /**
