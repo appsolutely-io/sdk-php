@@ -63,7 +63,7 @@ final readonly class HttpTransport
         $request = $this->request($method, $url, $headers);
         if ($body !== null) {
             $request = $request
-                ->withHeader(Header::CONTENT_TYPE, 'application/json')
+                ->withHeader(Header::CONTENT_TYPE, MediaType::JSON)
                 ->withBody($this->streams->createStream($body));
         }
 
@@ -77,7 +77,7 @@ final readonly class HttpTransport
     {
         $request = $this->requests->createRequest($method, $url)
             ->withHeader(Header::USER_AGENT, Sdk::userAgent())
-            ->withHeader(Header::ACCEPT, 'application/json');
+            ->withHeader(Header::ACCEPT, MediaType::JSON);
 
         foreach ($headers as $name => $value) {
             $request = $request->withHeader($name, $value);

@@ -12,6 +12,7 @@ use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\BearerToken;
 use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\HttpTransport;
+use Appsolutely\Sdk\Http\MediaType;
 use Appsolutely\Sdk\Http\SecureUrl;
 use Appsolutely\Sdk\Support\Untrusted;
 use Appsolutely\Sdk\Support\Uuid;
@@ -34,7 +35,7 @@ use Psr\Log\LoggerInterface;
  */
 final readonly class SiteApi
 {
-    public const string ACCEPT = 'application/json, application/problem+json';
+    public const string ACCEPT = MediaType::JSON . ', ' . MediaType::PROBLEM_JSON;
 
     /** The page size the site uses when none is sent, and the bounds it accepts. */
     public const int DEFAULT_LIMIT = 25;

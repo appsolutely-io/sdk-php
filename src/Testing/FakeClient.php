@@ -12,6 +12,7 @@ use Appsolutely\Sdk\Config;
 use Appsolutely\Sdk\Exception\ApiException;
 use Appsolutely\Sdk\Exception\UnarrangedCallException;
 use Appsolutely\Sdk\Http\Header;
+use Appsolutely\Sdk\Http\MediaType;
 use Appsolutely\Sdk\MemberClient;
 use Http\Discovery\Psr17FactoryDiscovery;
 use LogicException;
@@ -223,7 +224,7 @@ final class FakeClient
         }
         if ($answer['body'] !== null) {
             $response = $response
-                ->withHeader(Header::CONTENT_TYPE, $answer['problem'] ? 'application/problem+json' : 'application/json')
+                ->withHeader(Header::CONTENT_TYPE, $answer['problem'] ? MediaType::PROBLEM_JSON : MediaType::JSON)
                 ->withBody($this->streams->createStream(json_encode($answer['body'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)));
         }
 
