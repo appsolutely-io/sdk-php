@@ -20,6 +20,37 @@ final class EventType
 
     public const string FORM_SUBMITTED = 'form.submitted';
 
+    /** An order's payment settled. */
+    public const string ORDER_PAID = 'order.paid';
+    public const string ORDER_COMPLETED = 'order.completed';
+    public const string ORDER_SHIPPED = 'order.shipped';
+    public const string ORDER_CANCELLED = 'order.cancelled';
+    public const string ORDER_STATUS_UPDATED = 'order.status_updated';
+
+    /** The shop gave up on being paid for an unpaid order; not a cancellation. */
+    public const string ORDER_EXPIRED = 'order.expired';
+
+    /** An expired order came back because its money arrived; an `order.paid` follows. */
+    public const string ORDER_REVIVED = 'order.revived';
+
+    /** Money arrived for an order that stays closed. */
+    public const string ORDER_PAYMENT_ARRIVED_LATE = 'order.payment_arrived_late';
+
+    /** All of an order's money was returned. */
+    public const string ORDER_REFUNDED = 'order.refunded';
+
+    /** All of one payment's money was returned. */
+    public const string PAYMENT_REFUNDED = 'payment.refunded';
+
+    /** All of one payment's money is gone, a lost chargeback taking part of it. */
+    public const string PAYMENT_REVERSED = 'payment.reversed';
+
+    public const string REFUND_REQUESTED = 'refund.requested';
+    public const string REFUND_PROCESSED = 'refund.processed';
+
+    /** A referral reward was first released to the member who referred a friend. */
+    public const string REFERRAL_REWARD_ISSUED = 'referral.reward_issued';
+
     public const string PRODUCT_CREATED = 'product.created';
     public const string PRODUCT_UPDATED = 'product.updated';
     public const string PRODUCT_DELETED = 'product.deleted';
