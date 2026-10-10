@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk;
 
+use Appsolutely\Sdk\Api\RetryPolicy;
 use Appsolutely\Sdk\Exception\InvalidConfigException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Http\BearerToken;
@@ -67,6 +68,7 @@ final readonly class Config
         public ?LoggerInterface $logger = null,
         public ClientAuthentication $clientAuthentication = ClientAuthentication::ClientSecretBasic,
         public int $clockLeeway = self::DEFAULT_CLOCK_LEEWAY,
+        public RetryPolicy $retryPolicy = new RetryPolicy(),
     ) {
         self::assertBaseUrl($baseUrl);
         self::assertIssuer($issuer);
@@ -128,6 +130,7 @@ final readonly class Config
             'logger' => $this->logger,
             'clientAuthentication' => $this->clientAuthentication,
             'clockLeeway' => $this->clockLeeway,
+            'retryPolicy' => $this->retryPolicy,
         ];
     }
 

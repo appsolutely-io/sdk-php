@@ -44,15 +44,16 @@ final readonly class Client
         }
 
         $clock = $config->clock ?? new SystemClock();
+        $logger = $config->logger ?? new NullLogger();
 
         $this->oidc = new OpenIdClient(
             $config,
             $http,
             $config->cache ?? new InMemoryCache($clock),
             $clock,
-            $config->logger ?? new NullLogger(),
+            $logger,
         );
-        $this->api = new SiteApi($http, $config->baseUrl, $config->apiToken(), $clock);
+        $this->api = new SiteApi($http, $config->baseUrl, $config->apiToken(), $clock, $config->retryPolicy, $logger);
     }
 
     /**

@@ -7,6 +7,7 @@ namespace Appsolutely\Sdk\Api;
 use Appsolutely\Sdk\Exception\ApiException;
 use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
+use Appsolutely\Sdk\Exception\TransportException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\BearerToken;
 use Appsolutely\Sdk\Http\HttpTransport;
@@ -17,6 +18,7 @@ use Appsolutely\Sdk\Support\Uuid;
 use JsonException;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Calls to the Site API, every one carrying the credential of the client it
@@ -27,7 +29,8 @@ use Psr\Http\Message\ResponseInterface;
  * Paths are the ones the site's API document names, such as
  * `/api/v1/articles`, with identifiers filled in as the site gave them. A
  * success is answered as an ApiResponse; a refusal is thrown as an
- * Exception\ApiException.
+ * Exception\ApiException. Reads and keyed writes are retried as the
+ * Config's RetryPolicy says; other writes never are.
  */
 final readonly class SiteApi
 {
@@ -49,6 +52,8 @@ final readonly class SiteApi
         #[\SensitiveParameter]
         private ?string $token,
         private ClockInterface $clock,
+        private RetryPolicy $retryPolicy,
+        private LoggerInterface $logger,
     ) {
         $this->origin = rtrim($baseUrl, '/');
     }
@@ -64,7 +69,7 @@ final readonly class SiteApi
             throw new InvalidArgumentValueException('An access token must be a non-empty run of printable ASCII characters without spaces.');
         }
 
-        return new self($this->http, $this->origin, $token, $this->clock);
+        return new self($this->http, $this->origin, $token, $this->clock, $this->retryPolicy, $this->logger);
     }
 
     /**
@@ -73,7 +78,7 @@ final readonly class SiteApi
      */
     public function get(string $path, #[\SensitiveParameter] array $query = [], ?string $requestId = null): ApiResponse
     {
-        return $this->call('GET', $path, $query, null, $requestId);
+        return $this->call('GET', $path, $query, null, $requestId, retryable: true);
     }
 
     /**
@@ -104,7 +109,27 @@ final readonly class SiteApi
     }
 
     /**
-     * A POST without an Idempotency-Key.
+     * A POST the site runs once however often it arrives: it carries an
+     * Idempotency-Key, the same on every retry of this call, and a retry
+     * is answered with the first answer (`$replayed` on the result). Use it
+     * for the operations the site's API document gives an Idempotency-Key.
+     *
+     * @param array<string, mixed> $body
+     * @param string|null $idempotencyKey a key for this one operation, 1 to 255 printable ASCII characters;
+     *                                    a fresh UUID when none is given. Never reuse one for a different request.
+     */
+    public function postIdempotent(string $path, #[\SensitiveParameter] array $body = [], ?string $idempotencyKey = null, ?string $requestId = null): ApiResponse
+    {
+        $idempotencyKey ??= Uuid::v4();
+        if (preg_match('/^[\x21-\x7E](?:[\x20-\x7E]{0,253}[\x21-\x7E])?$/D', $idempotencyKey) !== 1) {
+            throw new InvalidArgumentValueException('An Idempotency-Key must be 1 to 255 printable ASCII characters, not starting or ending with a space.');
+        }
+
+        return $this->call('POST', $path, [], $body, $requestId, retryable: true, idempotencyKey: $idempotencyKey);
+    }
+
+    /**
+     * A POST without an Idempotency-Key, never retried.
      *
      * @param array<string, mixed> $body
      */
@@ -169,7 +194,7 @@ final readonly class SiteApi
      */
     private function fetchPage(string $path, #[\SensitiveParameter] array $query, int $limit, ?string $cursor, ?string $requestId): Page
     {
-        $response = $this->call('GET', $path, [...$query, 'limit' => $limit, 'cursor' => $cursor], null, $requestId);
+        $response = $this->call('GET', $path, [...$query, 'limit' => $limit, 'cursor' => $cursor], null, $requestId, retryable: true);
         $data = $response->data;
         $items = is_array($data) && !array_is_list($data) ? ($data['data'] ?? null) : null;
         $next = is_array($data) ? ($data['next_cursor'] ?? null) : null;
@@ -209,8 +234,17 @@ final readonly class SiteApi
      * @param array<string, string|int|bool|null> $query
      * @param array<string, mixed>|null $body
      */
-    private function call(string $method, string $path, #[\SensitiveParameter] array $query, #[\SensitiveParameter] ?array $body, ?string $requestId): ApiResponse
-    {
+    private function call(
+        string $method,
+        string $path,
+        #[\SensitiveParameter]
+        array $query,
+        #[\SensitiveParameter]
+        ?array $body,
+        ?string $requestId,
+        bool $retryable = false,
+        ?string $idempotencyKey = null,
+    ): ApiResponse {
         $url = $this->url($path, $query);
         $requestId ??= Uuid::v4();
         self::assertHeaderValue('request id', $requestId);
@@ -219,14 +253,71 @@ final readonly class SiteApi
         if ($this->token !== null) {
             $headers['Authorization'] = 'Bearer ' . $this->token;
         }
+        if ($idempotencyKey !== null) {
+            $headers['Idempotency-Key'] = $idempotencyKey;
+        }
+        $encoded = $body === null ? null : self::encode($body);
 
-        $response = $this->http->json($method, $url, $headers, $body === null ? null : self::encode($body));
+        for ($retry = 0; ; $retry++) {
+            try {
+                $response = $this->http->json($method, $url, $headers, $encoded);
+            } catch (TransportException $exception) {
+                $this->waitBeforeRetrying($exception, $retryable, $retry, $method, $path, 'a network failure', $this->retryPolicy->backoff($retry + 1));
 
-        if (!HttpTransport::isSuccessful($response)) {
-            throw ApiException::fromResponse($response, $requestId, $this->clock->now());
+                continue;
+            }
+
+            if (HttpTransport::isSuccessful($response)) {
+                return $this->answer($response, $method, $path, $requestId, $idempotencyKey);
+            }
+
+            $exception = ApiException::fromResponse($response, $requestId, $this->clock->now());
+            $this->waitBeforeRetrying($exception, $retryable, $retry, $method, $path, (string) $exception->status, $this->delay($exception, $idempotencyKey !== null, $retry + 1));
+        }
+    }
+
+    /**
+     * Seconds to wait before retrying after this refusal, or null when it is
+     * not one a retry can change: a 429 or a 503, or the 409 of a keyed
+     * request still in flight, waiting what the site asks.
+     */
+    private function delay(ApiException $exception, bool $keyed, int $retry): ?float
+    {
+        $asked = match (true) {
+            $exception->status === 429 => $exception->retryAfter ?? $exception->rateLimit->exhausted()?->reset,
+            $exception->status === 503 => $exception->retryAfter,
+            $exception->status === 409 && $keyed && $exception->hasType('idempotency-request-in-flight') => $exception->retryAfter,
+            default => false,
+        };
+
+        if ($asked === false) {
+            return null;
         }
 
-        return $this->answer($response, $method, $path, $requestId, null);
+        return $asked === null ? $this->retryPolicy->backoff($retry) : (float) $asked;
+    }
+
+    /**
+     * Waits before the next attempt, or throws the failure when the call is
+     * not retried, the retries are spent, or the wait asked for is beyond
+     * the policy's ceiling.
+     */
+    private function waitBeforeRetrying(TransportException|ApiException $failure, bool $retryable, int $retry, string $method, string $path, string $reason, ?float $delay): void
+    {
+        if (!$retryable || $delay === null || $retry >= $this->retryPolicy->maxRetries || $delay > $this->retryPolicy->maxDelay) {
+            throw $failure;
+        }
+
+        $this->logger->info(sprintf(
+            'Retrying %s %s after %s, in %.1f seconds (retry %d of %d).',
+            $method,
+            Untrusted::text($path, Untrusted::MAX_LONG_LENGTH),
+            $reason,
+            $delay,
+            $retry + 1,
+            $this->retryPolicy->maxRetries,
+        ));
+        $this->retryPolicy->sleeper->sleep($delay);
     }
 
     private function answer(ResponseInterface $response, string $method, string $path, string $requestId, ?string $idempotencyKey): ApiResponse

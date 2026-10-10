@@ -70,7 +70,7 @@ $client = new Client(new Config(
 
 The administrator token is a long-lived credential issued on the site's API-token screen; it is sent on the calls your server makes on its own behalf. Leave it out when your server only acts for signed-in members. Keep it, like the client secret, out of version control.
 
-`Config` also takes a PSR-18 client and PSR-17 factories, a PSR-20 clock, a PSR-3 logger, the token-endpoint authentication (`client_secret_basic` by default, or `ClientAuthentication::ClientSecretPost`) and the clock leeway for ID tokens (60 seconds by default).
+`Config` also takes a PSR-18 client and PSR-17 factories, a PSR-20 clock, a PSR-3 logger, the token-endpoint authentication (`client_secret_basic` by default, or `ClientAuthentication::ClientSecretPost`), the clock leeway for ID tokens (60 seconds by default) and the retry policy for Site API calls (see [Writes that must happen once](#writes-that-must-happen-once)).
 
 ### The cache
 
@@ -168,6 +168,27 @@ $savedCursor = $page->nextCursor;      // null on the last page
 `limit` runs from 1 to 100 (25 by default). The filters go with every page; the cursor is sealed by the site, so pass back `nextCursor` unchanged and never build one. `$paginator->pages()` yields whole `Api\Page`s, and `$paginator->map($fn)` converts each item as it is reached.
 
 A refusal is thrown as an `Exception\ApiException` built from the site's RFC 9457 problem: `$type` (branch on it, or on `hasType('validation-failed')`), `$title`, `$status`, `$detail`, `$errors`, `$requestId`, `$retryAfter`, `$challenge` (the `WWW-Authenticate` header) and any other member through `extension('required_ability')`. `ValidationFailedException`, `NotFoundException`, `UnauthenticatedException`, `ForbiddenException`, `ConflictException`, `RateLimitedException` and `ServiceUnavailableException` extend it for the cases you are likely to handle; an answer that is not a problem (a proxy's error page) is an `ApiException` with `$isProblem` false and the raw `$body`. A request that never got an answer is an `Exception\TransportException`.
+
+### Writes that must happen once
+
+Some writes, such as creating an article or filing a member's address, accept an `Idempotency-Key`. Send them with `postIdempotent()`: the client generates a UUID v4 key (or takes yours, 1 to 255 printable ASCII characters, one per operation) and sends the same key on every retry, so a retry after a lost answer is answered with the first answer instead of creating a second record:
+
+```php
+$response = $client->forMember($accessToken)->api()->postIdempotent('/api/v1/me/addresses', $address);
+$response->replayed;          // true when this is the stored answer to an earlier attempt
+$response->idempotencyKey;    // the key that was sent
+```
+
+Reads and keyed writes are retried after a network failure, a `429`, a `503`, and, for a keyed write, the `409` of an attempt with the same key still running. Each wait is what the site asks in `Retry-After` (or, on a `429` without it, until the spent quota in `RateLimit` turns over), otherwise a jittered backoff doubling from half a second. Other refusals are thrown at once, and so is a `500` under a key, whose outcome only reading the current state can settle; send the operation again under a new key if it still needs doing. `post()`, `put()`, `patch()` and `delete()` are never retried. Tune or turn this off in `Config`:
+
+```php
+use Appsolutely\Sdk\Api\RetryPolicy;
+
+new Config(/* ... */, retryPolicy: new RetryPolicy(maxRetries: 3, maxDelay: 60));
+new Config(/* ... */, retryPolicy: RetryPolicy::none());
+```
+
+`maxRetries` runs from 0 to 10 (2 by default), and a wait the site asks for beyond `maxDelay` seconds (30 by default) is not made: the refusal is thrown instead. Each retry is logged at `info` through the PSR-3 logger.
 
 When the site refuses a token with `UnauthenticatedException`, renew it rather than retrying: refused credentials count against a budget of their own, and a client that keeps sending a dead token locks out every caller behind the same address.
 
