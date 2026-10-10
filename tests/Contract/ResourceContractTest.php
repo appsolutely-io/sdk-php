@@ -128,7 +128,11 @@ final class ResourceContractTest extends TestCase
     #[DataProvider('siteOverrides')]
     public function testEachFieldSampledAsTheSiteSendsItIsStillDeclaredOtherwise(string $schema, string $field): void
     {
-        self::assertArrayHasKey($field, self::siteOverridesOf($schema));
+        self::assertSame(Document::map(Document::map(self::AS_THE_SITE_SENDS[$schema][$field] ?? null)['document'] ?? null), self::declared($schema, $field), sprintf(
+            'The pinned document now declares %s.%s otherwise than the override in AS_THE_SITE_SENDS was written against: drop the entry if the document agrees with what the site sends, or rewrite it.',
+            $schema,
+            $field,
+        ));
     }
 
     /**
@@ -441,29 +445,34 @@ final class ResourceContractTest extends TestCase
     }
 
     /**
-     * The fields of a schema to sample as the site sends them, each once
-     * the document is shown to still declare what the override was written
-     * against.
+     * The fields of a schema to sample as the site sends them. Whether the
+     * document still declares what each override was written against is
+     * the test of AS_THE_SITE_SENDS, not this.
      *
      * @return array<array-key, mixed>
      */
     private static function siteOverridesOf(string $name): array
     {
         $overrides = [];
-        $properties = Document::map(Document::schema($name)['properties'] ?? null);
         foreach (Document::map(self::AS_THE_SITE_SENDS[$name] ?? null) as $field => $override) {
-            $override = Document::map($override);
-            $declared = Document::map($properties[$field] ?? null);
-            unset($declared['description']);
-            self::assertSame($override['document'], $declared, sprintf(
-                'The pinned document now declares %s.%s otherwise than the override in AS_THE_SITE_SENDS was written against: drop the entry if the document agrees with what the site sends, or rewrite it.',
-                $name,
-                $field,
-            ));
-            $overrides[$field] = $override['site'];
+            $overrides[$field] = Document::map($override)['site'] ?? null;
         }
 
         return $overrides;
+    }
+
+    /**
+     * What the document declares for a field of a schema, its description
+     * aside.
+     *
+     * @return array<array-key, mixed>
+     */
+    private static function declared(string $schema, string $field): array
+    {
+        $declared = Document::map(Document::map(Document::schema($schema)['properties'] ?? null)[$field] ?? null);
+        unset($declared['description']);
+
+        return $declared;
     }
 
     /**
