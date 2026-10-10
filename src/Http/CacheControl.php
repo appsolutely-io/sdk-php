@@ -34,7 +34,7 @@ final class CacheControl
     {
         $directives = array_map(
             static fn(string $directive): string => strtolower(trim($directive)),
-            explode(',', $response->getHeaderLine('Cache-Control')),
+            explode(',', $response->getHeaderLine(Header::CACHE_CONTROL)),
         );
 
         if (in_array('no-store', $directives, true)) {

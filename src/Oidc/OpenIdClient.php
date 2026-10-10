@@ -12,6 +12,7 @@ use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
+use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Http\Json;
 use Appsolutely\Sdk\Support\Untrusted;
@@ -266,7 +267,7 @@ final readonly class OpenIdClient
         $endpoint = $this->metadata()->userInfoEndpoint
             ?? throw new DiscoveryException('The provider publishes no userinfo_endpoint.');
 
-        $response = $this->http->get($endpoint, ['Authorization' => 'Bearer ' . $accessToken]);
+        $response = $this->http->get($endpoint, [Header::AUTHORIZATION => 'Bearer ' . $accessToken]);
         $claims = $this->successfulJson($response, $endpoint);
 
         $subject = $claims['sub'] ?? null;
@@ -328,7 +329,7 @@ final readonly class OpenIdClient
     {
         return match ($this->config->clientAuthentication) {
             ClientAuthentication::ClientSecretBasic => [$fields, [
-                'Authorization' => 'Basic ' . base64_encode(urlencode($this->config->clientId) . ':' . urlencode($this->config->clientSecret())),
+                Header::AUTHORIZATION => 'Basic ' . base64_encode(urlencode($this->config->clientId) . ':' . urlencode($this->config->clientSecret())),
             ]],
             ClientAuthentication::ClientSecretPost => [
                 [...$fields, 'client_id' => $this->config->clientId, 'client_secret' => $this->config->clientSecret()],

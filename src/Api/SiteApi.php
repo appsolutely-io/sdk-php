@@ -10,6 +10,7 @@ use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Exception\TransportException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\BearerToken;
+use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Http\Json;
 use Appsolutely\Sdk\Http\SecureUrl;
@@ -243,12 +244,12 @@ final readonly class SiteApi
         $requestId ??= Uuid::v4();
         self::assertHeaderValue('request id', $requestId);
 
-        $headers = ['Accept' => self::ACCEPT, 'X-Request-Id' => $requestId];
+        $headers = [Header::ACCEPT => self::ACCEPT, Header::REQUEST_ID => $requestId];
         if ($this->token !== null) {
-            $headers['Authorization'] = 'Bearer ' . $this->token;
+            $headers[Header::AUTHORIZATION] = 'Bearer ' . $this->token;
         }
         if ($idempotencyKey !== null) {
-            $headers['Idempotency-Key'] = $idempotencyKey;
+            $headers[Header::IDEMPOTENCY_KEY] = $idempotencyKey;
         }
         $encoded = $body === null ? null : self::encode($body);
 
@@ -331,15 +332,15 @@ final readonly class SiteApi
             $data = array_is_list($decoded) ? $decoded : Json::stringKeys($decoded);
         }
 
-        $answeredId = $response->getHeaderLine('X-Request-Id');
-        $location = $response->getHeaderLine('Location');
+        $answeredId = $response->getHeaderLine(Header::REQUEST_ID);
+        $location = $response->getHeaderLine(Header::LOCATION);
 
         return new ApiResponse(
             $status,
             $data,
             $answeredId !== '' ? $answeredId : $requestId,
-            RateLimit::fromHeaders($response->getHeaderLine('RateLimit-Policy'), $response->getHeaderLine('RateLimit')),
-            strcasecmp($response->getHeaderLine('Idempotent-Replayed'), 'true') === 0,
+            RateLimit::fromHeaders($response->getHeaderLine(Header::RATE_LIMIT_POLICY), $response->getHeaderLine(Header::RATE_LIMIT)),
+            strcasecmp($response->getHeaderLine(Header::IDEMPOTENT_REPLAYED), 'true') === 0,
             $idempotencyKey,
             $location !== '' ? $location : null,
             $response,

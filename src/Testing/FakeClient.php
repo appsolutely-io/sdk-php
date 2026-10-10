@@ -11,6 +11,7 @@ use Appsolutely\Sdk\Client;
 use Appsolutely\Sdk\Config;
 use Appsolutely\Sdk\Exception\ApiException;
 use Appsolutely\Sdk\Exception\UnarrangedCallException;
+use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\MemberClient;
 use Http\Discovery\Psr17FactoryDiscovery;
 use LogicException;
@@ -178,9 +179,9 @@ final class FakeClient
         parse_str($request->getUri()->getQuery(), $query);
         $body = (string) $request->getBody();
         $decoded = $body === '' ? null : json_decode($body, true);
-        $authorization = $request->getHeaderLine('Authorization');
-        $requestId = $request->getHeaderLine('X-Request-Id');
-        $key = $request->getHeaderLine('Idempotency-Key');
+        $authorization = $request->getHeaderLine(Header::AUTHORIZATION);
+        $requestId = $request->getHeaderLine(Header::REQUEST_ID);
+        $key = $request->getHeaderLine(Header::IDEMPOTENCY_KEY);
 
         $this->calls[] = new RecordedCall(
             $operation,
@@ -199,13 +200,13 @@ final class FakeClient
         $answer = count($queue) > 1 ? array_shift($queue) : $queue[0];
         $this->answers[$operation->value] = $queue;
 
-        $response = $this->responses->createResponse($answer['status'])->withHeader('X-Request-Id', $requestId);
+        $response = $this->responses->createResponse($answer['status'])->withHeader(Header::REQUEST_ID, $requestId);
         foreach ($answer['headers'] as $name => $value) {
             $response = $response->withHeader($name, $value);
         }
         if ($answer['body'] !== null) {
             $response = $response
-                ->withHeader('Content-Type', $answer['problem'] ? 'application/problem+json' : 'application/json')
+                ->withHeader(Header::CONTENT_TYPE, $answer['problem'] ? 'application/problem+json' : 'application/json')
                 ->withBody($this->streams->createStream(json_encode($answer['body'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)));
         }
 
