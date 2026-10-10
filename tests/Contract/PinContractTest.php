@@ -18,15 +18,23 @@ final class PinContractTest extends TestCase
 {
     private const string DOCUMENT = "openapi: 3.1.0\ninfo:\n  title: Site API\n  version: v1\npaths: {}\n";
 
+    /** Where the tool, the revision and the copy of the document sit in a package, and the document in the site software. */
+    private const string TOOL = 'tools/pin-contract.php';
+    private const string CONTRACT_FILE = 'src/Contract.php';
+    private const string DOCUMENT_COPY = 'tests/Contract/openapi.yaml';
+    private const string SITE_DOCUMENT = 'docs/api/openapi.yaml';
+    /** What a run writes beside a file before renaming it into place. */
+    private const string PINNING = '.pinning';
+
     private string $scratch;
 
     protected function setUp(): void
     {
         $this->scratch = sys_get_temp_dir() . '/sdk-pin-contract-' . bin2hex(random_bytes(6));
-        mkdir($this->scratch . '/site/docs/api', 0o777, true);
-        mkdir($this->scratch . '/package/src', 0o777, true);
-        mkdir($this->scratch . '/package/tests/Contract', 0o777, true);
-        copy(dirname(__DIR__, 2) . '/src/Contract.php', $this->scratch . '/package/src/Contract.php');
+        mkdir(dirname($this->site(self::SITE_DOCUMENT)), 0o777, true);
+        mkdir(dirname($this->package(self::CONTRACT_FILE)), 0o777, true);
+        mkdir(dirname($this->package(self::DOCUMENT_COPY)), 0o777, true);
+        copy(self::own(self::CONTRACT_FILE), $this->package(self::CONTRACT_FILE));
     }
 
     protected function tearDown(): void
@@ -38,7 +46,7 @@ final class PinContractTest extends TestCase
     {
         self::assertMatchesRegularExpression('/^[0-9a-f]{40}$/D', Contract::REVISION);
 
-        $document = Yaml::parseFile(dirname(__DIR__) . '/Contract/openapi.yaml');
+        $document = Yaml::parseFile(self::own(self::DOCUMENT_COPY));
         self::assertIsArray($document);
         self::assertSame('3.1.0', $document['openapi'] ?? null);
     }
@@ -52,25 +60,25 @@ final class PinContractTest extends TestCase
         [$exitCode, $output] = $this->pin('v0.19.0');
 
         self::assertSame(0, $exitCode, $output);
-        self::assertSame(self::DOCUMENT, file_get_contents($this->scratch . '/package/tests/Contract/openapi.yaml'));
-        self::assertStringContainsString("public const string REVISION = '" . $first . "';", (string) file_get_contents($this->scratch . '/package/src/Contract.php'));
+        self::assertSame(self::DOCUMENT, file_get_contents($this->package(self::DOCUMENT_COPY)));
+        self::assertStringContainsString("public const string REVISION = '" . $first . "';", (string) file_get_contents($this->package(self::CONTRACT_FILE)));
         self::assertStringContainsString($first, $output);
     }
 
     public function testARefWithoutTheDocumentChangesNothing(): void
     {
-        file_put_contents($this->scratch . '/site/README.md', "site\n");
+        file_put_contents($this->site('README.md'), "site\n");
         $this->git('init', '--quiet', '--initial-branch=main');
         $this->git('add', 'README.md');
         $this->git('-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'init');
-        $before = (string) file_get_contents($this->scratch . '/package/src/Contract.php');
+        $before = (string) file_get_contents($this->package(self::CONTRACT_FILE));
 
         [$exitCode, $output] = $this->pin('main');
 
         self::assertNotSame(0, $exitCode);
-        self::assertStringContainsString('docs/api/openapi.yaml', $output);
-        self::assertSame($before, file_get_contents($this->scratch . '/package/src/Contract.php'));
-        self::assertFileDoesNotExist($this->scratch . '/package/tests/Contract/openapi.yaml');
+        self::assertStringContainsString(self::SITE_DOCUMENT, $output);
+        self::assertSame($before, file_get_contents($this->package(self::CONTRACT_FILE)));
+        self::assertFileDoesNotExist($this->package(self::DOCUMENT_COPY));
     }
 
     public function testARefThatNamesNoCommitIsRefused(): void
@@ -81,67 +89,91 @@ final class PinContractTest extends TestCase
 
         self::assertNotSame(0, $exitCode);
         self::assertStringContainsString('no-such-ref', $output);
-        self::assertFileDoesNotExist($this->scratch . '/package/tests/Contract/openapi.yaml');
+        self::assertFileDoesNotExist($this->package(self::DOCUMENT_COPY));
     }
 
     public function testWhenTheRevisionCannotBeWrittenTheDocumentIsNotPinnedEither(): void
     {
         $this->commitDocument(self::DOCUMENT);
-        $before = (string) file_get_contents($this->scratch . '/package/src/Contract.php');
+        $before = (string) file_get_contents($this->package(self::CONTRACT_FILE));
         // A directory where the revision's temporary file would go makes
         // that write fail whoever runs the suite.
-        mkdir($this->scratch . '/package/src/Contract.php.pinning');
+        mkdir($this->package(self::CONTRACT_FILE . self::PINNING));
 
         [$exitCode, $output] = $this->pin('main');
 
         self::assertNotSame(0, $exitCode, $output);
-        self::assertFileDoesNotExist($this->scratch . '/package/tests/Contract/openapi.yaml');
-        self::assertFileDoesNotExist($this->scratch . '/package/tests/Contract/openapi.yaml.pinning');
-        self::assertSame($before, file_get_contents($this->scratch . '/package/src/Contract.php'));
+        self::assertFileDoesNotExist($this->package(self::DOCUMENT_COPY));
+        self::assertFileDoesNotExist($this->package(self::DOCUMENT_COPY . self::PINNING));
+        self::assertSame($before, file_get_contents($this->package(self::CONTRACT_FILE)));
     }
 
     public function testWhenTheDocumentCannotBeRenamedIntoPlaceTheRevisionIsPutBack(): void
     {
         $this->commitDocument(self::DOCUMENT);
-        $before = (string) file_get_contents($this->scratch . '/package/src/Contract.php');
+        $before = (string) file_get_contents($this->package(self::CONTRACT_FILE));
         // A directory with something in it where the document goes: both
         // temporary files are written and the revision is renamed into
         // place before the document's rename fails, whoever runs the suite.
-        mkdir($this->scratch . '/package/tests/Contract/openapi.yaml');
-        touch($this->scratch . '/package/tests/Contract/openapi.yaml/kept');
+        mkdir($this->package(self::DOCUMENT_COPY));
+        touch($this->package(self::DOCUMENT_COPY . '/kept'));
 
         [$exitCode, $output] = $this->pin('main');
 
         self::assertNotSame(0, $exitCode, $output);
-        self::assertStringContainsString('openapi.yaml', $output);
-        self::assertSame($before, file_get_contents($this->scratch . '/package/src/Contract.php'));
-        self::assertFileExists($this->scratch . '/package/tests/Contract/openapi.yaml/kept');
-        self::assertSame(['Contract.php'], array_values(array_diff((array) scandir($this->scratch . '/package/src'), ['.', '..'])));
-        self::assertSame(['openapi.yaml'], array_values(array_diff((array) scandir($this->scratch . '/package/tests/Contract'), ['.', '..'])));
+        self::assertStringContainsString(self::DOCUMENT_COPY, $output);
+        self::assertSame($before, file_get_contents($this->package(self::CONTRACT_FILE)));
+        self::assertFileExists($this->package(self::DOCUMENT_COPY . '/kept'));
+        self::assertSame([basename(self::CONTRACT_FILE)], array_values(array_diff((array) scandir(dirname($this->package(self::CONTRACT_FILE))), ['.', '..'])));
+        self::assertSame([basename(self::DOCUMENT_COPY)], array_values(array_diff((array) scandir(dirname($this->package(self::DOCUMENT_COPY))), ['.', '..'])));
     }
 
     public function testTheUsageNamesEveryOption(): void
     {
-        [, $output] = $this->execute([PHP_BINARY, dirname(__DIR__, 2) . '/tools/pin-contract.php']);
+        [, $output] = $this->execute([PHP_BINARY, self::own(self::TOOL)]);
 
         self::assertStringContainsString('--root=', $output);
     }
 
     public function testBothArgumentsAreRequired(): void
     {
-        [$exitCode, $output] = $this->execute([PHP_BINARY, dirname(__DIR__, 2) . '/tools/pin-contract.php', '--root=' . $this->scratch . '/package', $this->scratch . '/site']);
+        [$exitCode, $output] = $this->execute([PHP_BINARY, self::own(self::TOOL), '--root=' . $this->package(), $this->site()]);
 
         self::assertNotSame(0, $exitCode);
         self::assertStringContainsString('Usage', $output);
     }
 
+    /**
+     * A path in this package, the one under test.
+     */
+    private static function own(string $path): string
+    {
+        return dirname(__DIR__, 2) . '/' . $path;
+    }
+
+    /**
+     * A path in the scratch copy of the package the tool pins, or its root.
+     */
+    private function package(string $path = ''): string
+    {
+        return $this->scratch . '/package' . ($path === '' ? '' : '/' . $path);
+    }
+
+    /**
+     * A path in the scratch checkout of the site software, or its root.
+     */
+    private function site(string $path = ''): string
+    {
+        return $this->scratch . '/site' . ($path === '' ? '' : '/' . $path);
+    }
+
     private function commitDocument(string $contents): string
     {
-        if (!is_dir($this->scratch . '/site/.git')) {
+        if (!is_dir($this->site('.git'))) {
             $this->git('init', '--quiet', '--initial-branch=main');
         }
-        file_put_contents($this->scratch . '/site/docs/api/openapi.yaml', $contents);
-        $this->git('add', 'docs/api/openapi.yaml');
+        file_put_contents($this->site(self::SITE_DOCUMENT), $contents);
+        $this->git('add', self::SITE_DOCUMENT);
         $this->git('-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'document');
 
         return trim($this->git('rev-parse', 'HEAD'));
@@ -152,12 +184,12 @@ final class PinContractTest extends TestCase
      */
     private function pin(string $ref): array
     {
-        return $this->execute([PHP_BINARY, dirname(__DIR__, 2) . '/tools/pin-contract.php', '--root=' . $this->scratch . '/package', $this->scratch . '/site', $ref]);
+        return $this->execute([PHP_BINARY, self::own(self::TOOL), '--root=' . $this->package(), $this->site(), $ref]);
     }
 
     private function git(string ...$arguments): string
     {
-        [$exitCode, $output] = $this->execute(['git', '-C', $this->scratch . '/site', ...array_values($arguments)]);
+        [$exitCode, $output] = $this->execute(['git', '-C', $this->site(), ...array_values($arguments)]);
         self::assertSame(0, $exitCode, $output);
 
         return $output;

@@ -18,6 +18,12 @@ declare(strict_types=1);
  */
 
 const DOCUMENT = 'docs/api/openapi.yaml';
+/** Where the package keeps the revision and the copy of the document, under its root. */
+const CONTRACT_FILE = 'src/Contract.php';
+const DOCUMENT_COPY = 'tests/Contract/openapi.yaml';
+/** What a run writes beside each file: the new contents, and the original until both are in place. */
+const PINNING = '.pinning';
+const UNPINNED = '.unpinned';
 const REVISION_LINE = '/public const string REVISION = \'[0-9a-f]*\';/';
 
 function fail(string $message): never
@@ -67,7 +73,7 @@ function writeAll(array $files): void
 {
     $temporaries = [];
     foreach ($files as $path => $contents) {
-        $temporary = $path . '.pinning';
+        $temporary = $path . PINNING;
         if (@file_put_contents($temporary, $contents) !== strlen($contents)) {
             if (is_file($temporary)) {
                 $temporaries[] = $temporary;
@@ -81,17 +87,17 @@ function writeAll(array $files): void
     $backups = [];
     foreach (array_keys($files) as $path) {
         if (is_file($path)) {
-            if (!@copy($path, $path . '.unpinned')) {
-                removeAll([...$temporaries, ...array_values($backups), $path . '.unpinned']);
+            if (!@copy($path, $path . UNPINNED)) {
+                removeAll([...$temporaries, ...array_values($backups), $path . UNPINNED]);
                 fail(sprintf('%s could not be backed up.', $path));
             }
-            $backups[$path] = $path . '.unpinned';
+            $backups[$path] = $path . UNPINNED;
         }
     }
 
     $replaced = [];
     foreach (array_keys($files) as $path) {
-        if (!@rename($path . '.pinning', $path)) {
+        if (!@rename($path . PINNING, $path)) {
             $left = restoreAll($replaced, $backups);
             removeAll([...$temporaries, ...array_values(array_diff_key($backups, $left))]);
             fail(implode(' ', [sprintf('%s could not be written.', $path), ...array_values($left)]));
@@ -138,7 +144,7 @@ function removeAll(array $paths): void
     }
 }
 
-const USAGE = "Usage: composer pin-contract -- [--root=<package>] <site-software checkout> <ref>\n\nCopies " . DOCUMENT . " at <ref> into tests/Contract/openapi.yaml and records the commit in Contract::REVISION.\n--root=<package> pins another copy of this package than the one the tool sits in.";
+const USAGE = "Usage: composer pin-contract -- [--root=<package>] <site-software checkout> <ref>\n\nCopies " . DOCUMENT . ' at <ref> into ' . DOCUMENT_COPY . ' and records the commit in Contract::REVISION (' . CONTRACT_FILE . ").\n--root=<package> pins another copy of this package than the one the tool sits in.";
 
 $root = dirname(__DIR__);
 $arguments = [];
@@ -173,7 +179,7 @@ if ($exitCode !== 0 || $document === '') {
     fail(sprintf('%s has no %s at %s. %s', $checkout, DOCUMENT, $commit, trim($error)));
 }
 
-$contractPath = $root . '/src/Contract.php';
+$contractPath = $root . '/' . CONTRACT_FILE;
 $contract = file_get_contents($contractPath);
 if ($contract === false) {
     fail(sprintf('%s could not be read.', $contractPath));
@@ -185,7 +191,7 @@ if ($pinned === null || $count !== 1) {
 
 writeAll([
     $contractPath => $pinned,
-    $root . '/tests/Contract/openapi.yaml' => $document,
+    $root . '/' . DOCUMENT_COPY => $document,
 ]);
 
 fwrite(STDOUT, sprintf("Pinned %s at %s (%s).\n", DOCUMENT, $commit, $ref));
