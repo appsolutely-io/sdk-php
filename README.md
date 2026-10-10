@@ -229,6 +229,47 @@ A PSR-7 server request can be passed to `$verifier->verifyRequest($request)` ins
 
 Answer with a 2xx within a few seconds and queue slow work: an attempt that times out counts as failed and is retried. Never redirect the endpoint: redirects are not followed, so a 3xx is a failed attempt. Answering `410 Gone` switches the endpoint off.
 
+### Typed events
+
+`TypedEvent::from()` reads a verified envelope's `data` into typed, read-only properties: one class per family of event types that share a payload.
+
+```php
+use Appsolutely\Sdk\Webhooks\EventType;
+use Appsolutely\Sdk\Webhooks\Events\AccountEvent;
+use Appsolutely\Sdk\Webhooks\Events\OrderPaidEvent;
+use Appsolutely\Sdk\Webhooks\Events\TypedEvent;
+use Appsolutely\Sdk\Webhooks\Events\UnknownEvent;
+
+$typed = TypedEvent::from($event);         // $event is what verify() returned
+
+match (true) {
+    $typed instanceof OrderPaidEvent => bookPurchase($typed->payment?->reference, $typed->order, $typed->subject),
+    $typed instanceof AccountEvent => applyState($typed->state),          // keep the highest sequence per subject
+    $typed instanceof UnknownEvent => null,                              // a type this client does not know yet
+    default => null,
+};
+```
+
+| Class | Types | Properties |
+| --- | --- | --- |
+| `ArticleEvent`, `PageEvent`, `ProductEvent` | `article.*`, `page.*`, `product.*` (`created`, `updated`, `deleted`) | `$article`, `$page`, `$product` |
+| `FormSubmittedEvent` | `form.submitted` | `$entry`, `$form` |
+| `OrderEvent` | `order.completed`, `order.shipped`, `order.cancelled`, `order.status_updated`, `order.expired`, `order.revived`, `order.payment_arrived_late` | `$order` |
+| `OrderPaidEvent` | `order.paid` | `$order`, `$payment`, `$subject` |
+| `PaymentReturnedEvent` | `order.refunded`, `payment.refunded`, `payment.reversed` | `$order`, `$payment` |
+| `RefundEvent` | `refund.requested`, `refund.processed` | `$refund` (its reference) |
+| `ReferralRewardIssuedEvent` | `referral.reward_issued` | `$subject`, `$referralCode`, `$paymentReference`, `$reward` |
+| `SubscriptionEvent` | `subscription.*` | `$subscription`, and `$period` on `started` and `renewed` |
+| `AccountEvent` | `account.suspended`, `account.reinstated`, `account.erased`, `account.entitlements_changed`, `account.email_changed` | `$state` |
+| `PingEvent` | `webhook.ping` | `$subscriptionId` |
+| `UnknownEvent` | any other type | none |
+
+`EventType` names every type as a constant. Times are `DateTimeImmutable` in UTC, ids are strings, and amounts are integers in the minor unit of the `currency` beside them. Every value object keeps the fields the site sent that it does not name in `$extra`, and every event keeps its envelope in `$envelope`, `data` included, so nothing that arrived is out of reach.
+
+A type this client does not know becomes an `UnknownEvent`, never an exception: acknowledge it with a 2xx. A known type whose `data` lacks a field or carries one of the wrong type throws `Exception\UnexpectedPayloadException`; the delivery is genuine, so answer it with a 5xx and the site will retry it.
+
+An account's `totals` is an array of integers by entitlement key, empty when the account holds nothing (the site sends `{}`). Decide what to do from `$state->status` and apply a state only when its `$state->sequence` is higher than the one you hold for that `$state->subject`: deliveries can arrive out of order, and changes close together can arrive as fewer deliveries.
+
 ### Testing your endpoint
 
 The classes in `Appsolutely\Sdk\Testing` are test helpers: use them in your test suite, not in production code. `Testing\WebhookFactory` builds deliveries signed exactly as Appsolutely signs them:
