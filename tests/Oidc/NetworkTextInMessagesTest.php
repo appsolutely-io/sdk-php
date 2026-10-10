@@ -66,8 +66,10 @@ final class NetworkTextInMessagesTest extends TestCase
         $provider->discovery['token_endpoint'] = FakeProvider::ISSUER . '/oauth/' . str_repeat('x', 300);
         $provider->token = fn(): ResponseInterface => $provider->factory->createResponse(502);
 
+        $original = $provider->oidc()->verifyIdToken($provider->rsa->sign($provider->claims()), 'the-nonce');
+
         try {
-            $provider->oidc()->machineToken();
+            $provider->oidc()->refresh('rt-1', $original);
             self::fail('A failed token request was not reported.');
         } catch (UnexpectedResponseException $exception) {
             self::assertStringContainsString('502', $exception->getMessage());
