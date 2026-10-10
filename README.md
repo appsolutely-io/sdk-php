@@ -192,6 +192,34 @@ new Config(/* ... */, retryPolicy: RetryPolicy::none());
 
 When the site refuses a token with `UnauthenticatedException`, renew it rather than retrying: refused credentials count against a budget of their own, and a client that keeps sending a dead token locks out every caller behind the same address.
 
+### Testing without a site
+
+`Testing\FakeClient` answers the Site API in memory. Arrange an answer per operation, named by `Api\Operation`, hand `client()` to the code under test, then read the calls it made:
+
+```php
+use Appsolutely\Sdk\Api\Operation;
+use Appsolutely\Sdk\Testing\FakeClient;
+
+$fake = (new FakeClient())
+    ->answer(Operation::GetArticle, ['id' => 'a-1', 'title' => 'Hello', /* ... as the document shapes it */])
+    ->answerPage(Operation::ListOrders, [$order1, $order2], nextCursor: 'c2')
+    ->answerPage(Operation::ListOrders, [$order3])
+    ->refuse(Operation::CreateArticle, 'validation-failed', 422, members: ['errors' => ['title' => ['Required.']]]);
+
+$service = new ArticleImporter($fake->client());   // a real Client; nothing leaves the process
+$service->run();
+
+$call = $fake->lastCall(Operation::CreateArticle);
+$call->body;              // the JSON body sent, decoded
+$call->idempotencyKey;    // the key sent with a keyed write
+$call->pathParameters;    // ['id' => 'a-1'] for a path with placeholders
+$call->query;             // the query, decoded
+$call->token;             // FakeClient::ADMINISTRATOR_TOKEN, a member's token, or null
+$fake->calls();           // every call, in order
+```
+
+`client()` is a real `Client` whose HTTP client answers from the arrangement, so an arranged body is read into the same models as a site's answer, a refusal becomes the same `ApiException` subclass, and an answer that breaks the document fails the same way. Answers to one operation are given in the order arranged, and the last one keeps answering. `answer()` takes the operation's success status unless you pass another, and headers such as `Idempotent-Replayed: true`; `refuse()` takes a problem type (`validation-failed`, or a full URI), a status, and the problem's other members. `forMember($token)` calls as a member. Calls are not retried, so a refusal is thrown at once. A call with no answer arranged, or to a path that is no operation of the document, throws `Exception\UnarrangedCallException`, a `LogicException`. Sign-in through `oidc()` is not faked.
+
 ## Verifying webhook deliveries
 
 Deliveries follow [Standard Webhooks](https://www.standardwebhooks.com/). Verify the raw request body, before any framework parses it:
