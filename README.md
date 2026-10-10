@@ -132,54 +132,158 @@ The same client reads the member's UserInfo claims (`userInfo($accessToken, $mem
 
 ## Calling the Site API
 
-`$client->api()` calls the site's API as its administrator, with the token from `Config`; `$client->forMember($accessToken)->api()` calls it as a signed-in member, with the access token their sign-in returned. Each has `raw()`, the untyped calls underneath, for an operation the site has and this client was not written against; paths are the ones the site's API document names:
+`$client->api()` calls the site's API as its administrator, with the token from `Config`; `$client->forMember($accessToken)->api()` calls it as a signed-in member, with the access token their sign-in returned. Every operation of the Site API document has one typed method, on the client of the audience that may call it: the member's own data only on the member's, everything else only on the administrator's.
+
+Answers are small readonly models in `Appsolutely\Sdk\Model`. Ids are strings, times are `DateTimeImmutable` in UTC, money is an integer count of the currency's minor units beside its ISO 4217 `currency` (`1999` with `USD` is 19.99), and `$model->attributes` keeps the whole object as the site sent it, so a field added by a newer site stays readable. The document the client is written against is pinned at `Contract::REVISION`, a commit of the site software.
+
+### Pages, articles and products
 
 ```php
-use Appsolutely\Sdk\Exception\ApiException;
 use Appsolutely\Sdk\Exception\NotFoundException;
 use Appsolutely\Sdk\Exception\ValidationFailedException;
 
-$article = $client->api()->raw()->get('/api/v1/articles/' . rawurlencode($id))->data;
+$api = $client->api();
 
-$me = $client->forMember($tokens->accessToken)->api()->raw()->get('/api/v1/me')->data;
+foreach ($api->articles()->list(sort: 'published_at', order: 'desc') as $article) {
+    echo $article->title, ' ', $article->publishedAt->format(DATE_ATOM), "\n";
+}
+
+$article = $api->articles()->get($id);
+$created = $api->articles()->create(['title' => 'Hello', 'content' => '<p>Hi</p>', 'published_at' => new DateTimeImmutable()]);
+$created->value;          // the Article
+$created->replayed;       // see "Writes that must happen once"
 
 try {
-    $client->api()->raw()->patch('/api/v1/articles/' . rawurlencode($id), ['title' => $title]);
+    $api->articles()->update($id, ['title' => $title]);   // only the fields given change
 } catch (ValidationFailedException $exception) {
     $errors = $exception->errors;          // ['title' => ['The title field is required.']]
 } catch (NotFoundException) {
     // gone in the meantime
 }
+
+$page = $api->pages()->get($pageId);            // Model\ContentPage, so it is not mistaken for Api\Page
+$product = $api->products()->get($productId);   // $product->prices: one ProductPrice per currency
 ```
 
-Every call sends `Accept: application/json, application/problem+json`, the SDK's `User-Agent` and an `X-Request-Id`: a fresh UUID, or the one you pass as `requestId:` to tie the call to your own logs. A success is an `Api\ApiResponse`: the decoded resource in `$data` (null for a `204`), `$status`, `$location` for a created resource, `$requestId` as the site answered it, and `$rateLimit`, the budget the site states in its `RateLimit-Policy` and `RateLimit` headers, by quota name (`$response->rateLimit->quota('api:authenticated')?->remaining`).
-
-A list answers a page, `{"data": [...], "next_cursor": "..."}`. `paginate()` walks every item, asking for each next page only when iteration reaches it and stopping at the page without a cursor; `page()` fetches one page when you keep the cursor yourself, say between requests:
+### Orders, form entries, account states and webhook deliveries
 
 ```php
-foreach ($client->api()->raw()->paginate('/api/v1/orders', ['status' => 'paid'], limit: 100) as $order) {
-    // every paid order, 100 per request
+foreach ($api->orders()->list(sort: 'updated_at') as $order) {
+    $order->totalAmount;      // minor units of $order->currency
+    $order->items;            // list of OrderLine
 }
 
-$page = $client->api()->raw()->page('/api/v1/orders', ['status' => 'paid'], cursor: $savedCursor);
-$savedCursor = $page->nextCursor;      // null on the last page
+$entry = $api->formEntries()->get($entryId);   // $entry->data holds the answers, keyed by field
+
+$states = $api->accountStates()->list(['member-42', 'member-43']);   // one page, no cursor
+foreach ($states->items as $state) {
+    $state->entitlements;     // list of Entitlement
+}
+
+$failed = $api->webhookDeliveries()->list($subscription, status: 'failed', since: new DateTimeImmutable('-1 day'));
+$api->webhookDeliveries()->redeliver($subscription, $webhookId);
 ```
 
-`limit` runs from 1 to 100 (25 by default). The filters go with every page; the cursor is sealed by the site, so pass back `nextCursor` unchanged and never build one. `$paginator->pages()` yields whole `Api\Page`s, and `$paginator->map($fn)` converts each item as it is reached.
+### Sync feeds
+
+A pull returns what changed in one resource since a cursor; keep `nextCursor` and pull from it next time, until `hasMore` is false:
+
+```php
+$cursor = $savedCursor;   // null the first time
+do {
+    $pull = $api->sync()->articles()->pull($cursor);
+    foreach ($pull->upserts as $article) { /* created or changed */ }
+    foreach ($pull->tombstones as $tombstone) { /* $tombstone->id was deleted */ }
+    $cursor = $pull->nextCursor;
+} while ($pull->hasMore);
+
+$push = $api->sync()->articles()->push([
+    ['mutation_id' => 'm-1', 'op' => 'upsert', 'id' => $id, 'client_updated_at' => $editedAt, 'attributes' => ['title' => 'Hi']],
+]);
+$push->results[0]->applied;   // and ->reason, ->errors, ->serverRecord
+```
+
+Feeds exist for articles, form entries, orders, pages and products. A `410` `cursor-expired` refusal means records went without a tombstone since the cursor: pull again from the start.
+
+### The member's own data
+
+```php
+$member = $client->forMember($tokens->accessToken)->api();
+
+$me = $member->me()->get();
+$member->me()->update(name: 'Ada Lovelace');
+
+foreach ($member->me()->addresses()->list() as $address) { /* Model\Address */ }
+$filed = $member->me()->addresses()->create(['name' => 'Ada Lovelace', 'address' => '1 Main St']);
+$member->me()->addresses()->update($addressId, ['city' => 'Leeds']);
+$member->me()->addresses()->delete($addressId);
+
+$member->me()->orders()->list();
+$member->me()->entitlements()->list();                       // one page, no cursor
+$member->me()->billingEntry()->get('app_store', storefront: 'GB');
+$member->me()->pushDevices()->register($deviceToken, 'ios');
+$member->me()->pushDevices()->unregister($deviceToken);
+$member->me()->referral()->get();
+$member->me()->referral()->rewards();
+
+$member->sync()->addresses()->pull($cursor);                 // and ->push(), and ->orders()->pull()
+```
+
+### Without a credential
+
+The version record, the API document and the magic-link sign-in are open to anyone, so the client sends them without a credential even when it holds the administrator token:
+
+```php
+$version = $client->api()->version();         // ->status, ->deprecation, ->sunset, ->successor
+$document = $client->api()->openApiDocument();
+
+$client->api()->magicLink()->request($email, ['me:read', 'me:write'], 'Ada\'s phone', $codeChallenge);
+$token = $client->api()->magicLink()->exchange($link, $codeVerifier);
+$member = $client->forMember($token->token);
+```
+
+### Lists, answers and refusals
+
+A list method returns an `Api\Paginator` and sends no request until it is used. Iterating it walks every item, asking for each next page only when iteration reaches it and stopping at the page without a cursor; `page()` fetches one page, the first or the one a cursor kept from an earlier run asks for:
+
+```php
+$page = $client->api()->orders()->list(limit: 100)->page($savedCursor);
+$page->items;                           // list of Model\Order
+$savedCursor = $page->nextCursor;       // null on the last page
+```
+
+`limit` runs from 1 to 100 (25 by default). The cursor is sealed by the site, so pass back `nextCursor` unchanged and never build one. `$paginator->pages()` yields whole `Api\Page`s, and `$page->response` is the answer that carried the page.
+
+Every call sends `Accept: application/json, application/problem+json`, the SDK's `User-Agent` and an `X-Request-Id`. An answer that breaks the document, such as a required field missing or a time without an offset, is an `Exception\UnexpectedResponseException` naming the schema and the field, never a value read as something else.
 
 A refusal is thrown as an `Exception\ApiException` built from the site's RFC 9457 problem: `$type` (branch on it, or on `hasType('validation-failed')`), `$title`, `$status`, `$detail`, `$errors`, `$requestId`, `$retryAfter`, `$challenge` (the `WWW-Authenticate` header) and any other member through `extension('required_ability')`. `ValidationFailedException`, `NotFoundException`, `UnauthenticatedException`, `ForbiddenException`, `ConflictException`, `RateLimitedException` and `ServiceUnavailableException` extend it for the cases you are likely to handle; an answer that is not a problem (a proxy's error page) is an `ApiException` with `$isProblem` false and the raw `$body`. A request that never got an answer is an `Exception\TransportException`.
 
-### Writes that must happen once
+### Untyped calls
 
-Some writes, such as creating an article or filing a member's address, accept an `Idempotency-Key`. Send them with `postIdempotent()`: the client generates a UUID v4 key (or takes yours, 1 to 255 printable ASCII characters, one per operation) and sends the same key on every retry, so a retry after a lost answer is answered with the first answer instead of creating a second record:
+Each client's `raw()` gives the calls underneath the typed methods, with the same credential, headers, retries and refusals, for an operation the site has and this client was not written against. Paths are the ones the site's API document names; a success is an `Api\ApiResponse`: the decoded body in `$data` (null for a `204`), `$status`, `$location` for a created resource, `$requestId` as the site answered it, and `$rateLimit`, the budget the site states in its `RateLimit-Policy` and `RateLimit` headers, by quota name (`$response->rateLimit->quota('api:authenticated')?->remaining`):
 
 ```php
-$response = $client->forMember($accessToken)->api()->raw()->postIdempotent('/api/v1/me/addresses', $address);
-$response->replayed;          // true when this is the stored answer to an earlier attempt
-$response->idempotencyKey;    // the key that was sent
+$data = $client->api()->raw()->get('/api/v1/articles/' . rawurlencode($id), requestId: $traceId)->data;
+
+foreach ($client->api()->raw()->paginate('/api/v1/orders', ['status' => 'paid'], limit: 100) as $order) {
+    // every paid order as decoded JSON, 100 per request
+}
 ```
 
-Reads and keyed writes are retried after a network failure, a `429`, a `503`, and, for a keyed write, the `409` of an attempt with the same key still running. Each wait is what the site asks in `Retry-After` (or, on a `429` without it, until the spent quota in `RateLimit` turns over), otherwise a jittered backoff doubling from half a second. Other refusals are thrown at once, and so is a `500` under a key, whose outcome only reading the current state can settle; send the operation again under a new key if it still needs doing. `post()`, `put()`, `patch()` and `delete()` are never retried. Tune or turn this off in `Config`:
+### Writes that must happen once
+
+Creating an article, filing a member's address and redelivering a webhook accept an `Idempotency-Key`, and their methods always send one: yours (1 to 255 printable ASCII characters, one per operation) or a fresh UUID v4. The same key goes with every retry, so a retry after a lost answer is answered with the first answer instead of creating a second record, and the result says which key was sent and whether the answer was replayed:
+
+```php
+$filed = $member->me()->addresses()->create($address, idempotencyKey: $formSubmissionId);
+$filed->value;            // the Address
+$filed->replayed;         // true when this is the stored answer to an earlier attempt
+$filed->idempotencyKey;   // the key that was sent; send it again to retry the same write
+```
+
+Untyped, the same is `raw()->postIdempotent($path, $body, $key)`.
+
+Reads and keyed writes are retried after a network failure, a `429`, a `503`, and, for a keyed write, the `409` of an attempt with the same key still running. Each wait is what the site asks in `Retry-After` (or, on a `429` without it, until the spent quota in `RateLimit` turns over), otherwise a jittered backoff doubling from half a second. Other refusals are thrown at once, and so is a `500` under a key, whose outcome only reading the current state can settle; send the operation again under a new key if it still needs doing. Other writes (`update()`, `delete()`, a sync push, and `raw()`'s `post()`, `put()`, `patch()` and `delete()`) are never retried. Tune or turn this off in `Config`:
 
 ```php
 use Appsolutely\Sdk\Api\RetryPolicy;
