@@ -33,6 +33,11 @@ final readonly class SiteApi
 {
     public const string ACCEPT = 'application/json, application/problem+json';
 
+    /** The page size the site uses when none is sent, and the bounds it accepts. */
+    public const int DEFAULT_LIMIT = 25;
+    public const int MIN_LIMIT = 1;
+    public const int MAX_LIMIT = 100;
+
     private string $origin;
 
     /**
@@ -69,6 +74,33 @@ final readonly class SiteApi
     public function get(string $path, #[\SensitiveParameter] array $query = [], ?string $requestId = null): ApiResponse
     {
         return $this->call('GET', $path, $query, null, $requestId);
+    }
+
+    /**
+     * One page of a list.
+     *
+     * @param array<string, string|int|bool|null> $query the list's filters, the same for every page
+     * @param string|null $cursor the previous page's nextCursor, unchanged; null for the first page
+     * @return Page<array<string, mixed>>
+     */
+    public function page(string $path, #[\SensitiveParameter] array $query = [], int $limit = self::DEFAULT_LIMIT, ?string $cursor = null, ?string $requestId = null): Page
+    {
+        self::assertPaging($query, $limit);
+
+        return $this->fetchPage($path, $query, $limit, $cursor, $requestId);
+    }
+
+    /**
+     * Every item of a list, fetched page by page as iteration reaches it.
+     *
+     * @param array<string, string|int|bool|null> $query the list's filters, sent with every page
+     * @return Paginator<array<string, mixed>>
+     */
+    public function paginate(string $path, #[\SensitiveParameter] array $query = [], int $limit = self::DEFAULT_LIMIT): Paginator
+    {
+        self::assertPaging($query, $limit);
+
+        return new Paginator(fn(?string $cursor): Page => $this->fetchPage($path, $query, $limit, $cursor, null));
     }
 
     /**
@@ -129,6 +161,48 @@ final readonly class SiteApi
     public function __unserialize(array $data): void
     {
         throw new NotSerializableException('A SiteApi holds a bearer token and is not unserialized; obtain it again from its Client.');
+    }
+
+    /**
+     * @param array<string, string|int|bool|null> $query
+     * @return Page<array<string, mixed>>
+     */
+    private function fetchPage(string $path, #[\SensitiveParameter] array $query, int $limit, ?string $cursor, ?string $requestId): Page
+    {
+        $response = $this->call('GET', $path, [...$query, 'limit' => $limit, 'cursor' => $cursor], null, $requestId);
+        $data = $response->data;
+        $items = is_array($data) && !array_is_list($data) ? ($data['data'] ?? null) : null;
+        $next = is_array($data) ? ($data['next_cursor'] ?? null) : null;
+
+        if (!is_array($items) || !array_is_list($items) || ($next !== null && !is_string($next))) {
+            throw new UnexpectedResponseException(sprintf('GET %s did not answer a page of the form {data, next_cursor}.', Untrusted::text($path, Untrusted::MAX_LONG_LENGTH)), $response->status);
+        }
+
+        $objects = [];
+        foreach ($items as $item) {
+            if (!is_array($item) || ($item !== [] && array_is_list($item))) {
+                throw new UnexpectedResponseException(sprintf('GET %s answered a page whose items are not all objects.', Untrusted::text($path, Untrusted::MAX_LONG_LENGTH)), $response->status);
+            }
+            $objects[] = Json::stringKeys($item);
+        }
+
+        return new Page($objects, $next === '' ? null : $next, $response);
+    }
+
+    /**
+     * @param array<string, string|int|bool|null> $query
+     */
+    private static function assertPaging(#[\SensitiveParameter] array $query, int $limit): void
+    {
+        if ($limit < self::MIN_LIMIT || $limit > self::MAX_LIMIT) {
+            throw new InvalidArgumentValueException(sprintf('The page limit must be between %d and %d, got %d.', self::MIN_LIMIT, self::MAX_LIMIT, $limit));
+        }
+
+        foreach (['limit', 'cursor'] as $name) {
+            if (array_key_exists($name, $query)) {
+                throw new InvalidArgumentValueException(sprintf('"%s" is set by the client; pass the page size as $limit and follow the site\'s cursor rather than building one.', $name));
+            }
+        }
     }
 
     /**
