@@ -9,13 +9,10 @@ use Appsolutely\Sdk\Model\Entitlement;
 use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Tests\Support\SourceTokens;
 use PHPUnit\Framework\TestCase;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use ReflectionClass;
 use ReflectionNamedType;
 use ReflectionParameter;
 use SensitiveParameter;
-use SplFileInfo;
 
 /**
  * A parameter that can carry a secret or a token is marked
@@ -239,11 +236,7 @@ final class SensitiveParametersTest extends TestCase
      */
     private static function parameters(): iterable
     {
-        $root = dirname(__DIR__) . '/src';
-
-        /** @var SplFileInfo $file */
-        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
-            $class = 'Appsolutely\\Sdk\\' . str_replace('/', '\\', substr($file->getPathname(), strlen($root) + 1, -strlen('.php')));
+        foreach (SourceTokens::classNames() as $class) {
             if (!class_exists($class) && !interface_exists($class) && !enum_exists($class)) {
                 continue;
             }

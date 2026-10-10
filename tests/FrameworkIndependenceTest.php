@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests;
 
+use Appsolutely\Sdk\Tests\Support\SourceTokens;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
 
 /**
  * The package is framework-free and speaks to one site: its source names no
@@ -26,11 +24,8 @@ final class FrameworkIndependenceTest extends TestCase
      */
     public static function sourceFiles(): iterable
     {
-        $root = dirname(__DIR__) . '/src';
-
-        /** @var SplFileInfo $file */
-        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
-            yield substr($file->getPathname(), strlen($root) + 1) => [$file->getPathname()];
+        foreach (SourceTokens::files() as $file => $path) {
+            yield $file => [$path];
         }
     }
 

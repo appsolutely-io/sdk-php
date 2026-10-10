@@ -7,10 +7,7 @@ namespace Appsolutely\Sdk\Tests\Http;
 use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Tests\Support\SourceTokens;
 use PHPUnit\Framework\TestCase;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use ReflectionClass;
-use SplFileInfo;
 
 /**
  * A header field's name is written once, in Http\Header; the code that sends
@@ -241,12 +238,8 @@ final class HeaderTest extends TestCase
      */
     private static function headerParameters(): array
     {
-        $root = dirname(__DIR__, 2) . '/src';
         $places = [];
-
-        /** @var SplFileInfo $file */
-        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
-            $class = 'Appsolutely\\Sdk\\' . str_replace('/', '\\', substr($file->getPathname(), strlen($root) + 1, -strlen('.php')));
+        foreach (SourceTokens::classNames() as $class) {
             if (!class_exists($class)) {
                 continue;
             }

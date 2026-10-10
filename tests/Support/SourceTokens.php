@@ -9,10 +9,10 @@ use RecursiveIteratorIterator;
 use SplFileInfo;
 
 /**
- * The package's source read as PHP tokens, for tests that hold a rule over
- * how the code is written: whitespace and comments dropped, every token a
- * triple of its id (a T_* constant, or the character itself), its text and
- * its line.
+ * The package's source, for tests that hold a rule over all of it: the one
+ * walk of src/, by file, by the class each file declares, or read as PHP
+ * tokens with whitespace and comments dropped, every token a triple of its
+ * id (a T_* constant, or the character itself), its text and its line.
  *
  * @phpstan-type Token array{int|string, string, int}
  */
@@ -23,6 +23,40 @@ final class SourceTokens
 
     public const array CLOSERS = [')', ']', '}'];
 
+    /** The namespace src/ maps to. */
+    public const string ROOT_NAMESPACE = 'Appsolutely\\Sdk\\';
+
+    /**
+     * Every file under src/: its full path by its path under src/.
+     *
+     * @return iterable<string, string>
+     */
+    public static function files(): iterable
+    {
+        $root = dirname(__DIR__, 2) . '/src';
+
+        /** @var SplFileInfo $file */
+        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
+            yield substr($file->getPathname(), strlen($root) + 1) => $file->getPathname();
+        }
+    }
+
+    /**
+     * The name of the class, interface, trait or enum each PHP file under
+     * src/ declares by its path, by that path; whether it exists is for the
+     * caller to ask.
+     *
+     * @return iterable<string, string>
+     */
+    public static function classNames(): iterable
+    {
+        foreach (self::files() as $file => $path) {
+            if (str_ends_with($file, '.php')) {
+                yield $file => self::ROOT_NAMESPACE . str_replace('/', '\\', substr($file, 0, -strlen('.php')));
+            }
+        }
+    }
+
     /**
      * Every PHP file under src/, as tokens, by its path under src/.
      *
@@ -30,12 +64,9 @@ final class SourceTokens
      */
     public static function sources(): iterable
     {
-        $root = dirname(__DIR__, 2) . '/src';
-
-        /** @var SplFileInfo $file */
-        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
-            if ($file->getExtension() === 'php') {
-                yield substr($file->getPathname(), strlen($root) + 1) => self::of((string) file_get_contents($file->getPathname()));
+        foreach (self::files() as $file => $path) {
+            if (str_ends_with($file, '.php')) {
+                yield $file => self::of((string) file_get_contents($path));
             }
         }
     }
