@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Http;
 
 use Appsolutely\Sdk\Http\Header;
+use Appsolutely\Sdk\Tests\Support\SourceTokens;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -19,6 +20,8 @@ use SplFileInfo;
  * The source is read as PHP tokens, so only a whole string literal in the
  * place of a header name counts: a JSON member, an error message or a
  * comment that mentions a header is not one.
+ *
+ * @phpstan-import-type Token from SourceTokens
  */
 final class HeaderTest extends TestCase
 {
@@ -62,9 +65,9 @@ final class HeaderTest extends TestCase
                 if ($id !== T_STRING || !array_key_exists($method, self::NAME_ARGUMENTS) || ($tokens[$index + 1][0] ?? null) !== '(' || ($tokens[$index - 1][0] ?? null) === T_FUNCTION) {
                     continue;
                 }
-                foreach (self::arguments($tokens, $index + 1) as $position => $argument) {
+                foreach (SourceTokens::arguments($tokens, $index + 1) as $position => $argument) {
                     $positions = self::NAME_ARGUMENTS[$method];
-                    if (($positions === null || in_array($position, $positions, true)) && self::isLiteral($argument)) {
+                    if (($positions === null || in_array($position, $positions, true)) && SourceTokens::isLiteral($argument)) {
                         $found[] = sprintf('%s:%d %s(%s)', $file, $argument[0][2], $text, $argument[0][1]);
                     }
                 }
@@ -93,7 +96,7 @@ final class HeaderTest extends TestCase
 
     public function testTheRulesSeeTheHeaderNamesTheyAreMeantToRefuse(): void
     {
-        $tokens = self::tokens(<<<'PHP'
+        $tokens = SourceTokens::of(<<<'PHP'
             <?php
             $request->withHeader('X-Trace', 'v')->getHeaderLine("Accept");
             $this->header($all, 'webhook-id');
@@ -112,8 +115,8 @@ final class HeaderTest extends TestCase
         foreach ($tokens as $index => [$id, $text]) {
             if ($id === T_STRING && array_key_exists(strtolower($text), self::NAME_ARGUMENTS) && ($tokens[$index + 1][0] ?? null) === '(') {
                 $positions = self::NAME_ARGUMENTS[strtolower($text)];
-                foreach (self::arguments($tokens, $index + 1) as $position => $argument) {
-                    if (($positions === null || in_array($position, $positions, true)) && self::isLiteral($argument)) {
+                foreach (SourceTokens::arguments($tokens, $index + 1) as $position => $argument) {
+                    if (($positions === null || in_array($position, $positions, true)) && SourceTokens::isLiteral($argument)) {
                         $calls[] = $argument[0][1];
                     }
                 }
@@ -125,81 +128,25 @@ final class HeaderTest extends TestCase
     }
 
     /**
-     * Every source file but Header's, as tokens without whitespace and
-     * comments, by its path under src/.
+     * Every source file but Header's, as tokens.
      *
-     * @return iterable<string, list<array{int|string, string, int}>>
+     * @return iterable<string, list<Token>>
      */
     private static function sources(): iterable
     {
-        $root = dirname(__DIR__, 2) . '/src';
-        $header = realpath($root . '/Http/Header.php');
-
-        /** @var SplFileInfo $file */
-        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
-            if ($file->getRealPath() !== $header && $file->getExtension() === 'php') {
-                yield substr($file->getPathname(), strlen($root) + 1) => self::tokens((string) file_get_contents($file->getPathname()));
+        foreach (SourceTokens::sources() as $file => $tokens) {
+            if ($file !== 'Http/Header.php') {
+                yield $file => $tokens;
             }
         }
-    }
-
-    /**
-     * @return list<array{int|string, string, int}>
-     */
-    private static function tokens(string $source): array
-    {
-        $tokens = [];
-        $line = 1;
-        foreach (token_get_all($source) as $token) {
-            if (is_array($token)) {
-                $line = $token[2];
-                if (!in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT, T_OPEN_TAG], true)) {
-                    $tokens[] = [$token[0], $token[1], $line];
-                }
-            } else {
-                $tokens[] = [$token, $token, $line];
-            }
-        }
-
-        return $tokens;
-    }
-
-    /**
-     * The arguments of the call whose opening parenthesis is at $open, each
-     * as its tokens.
-     *
-     * @param list<array{int|string, string, int}> $tokens
-     * @return list<list<array{int|string, string, int}>>
-     */
-    private static function arguments(array $tokens, int $open): array
-    {
-        $arguments = [[]];
-        $depth = 0;
-        for ($index = $open + 1; $index < count($tokens); $index++) {
-            $id = $tokens[$index][0];
-            if (in_array($id, ['(', '[', '{', T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES], true)) {
-                $depth++;
-            } elseif (in_array($id, [')', ']', '}'], true)) {
-                if ($depth === 0) {
-                    break;
-                }
-                $depth--;
-            } elseif ($id === ',' && $depth === 0) {
-                $arguments[] = [];
-                continue;
-            }
-            $arguments[array_key_last($arguments)][] = $tokens[$index];
-        }
-
-        return $arguments;
     }
 
     /**
      * The string-literal keys of every header array, and the string-literal
      * offsets of `$headers[...]`.
      *
-     * @param list<array{int|string, string, int}> $tokens
-     * @return list<array{int|string, string, int}>
+     * @param list<Token> $tokens
+     * @return list<Token>
      */
     private static function headerArrayKeys(array $tokens): array
     {
@@ -213,14 +160,14 @@ final class HeaderTest extends TestCase
         foreach ($tokens as $index => $token) {
             $id = $token[0];
             $before = $tokens[$index - 1][0] ?? null;
-            if (in_array($id, ['[', '(', '{', T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES], true)) {
+            if (in_array($id, SourceTokens::OPENERS, true)) {
                 $isArray = ($id === '[' && !in_array($before, [T_VARIABLE, ']', ')', '}', T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_CONSTANT_ENCAPSED_STRING], true))
                     || ($id === '(' && $before === T_ARRAY);
                 $parent = $frames === [] ? null : $frames[array_key_last($frames)];
                 $isArgument = $parent !== null && $element === [] && in_array($parent['position'], $parameters[$parent['callee']] ?? [], true);
                 if ($id === '[' && $before === T_VARIABLE && preg_match('/headers$/i', $tokens[$index - 1][1]) === 1) {
-                    $offset = self::arguments($tokens, $index)[0];
-                    if (self::isLiteral($offset)) {
+                    $offset = SourceTokens::arguments($tokens, $index)[0];
+                    if (SourceTokens::isLiteral($offset)) {
                         $found[] = $offset[0];
                     }
                 }
@@ -236,7 +183,7 @@ final class HeaderTest extends TestCase
 
                 continue;
             }
-            if ($frames !== [] && in_array($id, [']', ')', '}'], true)) {
+            if ($frames !== [] && in_array($id, SourceTokens::CLOSERS, true)) {
                 $frame = array_pop($frames);
                 if ($frame['headers']) {
                     $found = [...$found, ...$frame['keys']];
@@ -253,7 +200,7 @@ final class HeaderTest extends TestCase
                 continue;
             }
             if ($top !== null && $frames[$top]['array'] && $id === T_DOUBLE_ARROW && !in_array(T_DOUBLE_ARROW, array_column($element, 0), true)) {
-                if (self::isLiteral($element)) {
+                if (SourceTokens::isLiteral($element)) {
                     $frames[$top]['keys'][] = $element[0];
                 } elseif (count($element) === 3 && $element[0][1] === 'Header' && $element[1][0] === T_DOUBLE_COLON) {
                     $frames[$top]['headers'] = true;
@@ -269,7 +216,7 @@ final class HeaderTest extends TestCase
      * The name of the call whose argument list opens at $index, lower case,
      * as `new <class>` for a constructor; empty when it is no call.
      *
-     * @param list<array{int|string, string, int}> $tokens
+     * @param list<Token> $tokens
      */
     private static function callee(array $tokens, int $index): string
     {
@@ -326,7 +273,7 @@ final class HeaderTest extends TestCase
      * Whether the bracket at $index opens what is assigned to `$headers`
      * (or a variable ending so) or passed as the named argument `headers`.
      *
-     * @param list<array{int|string, string, int}> $tokens
+     * @param list<Token> $tokens
      */
     private static function isNamedHeaders(array $tokens, int $index): bool
     {
@@ -338,15 +285,6 @@ final class HeaderTest extends TestCase
 
         return ($operator[0] === '=' && $name[0] === T_VARIABLE && preg_match('/headers$/i', $name[1]) === 1)
             || ($operator[0] === ':' && $name[0] === T_STRING && $name[1] === 'headers');
-    }
-
-    /**
-     * @param list<array{int|string, string, int}> $tokens
-     * @phpstan-assert-if-true non-empty-list<array{int|string, string, int}> $tokens
-     */
-    private static function isLiteral(array $tokens): bool
-    {
-        return count($tokens) === 1 && $tokens[0][0] === T_CONSTANT_ENCAPSED_STRING;
     }
 
     private static function unquote(string $literal): string
