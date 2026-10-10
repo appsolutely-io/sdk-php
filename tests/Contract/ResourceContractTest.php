@@ -98,17 +98,42 @@ final class ResourceContractTest extends TestCase
 
     /**
      * Fields the pinned document types otherwise than the site sends them,
-     * where the model follows the site: sampled as the site sends them.
-     * An entry goes once the pinned document agrees with the site.
+     * where the model follows the site: sampled as the site sends them. Each
+     * names what the document declares (its description aside), and the
+     * override applies only while the document still declares exactly that,
+     * so a document that changes, to agree with the site or otherwise, fails
+     * until the entry is dropped or rewritten.
      *
      * The document declares an order's `status` an integer; the site sends
      * its order status as a string (`shipped`). It leaves an account's
      * `totals` an open object; the site sends a quantity per key.
      */
     private const array AS_THE_SITE_SENDS = [
-        'Order' => ['status' => 'shipped'],
-        'AccountState' => ['totals' => ['seats' => 3]],
+        'Order' => [
+            'status' => ['document' => ['oneOf' => [['type' => 'integer'], ['type' => 'null']]], 'site' => 'shipped'],
+        ],
+        'AccountState' => [
+            'totals' => ['document' => ['type' => 'object', 'additionalProperties' => true], 'site' => ['seats' => 3]],
+        ],
     ];
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function siteOverrides(): iterable
+    {
+        foreach (self::AS_THE_SITE_SENDS as $schema => $fields) {
+            foreach (array_keys($fields) as $field) {
+                yield $schema . '.' . $field => [$schema, $field];
+            }
+        }
+    }
+
+    #[DataProvider('siteOverrides')]
+    public function testEachFieldSampledAsTheSiteSendsItIsStillDeclaredOtherwise(string $schema, string $field): void
+    {
+        self::assertArrayHasKey($field, self::siteOverridesOf($schema));
+    }
 
     /**
      * @return iterable<string, array{class-string, string}>
@@ -422,7 +447,33 @@ final class ResourceContractTest extends TestCase
      */
     private static function sampleOf(string $name): array
     {
-        return [...Document::map(self::sample(Document::schema($name))), ...(self::AS_THE_SITE_SENDS[$name] ?? [])];
+        return [...Document::map(self::sample(Document::schema($name))), ...self::siteOverridesOf($name)];
+    }
+
+    /**
+     * The fields of a schema to sample as the site sends them, each once
+     * the document is shown to still declare what the override was written
+     * against.
+     *
+     * @return array<string, mixed>
+     */
+    private static function siteOverridesOf(string $name): array
+    {
+        $overrides = [];
+        $properties = Document::map(Document::schema($name)['properties'] ?? null);
+        foreach (Document::map(self::AS_THE_SITE_SENDS[$name] ?? null) as $field => $override) {
+            $override = Document::map($override);
+            $declared = Document::map($properties[$field] ?? null);
+            unset($declared['description']);
+            self::assertSame($override['document'], $declared, sprintf(
+                'The pinned document now declares %s.%s otherwise than the override in AS_THE_SITE_SENDS was written against: drop the entry if the document agrees with what the site sends, or rewrite it.',
+                $name,
+                $field,
+            ));
+            $overrides[$field] = $override['site'];
+        }
+
+        return $overrides;
     }
 
     /**
