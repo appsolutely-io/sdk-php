@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Contract;
 
 use Appsolutely\Sdk\Contract;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Yaml\Yaml;
 
@@ -23,8 +24,9 @@ final class PinContractTest extends TestCase
     private const string CONTRACT_FILE = 'src/Contract.php';
     private const string DOCUMENT_COPY = 'tests/Contract/openapi.yaml';
     private const string SITE_DOCUMENT = 'docs/api/openapi.yaml';
-    /** What a run writes beside a file before renaming it into place. */
+    /** What a run leaves beside a file it writes: the new contents, and the original until both are in place. */
     private const string PINNING = '.pinning';
+    private const string UNPINNED = '.unpinned';
 
     private string $scratch;
 
@@ -126,6 +128,62 @@ final class PinContractTest extends TestCase
         self::assertFileExists($this->package(self::DOCUMENT_COPY . '/kept'));
         self::assertSame([basename(self::CONTRACT_FILE)], array_values(array_diff((array) scandir(dirname($this->package(self::CONTRACT_FILE))), ['.', '..'])));
         self::assertSame([basename(self::DOCUMENT_COPY)], array_values(array_diff((array) scandir(dirname($this->package(self::DOCUMENT_COPY))), ['.', '..'])));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function leftovers(): iterable
+    {
+        foreach ([self::CONTRACT_FILE, self::DOCUMENT_COPY] as $file) {
+            foreach ([self::PINNING, self::UNPINNED] as $suffix) {
+                yield $file . $suffix => [$file . $suffix];
+            }
+        }
+    }
+
+    #[DataProvider('leftovers')]
+    public function testAFileLeftByAnEarlierRunThatFailedIsRefusedBeforeAnythingChanges(string $leftover): void
+    {
+        $this->commitDocument(self::DOCUMENT);
+        $before = (string) file_get_contents($this->package(self::CONTRACT_FILE));
+        file_put_contents($this->package($leftover), "kept\n");
+
+        [$exitCode, $output] = $this->pin('main');
+
+        self::assertNotSame(0, $exitCode, $output);
+        self::assertStringContainsString($leftover, $output);
+        self::assertSame("kept\n", file_get_contents($this->package($leftover)));
+        self::assertSame($before, file_get_contents($this->package(self::CONTRACT_FILE)));
+        self::assertFileDoesNotExist($this->package(self::DOCUMENT_COPY));
+    }
+
+    public function testAPinnedFileKeepsItsMode(): void
+    {
+        $this->commitDocument(self::DOCUMENT);
+        chmod($this->package(self::CONTRACT_FILE), 0o640);
+
+        [$exitCode, $output] = $this->pin('main');
+
+        self::assertSame(0, $exitCode, $output);
+        clearstatcache();
+        self::assertSame(0o640, fileperms($this->package(self::CONTRACT_FILE)) & 0o7777);
+    }
+
+    public function testAFilePutBackKeepsItsMode(): void
+    {
+        $this->commitDocument(self::DOCUMENT);
+        chmod($this->package(self::CONTRACT_FILE), 0o640);
+        // As above: the revision is renamed into place before the
+        // document's rename fails, so the revision is put back.
+        mkdir($this->package(self::DOCUMENT_COPY));
+        touch($this->package(self::DOCUMENT_COPY . '/kept'));
+
+        [$exitCode, $output] = $this->pin('main');
+
+        self::assertNotSame(0, $exitCode, $output);
+        clearstatcache();
+        self::assertSame(0o640, fileperms($this->package(self::CONTRACT_FILE)) & 0o7777);
     }
 
     public function testTheUsageNamesEveryOption(): void

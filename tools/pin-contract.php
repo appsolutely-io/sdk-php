@@ -13,8 +13,9 @@ declare(strict_types=1);
  * different commits: both are written to temporary files first and only then
  * renamed into place, and the originals are backed up first and put back
  * when a rename fails, so nothing is changed when either cannot be read or
- * written. `--root=` pins another copy of this package than the one the tool
- * sits in.
+ * written; each file keeps its permissions. A run that finds a file such a
+ * failed run left behind refuses to start until it is dealt with. `--root=`
+ * pins another copy of this package than the one the tool sits in.
  */
 
 const DOCUMENT = 'docs/api/openapi.yaml';
@@ -61,7 +62,37 @@ function git(string $checkout, array $arguments): array
 }
 
 /**
- * Writes every file beside its path first, then backs up each original and
+ * Refuses to start while a file an earlier run wrote beside a path is still
+ * there: that run failed without cleaning up, and its backup may be the
+ * only copy of an original, which this run would overwrite and remove.
+ *
+ * @param list<string> $paths
+ */
+function refuseLeftovers(array $paths): void
+{
+    foreach ($paths as $path) {
+        if (is_file($path . UNPINNED)) {
+            fail(sprintf('%s holds the original of %s from an earlier run that failed: put it back over %s or remove it, then run again.', $path . UNPINNED, $path, $path));
+        }
+        if (is_file($path . PINNING)) {
+            fail(sprintf('%s holds what an earlier run that failed meant to write: remove it, then run again.', $path . PINNING));
+        }
+    }
+}
+
+/**
+ * Gives $to the permissions of $from.
+ */
+function keepMode(string $from, string $to): bool
+{
+    $mode = @fileperms($from);
+
+    return $mode !== false && @chmod($to, $mode & 0o7777);
+}
+
+/**
+ * Writes every file beside its path first, with the original's
+ * permissions, then backs up each original with its permissions and
  * renames the new files into place only once all are written. A failure
  * before the renames removes what was written; a rename that fails after
  * others succeeded puts the originals back, so the files change together
@@ -74,7 +105,7 @@ function writeAll(array $files): void
     $temporaries = [];
     foreach ($files as $path => $contents) {
         $temporary = $path . PINNING;
-        if (@file_put_contents($temporary, $contents) !== strlen($contents)) {
+        if (@file_put_contents($temporary, $contents) !== strlen($contents) || (is_file($path) && !keepMode($path, $temporary))) {
             if (is_file($temporary)) {
                 $temporaries[] = $temporary;
             }
@@ -87,7 +118,7 @@ function writeAll(array $files): void
     $backups = [];
     foreach (array_keys($files) as $path) {
         if (is_file($path)) {
-            if (!@copy($path, $path . UNPINNED)) {
+            if (!@copy($path, $path . UNPINNED) || !keepMode($path, $path . UNPINNED)) {
                 removeAll([...$temporaries, ...array_values($backups), $path . UNPINNED]);
                 fail(sprintf('%s could not be backed up.', $path));
             }
@@ -167,6 +198,9 @@ if (count($arguments) !== 2) {
     fail(USAGE);
 }
 [$checkout, $ref] = $arguments;
+$contractPath = $root . '/' . CONTRACT_FILE;
+$documentPath = $root . '/' . DOCUMENT_COPY;
+refuseLeftovers([$contractPath, $documentPath]);
 
 [$exitCode, $commit, $error] = git($checkout, ['rev-parse', '--verify', '--quiet', '--end-of-options', $ref . '^{commit}']);
 $commit = trim($commit);
@@ -179,7 +213,6 @@ if ($exitCode !== 0 || $document === '') {
     fail(sprintf('%s has no %s at %s. %s', $checkout, DOCUMENT, $commit, trim($error)));
 }
 
-$contractPath = $root . '/' . CONTRACT_FILE;
 $contract = file_get_contents($contractPath);
 if ($contract === false) {
     fail(sprintf('%s could not be read.', $contractPath));
@@ -191,7 +224,7 @@ if ($pinned === null || $count !== 1) {
 
 writeAll([
     $contractPath => $pinned,
-    $root . '/' . DOCUMENT_COPY => $document,
+    $documentPath => $document,
 ]);
 
 fwrite(STDOUT, sprintf("Pinned %s at %s (%s).\n", DOCUMENT, $commit, $ref));
