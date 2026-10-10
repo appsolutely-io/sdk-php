@@ -100,6 +100,26 @@ final class PinContractTest extends TestCase
         self::assertSame($before, file_get_contents($this->scratch . '/package/src/Contract.php'));
     }
 
+    public function testWhenTheDocumentCannotBeRenamedIntoPlaceTheRevisionIsPutBack(): void
+    {
+        $this->commitDocument(self::DOCUMENT);
+        $before = (string) file_get_contents($this->scratch . '/package/src/Contract.php');
+        // A directory with something in it where the document goes: both
+        // temporary files are written and the revision is renamed into
+        // place before the document's rename fails, whoever runs the suite.
+        mkdir($this->scratch . '/package/tests/Contract/openapi.yaml');
+        touch($this->scratch . '/package/tests/Contract/openapi.yaml/kept');
+
+        [$exitCode, $output] = $this->pin('main');
+
+        self::assertNotSame(0, $exitCode, $output);
+        self::assertStringContainsString('openapi.yaml', $output);
+        self::assertSame($before, file_get_contents($this->scratch . '/package/src/Contract.php'));
+        self::assertFileExists($this->scratch . '/package/tests/Contract/openapi.yaml/kept');
+        self::assertSame(['Contract.php'], array_values(array_diff((array) scandir($this->scratch . '/package/src'), ['.', '..'])));
+        self::assertSame(['openapi.yaml'], array_values(array_diff((array) scandir($this->scratch . '/package/tests/Contract'), ['.', '..'])));
+    }
+
     public function testTheUsageNamesEveryOption(): void
     {
         [, $output] = $this->execute([PHP_BINARY, dirname(__DIR__, 2) . '/tools/pin-contract.php']);
