@@ -15,7 +15,7 @@ final readonly class PingEvent extends TypedEvent
 {
     /**
      * @param string $subscriptionId the subscription's reference, as its screen shows it
-     * @param array<string, mixed> $extra fields the site sent that this class does not name
+     * @param array<array-key, mixed> $extra fields the site sent that this class does not name
      */
     public function __construct(
         Event $envelope,

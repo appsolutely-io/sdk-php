@@ -155,6 +155,19 @@ final class FieldsTest extends TestCase
         self::assertSame(['also_later' => true], $child->extra());
     }
 
+    /**
+     * PHP keeps a member named like a decimal integer under an integer key,
+     * whatever it is cast to, so maps and extras are keyed by array-key.
+     */
+    public function testAMemberNamedLikeANumberIsKeptUnderAnIntegerKey(): void
+    {
+        $fields = Fields::of(json_decode('{"totals":{"7":2,"seats":3},"8":"later","data":{"9":"x"}}', true, 512, JSON_THROW_ON_ERROR), 'Thing');
+
+        self::assertSame([7 => 2, 'seats' => 3], $fields->intMap('totals'));
+        self::assertSame([9 => 'x'], $fields->map('data'));
+        self::assertSame([8 => 'later'], $fields->extra());
+    }
+
     public function testTheFieldsReadAreRecordedWithTheirPath(): void
     {
         $fields = Fields::of(['id' => 'a', 'child' => ['id' => 'c'], 'children' => [['id' => 'd']], 'missing' => null], 'Thing');

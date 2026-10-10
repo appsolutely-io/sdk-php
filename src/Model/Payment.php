@@ -12,7 +12,7 @@ final readonly class Payment
 {
     /**
      * @param int $amount in the minor unit of `$currency`
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $reference,

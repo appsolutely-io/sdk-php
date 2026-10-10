@@ -27,7 +27,7 @@ final readonly class ReferralReward
      * @param string $state such as `held`, `available` or `spent`
      * @param int $value in the minor units of $currency
      * @param string|null $code the coupon code, which spends the credit for whoever holds it
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,

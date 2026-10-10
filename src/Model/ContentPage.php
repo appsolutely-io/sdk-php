@@ -19,7 +19,7 @@ final readonly class ContentPage
     /**
      * @param string|null $parentId the id of the page this one sits under
      * @param int|null $status 1 when active, 0 when not
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,

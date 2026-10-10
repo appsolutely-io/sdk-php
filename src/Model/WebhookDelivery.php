@@ -18,7 +18,7 @@ final readonly class WebhookDelivery
      * @param string $webhookId the event's id, sent as `webhook-id`
      * @param string $type such as `order.paid`
      * @param string $status `pending`, `succeeded` or `failed`
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $webhookId,

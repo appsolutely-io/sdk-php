@@ -17,7 +17,7 @@ final readonly class MagicLinkToken
     /**
      * @param string $token the member's bearer token; pass it to Client::forMember()
      * @param list<string> $abilities what the token may do, such as `me:read`
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         #[\SensitiveParameter]

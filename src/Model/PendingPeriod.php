@@ -15,7 +15,7 @@ final readonly class PendingPeriod
 {
     /**
      * @param string $status where the period's payment stands, such as `pending` or `settling`
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public DateTimeImmutable $start,

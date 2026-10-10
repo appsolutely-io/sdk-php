@@ -19,7 +19,7 @@ final readonly class Subscription
      * @param string|null $transitionCause what moved it to its current status
      * @param string|null $recoveryReason why a payment is being recovered
      * @param string|null $subjectReference what the subscription is for beyond the account it bills
-     * @param array<string, mixed> $extra the members the site sent that this class has no property for, as decoded
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,
