@@ -37,7 +37,7 @@ class ApiException extends RuntimeException implements AppsolutelyException
      * @internal built by the client from the site's answer
      *
      * @param array<string, list<string>> $errors
-     * @param array<string, mixed> $problem
+     * @param array<array-key, mixed> $problem
      */
     final public function __construct(
         public readonly int $status,

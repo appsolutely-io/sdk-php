@@ -14,11 +14,11 @@ final class Document
 {
     public const array METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'];
 
-    /** @var array<string, mixed>|null */
+    /** @var array<array-key, mixed>|null */
     private static ?array $document = null;
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public static function get(): array
     {
@@ -27,7 +27,7 @@ final class Document
             if (!is_array($document)) {
                 throw new RuntimeException('The pinned document is not a YAML mapping.');
             }
-            self::$document = self::stringKeys($document);
+            self::$document = $document;
         }
 
         return self::$document;
@@ -36,7 +36,7 @@ final class Document
     /**
      * Every operation, keyed by operationId.
      *
-     * @return array<string, array{method: string, path: string, operation: array<string, mixed>, parameters: list<array<string, mixed>>}>
+     * @return array<string, array{method: string, path: string, operation: array<array-key, mixed>, parameters: list<array<array-key, mixed>>}>
      */
     public static function operations(): array
     {
@@ -66,7 +66,7 @@ final class Document
     /**
      * A component schema by name.
      *
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public static function schema(string $name): array
     {
@@ -79,7 +79,7 @@ final class Document
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public static function schemas(): array
     {
@@ -89,8 +89,8 @@ final class Document
     /**
      * The schema a `$ref` points at, or the value itself.
      *
-     * @param array<string, mixed> $value
-     * @return array<string, mixed>
+     * @param array<array-key, mixed> $value
+     * @return array<array-key, mixed>
      */
     public static function resolve(array $value): array
     {
@@ -108,7 +108,7 @@ final class Document
     /**
      * The name of the component a `$ref` points at, or null.
      *
-     * @param array<string, mixed> $value
+     * @param array<array-key, mixed> $value
      */
     public static function refName(array $value): ?string
     {
@@ -118,11 +118,11 @@ final class Document
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public static function map(mixed $value): array
     {
-        return is_array($value) ? self::stringKeys($value) : [];
+        return is_array($value) ? $value : [];
     }
 
     /**
@@ -131,19 +131,5 @@ final class Document
     public static function list(mixed $value): array
     {
         return is_array($value) ? array_values($value) : [];
-    }
-
-    /**
-     * @param array<mixed> $value
-     * @return array<string, mixed>
-     */
-    private static function stringKeys(array $value): array
-    {
-        $strings = [];
-        foreach ($value as $key => $member) {
-            $strings[(string) $key] = $member;
-        }
-
-        return $strings;
     }
 }

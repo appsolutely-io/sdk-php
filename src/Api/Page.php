@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Api;
 
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
-use Appsolutely\Sdk\Http\Json;
 use Appsolutely\Sdk\Support\Untrusted;
 use Closure;
 
@@ -34,7 +33,7 @@ final readonly class Page
      *
      * @internal
      *
-     * @return self<array<string, mixed>>
+     * @return self<array<array-key, mixed>>
      */
     public static function fromResponse(ApiResponse $response, string $path): self
     {
@@ -51,7 +50,7 @@ final readonly class Page
             if (!is_array($item) || ($item !== [] && array_is_list($item))) {
                 throw new UnexpectedResponseException(sprintf('GET %s answered a page whose items are not all objects.', Untrusted::text($path, Untrusted::MAX_LONG_LENGTH)), $response->status);
             }
-            $objects[] = Json::stringKeys($item);
+            $objects[] = $item;
         }
 
         return new self($objects, $next === '' ? null : $next, $response);

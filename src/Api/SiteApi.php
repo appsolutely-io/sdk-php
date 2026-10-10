@@ -12,7 +12,6 @@ use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\BearerToken;
 use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\HttpTransport;
-use Appsolutely\Sdk\Http\Json;
 use Appsolutely\Sdk\Http\SecureUrl;
 use Appsolutely\Sdk\Support\Untrusted;
 use Appsolutely\Sdk\Support\Uuid;
@@ -98,7 +97,7 @@ final readonly class SiteApi
      *
      * @param array<string, string|int|bool|list<string>|null> $query the list's filters, the same for every page
      * @param string|null $cursor the previous page's nextCursor, unchanged; null for the first page
-     * @return Page<array<string, mixed>>
+     * @return Page<array<array-key, mixed>>
      */
     public function page(string $path, #[\SensitiveParameter] array $query = [], int $limit = self::DEFAULT_LIMIT, ?string $cursor = null, ?string $requestId = null): Page
     {
@@ -111,7 +110,7 @@ final readonly class SiteApi
      * Every item of a list, fetched page by page as iteration reaches it.
      *
      * @param array<string, string|int|bool|list<string>|null> $query the list's filters, sent with every page
-     * @return Paginator<array<string, mixed>>
+     * @return Paginator<array<array-key, mixed>>
      */
     public function paginate(string $path, #[\SensitiveParameter] array $query = [], int $limit = self::DEFAULT_LIMIT): Paginator
     {
@@ -202,7 +201,7 @@ final readonly class SiteApi
 
     /**
      * @param array<string, string|int|bool|list<string>|null> $query
-     * @return Page<array<string, mixed>>
+     * @return Page<array<array-key, mixed>>
      */
     private function fetchPage(string $path, #[\SensitiveParameter] array $query, int $limit, ?string $cursor, ?string $requestId): Page
     {
@@ -329,7 +328,7 @@ final readonly class SiteApi
             if (!is_array($decoded)) {
                 throw new UnexpectedResponseException(sprintf('%s %s answered %d with a body that is not a JSON object or list.', $method, Untrusted::text($path, Untrusted::MAX_LONG_LENGTH), $status), $status);
             }
-            $data = array_is_list($decoded) ? $decoded : Json::stringKeys($decoded);
+            $data = $decoded;
         }
 
         $answeredId = $response->getHeaderLine(Header::REQUEST_ID);

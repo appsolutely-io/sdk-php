@@ -12,9 +12,11 @@ use JsonException;
 final class Json
 {
     /**
-     * A JSON object as an associative array, or null for anything else.
+     * A JSON object as an associative array, or null for anything else. A
+     * member named like a decimal integer has an integer key: PHP turns
+     * such a key into an integer whatever it is cast to.
      *
-     * @return array<string, mixed>|null
+     * @return array<array-key, mixed>|null
      */
     public static function decodeObject(string $json): ?array
     {
@@ -28,24 +30,6 @@ final class Json
             return null;
         }
 
-        return self::stringKeys($value);
-    }
-
-    /**
-     * A decoded JSON object with its keys as strings: json_decode() turns a
-     * key such as "1" into an integer, which the array<string, mixed> type
-     * of every object this client reads does not allow.
-     *
-     * @param array<mixed> $object
-     * @return array<string, mixed>
-     */
-    public static function stringKeys(array $object): array
-    {
-        $strings = [];
-        foreach ($object as $key => $member) {
-            $strings[(string) $key] = $member;
-        }
-
-        return $strings;
+        return $value;
     }
 }

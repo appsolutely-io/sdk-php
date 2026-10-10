@@ -36,7 +36,7 @@ final readonly class ProviderMetadata
     /**
      * @internal the client builds it from the discovery document it fetched
      *
-     * @param array<string, mixed> $document
+     * @param array<array-key, mixed> $document
      */
     public static function fromArray(array $document): self
     {
@@ -59,7 +59,7 @@ final readonly class ProviderMetadata
     }
 
     /**
-     * @param array<string, mixed> $document
+     * @param array<array-key, mixed> $document
      */
     private static function requiredEndpoint(array $document, string $name): string
     {
@@ -71,7 +71,7 @@ final readonly class ProviderMetadata
      * the refusal of what parsers read differently: the client sends its
      * secret, codes and tokens to them and takes its keys from one.
      *
-     * @param array<string, mixed> $document
+     * @param array<array-key, mixed> $document
      */
     private static function optionalEndpoint(array $document, string $name): ?string
     {
@@ -84,7 +84,7 @@ final readonly class ProviderMetadata
     }
 
     /**
-     * @param array<string, mixed> $document
+     * @param array<array-key, mixed> $document
      */
     private static function requiredString(array $document, string $name): string
     {
@@ -92,7 +92,7 @@ final readonly class ProviderMetadata
     }
 
     /**
-     * @param array<string, mixed> $document
+     * @param array<array-key, mixed> $document
      */
     private static function optionalString(array $document, string $name): ?string
     {
@@ -108,7 +108,7 @@ final readonly class ProviderMetadata
     }
 
     /**
-     * @param array<string, mixed> $document
+     * @param array<array-key, mixed> $document
      * @return list<string>|null
      */
     private static function stringList(array $document, string $name): ?array
