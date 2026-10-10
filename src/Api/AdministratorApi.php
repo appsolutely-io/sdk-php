@@ -12,6 +12,7 @@ use Appsolutely\Sdk\Resource\MagicLink;
 use Appsolutely\Sdk\Resource\Orders;
 use Appsolutely\Sdk\Resource\Pages;
 use Appsolutely\Sdk\Resource\Products;
+use Appsolutely\Sdk\Resource\Sync;
 use Appsolutely\Sdk\Resource\WebhookDeliveries;
 
 /**
@@ -102,5 +103,10 @@ final readonly class AdministratorApi
     public function webhookDeliveries(): WebhookDeliveries
     {
         return new WebhookDeliveries($this->administrator);
+    }
+
+    public function sync(): Sync
+    {
+        return new Sync($this->administrator);
     }
 }

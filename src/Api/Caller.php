@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Api;
 
+use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Model\Fields;
 use Closure;
@@ -175,6 +176,22 @@ final readonly class Caller
 
         /** @var array<string, mixed> $data the decoded answer's keys are made strings */
         return $data;
+    }
+
+    /**
+     * The query of a sync pull: the cursor to resume from, and a page size
+     * the site bounds itself (100 by default, up to 500 unless the site is
+     * configured otherwise), so only one below 1 is refused here.
+     *
+     * @return array{cursor: string|null, limit: int|null}
+     */
+    public static function feed(?string $cursor, ?int $limit): array
+    {
+        if ($limit !== null && $limit < 1) {
+            throw new InvalidArgumentValueException(sprintf('A sync pull\'s limit must be at least 1, got %d.', $limit));
+        }
+
+        return ['cursor' => $cursor, 'limit' => $limit];
     }
 
     /**
