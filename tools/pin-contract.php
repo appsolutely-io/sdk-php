@@ -14,8 +14,10 @@ declare(strict_types=1);
  * renamed into place, and the originals are backed up first and put back
  * when a rename fails, so nothing is changed when either cannot be read or
  * written; each file keeps its permissions. A run that finds a file such a
- * failed run left behind refuses to start until it is dealt with. `--root=`
- * pins another copy of this package than the one the tool sits in.
+ * failed run left behind refuses to start until it is dealt with; a backup
+ * a run that succeeded could not remove is named in a warning as safe to
+ * delete. `--root=` pins another copy of this package than the one the
+ * tool sits in.
  */
 
 const DOCUMENT = 'docs/api/openapi.yaml';
@@ -99,8 +101,9 @@ function keepMode(string $from, string $to): bool
  * or not at all.
  *
  * @param array<string, string> $files contents by path
+ * @return list<string> a warning for each backup left behind once every file is in place
  */
-function writeAll(array $files): void
+function writeAll(array $files): array
 {
     $temporaries = [];
     foreach ($files as $path => $contents) {
@@ -109,8 +112,7 @@ function writeAll(array $files): void
             if (is_file($temporary)) {
                 $temporaries[] = $temporary;
             }
-            removeAll($temporaries);
-            fail(sprintf('%s could not be written.', $path));
+            fail(implode(' ', [sprintf('%s could not be written.', $path), ...notRemoved(removeAll($temporaries))]));
         }
         $temporaries[] = $temporary;
     }
@@ -119,8 +121,7 @@ function writeAll(array $files): void
     foreach (array_keys($files) as $path) {
         if (is_file($path)) {
             if (!@copy($path, $path . UNPINNED) || !keepMode($path, $path . UNPINNED)) {
-                removeAll([...$temporaries, ...array_values($backups), $path . UNPINNED]);
-                fail(sprintf('%s could not be backed up.', $path));
+                fail(implode(' ', [sprintf('%s could not be backed up.', $path), ...notRemoved(removeAll([...$temporaries, ...array_values($backups), $path . UNPINNED]))]));
             }
             $backups[$path] = $path . UNPINNED;
         }
@@ -130,13 +131,30 @@ function writeAll(array $files): void
     foreach (array_keys($files) as $path) {
         if (!@rename($path . PINNING, $path)) {
             $left = restoreAll($replaced, $backups);
-            removeAll([...$temporaries, ...array_values(array_diff_key($backups, $left))]);
-            fail(implode(' ', [sprintf('%s could not be written.', $path), ...array_values($left)]));
+            $stuck = removeAll([...$temporaries, ...array_values(array_diff_key($backups, $left))]);
+            fail(implode(' ', [sprintf('%s could not be written.', $path), ...array_values($left), ...notRemoved($stuck)]));
         }
         $replaced[] = $path;
     }
 
-    removeAll(array_values($backups));
+    return removeBackups(array_values($backups));
+}
+
+/**
+ * Removes the backups once every file is in place. One that cannot be
+ * removed is left with a warning rather than a failure: the pin succeeded,
+ * and the backup only holds an original nothing needs any more, though the
+ * next run refuses to start while it is there.
+ *
+ * @param list<string> $backups
+ * @return list<string> a warning for each backup left behind
+ */
+function removeBackups(array $backups): array
+{
+    return array_map(
+        static fn(string $backup): string => sprintf('Warning: %s could not be removed. The pin succeeded, so it is safe to delete; the next run refuses to start until it is gone.', $backup),
+        removeAll($backups),
+    );
 }
 
 /**
@@ -164,15 +182,38 @@ function restoreAll(array $replaced, array $backups): array
 }
 
 /**
+ * Removes what is at each path.
+ *
  * @param list<string> $paths
+ * @return list<string> the paths that could not be removed
  */
-function removeAll(array $paths): void
+function removeAll(array $paths): array
 {
+    $left = [];
     foreach ($paths as $path) {
-        if (is_file($path)) {
-            unlink($path);
+        if ((file_exists($path) || is_link($path)) && !@unlink($path)) {
+            $left[] = $path;
         }
     }
+
+    return $left;
+}
+
+/**
+ * What a failed run says of each file it could not remove, which the next
+ * run refuses to start beside.
+ *
+ * @param list<string> $paths
+ * @return list<string>
+ */
+function notRemoved(array $paths): array
+{
+    return array_map(static fn(string $path): string => sprintf('%s could not be removed; remove it before running again.', $path), $paths);
+}
+
+// Required for its functions alone, as by a test, it stops here.
+if (get_included_files()[0] !== __FILE__) {
+    return;
 }
 
 const USAGE = "Usage: composer pin-contract -- [--root=<package>] <site-software checkout> <ref>\n\nCopies " . DOCUMENT . ' at <ref> into ' . DOCUMENT_COPY . ' and records the commit in Contract::REVISION (' . CONTRACT_FILE . ").\n--root=<package> pins another copy of this package than the one the tool sits in.";
@@ -222,9 +263,12 @@ if ($pinned === null || $count !== 1) {
     fail(sprintf('%s does not hold exactly one REVISION constant to write.', $contractPath));
 }
 
-writeAll([
+$warnings = writeAll([
     $contractPath => $pinned,
     $documentPath => $document,
 ]);
 
 fwrite(STDOUT, sprintf("Pinned %s at %s (%s).\n", DOCUMENT, $commit, $ref));
+foreach ($warnings as $warning) {
+    fwrite(STDERR, $warning . "\n");
+}
