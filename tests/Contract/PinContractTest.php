@@ -186,6 +186,41 @@ final class PinContractTest extends TestCase
         self::assertSame(0o640, fileperms($this->package(self::CONTRACT_FILE)) & 0o7777);
     }
 
+    public function testAPinThatSucceedsLeavesNoBackupAndWarnsOfNone(): void
+    {
+        $this->commitDocument(self::DOCUMENT);
+
+        [$exitCode, $output] = $this->pin('main');
+
+        self::assertSame(0, $exitCode, $output);
+        self::assertStringNotContainsString('Warning', $output);
+        self::assertFileDoesNotExist($this->package(self::CONTRACT_FILE . self::UNPINNED));
+        self::assertFileDoesNotExist($this->package(self::DOCUMENT_COPY . self::UNPINNED));
+    }
+
+    /**
+     * A backup that cannot be removed once every file is in place is left
+     * with a warning that names it: the pin succeeded, so it is safe to
+     * delete, though the next run refuses to start until it is gone. A
+     * directory stands in for a backup that cannot be removed, whoever runs
+     * the suite.
+     */
+    public function testABackupThatCannotBeRemovedAfterAPinIsNamedAsSafeToDelete(): void
+    {
+        require_once self::own(self::TOOL);
+        $removed = $this->package(self::CONTRACT_FILE . self::UNPINNED);
+        $stuck = $this->package(self::DOCUMENT_COPY . self::UNPINNED);
+        file_put_contents($removed, "original\n");
+        mkdir($stuck);
+
+        $warnings = \removeBackups([$removed, $stuck]);
+
+        self::assertFileDoesNotExist($removed);
+        self::assertCount(1, $warnings);
+        self::assertStringContainsString($stuck, $warnings[0]);
+        self::assertStringContainsString('safe to delete', $warnings[0]);
+    }
+
     public function testTheUsageNamesEveryOption(): void
     {
         [, $output] = $this->execute([PHP_BINARY, self::own(self::TOOL)]);
