@@ -308,7 +308,7 @@ $fake = (new FakeClient())
     ->answer(Operation::GetArticle, ['id' => 'a-1', 'title' => 'Hello', /* ... as the document shapes it */])
     ->answerPage(Operation::ListOrders, [$order1, $order2], nextCursor: 'c2')
     ->answerPage(Operation::ListOrders, [$order3])
-    ->refuse(Operation::CreateArticle, 'validation-failed', 422, members: ['errors' => ['title' => ['Required.']]]);
+    ->refuse(Operation::CreateArticle, 'validation-failed', 422, 'The request is invalid.', members: ['errors' => ['title' => ['Required.']]]);
 
 $service = new ArticleImporter($fake->client());   // a real Client; nothing leaves the process
 $service->run();
@@ -322,7 +322,7 @@ $call->token;             // FakeClient::ADMINISTRATOR_TOKEN, a member's token, 
 $fake->calls();           // every call, in order
 ```
 
-`client()` is a real `Client` whose HTTP client answers from the arrangement, so an arranged body is read into the same models as a site's answer, a refusal becomes the same `ApiException` subclass, and an answer that breaks the document fails the same way. Answers to one operation are given in the order arranged, and the last one keeps answering. `answer()` takes the operation's success status unless you pass another, and headers such as `Idempotent-Replayed: true`; `refuse()` takes a problem type (`validation-failed`, or a full URI), a status, and the problem's other members. `forMember($token)` calls as a member. Calls are not retried, so a refusal is thrown at once. A call with no answer arranged, or to a path that is no operation of the document, throws `Exception\UnarrangedCallException`, a `LogicException`. Sign-in through `oidc()` is not faked.
+`client()` is a real `Client` whose HTTP client answers from the arrangement, so an arranged body is read into the same models as a site's answer, a refusal becomes the same `ApiException` subclass, and an answer that breaks the document fails the same way. Answers to one operation are given in the order arranged, and the last one keeps answering. `answer()` takes the operation's success status unless you pass another, and headers such as `Idempotent-Replayed: true`; `refuse()` takes a problem type (`validation-failed`, or a full URI), a status, a title, and the problem's extension members, which may not reuse a standard member (`type`, `title`, `status`, `detail`, `instance`); a `401` carries the site's `WWW-Authenticate: Bearer` challenge unless you pass another. `forMember($token)` calls as a member. Calls are not retried, so a refusal is thrown at once. A call with no answer arranged, or to a path that is no operation of the document, throws `Exception\UnarrangedCallException`, a `LogicException`. Sign-in through `oidc()` is not faked.
 
 ## Verifying webhook deliveries
 

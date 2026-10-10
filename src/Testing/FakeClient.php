@@ -28,7 +28,7 @@ use Psr\Http\Message\StreamFactoryInterface;
  *
  *     $fake = (new FakeClient())
  *         ->answer(Operation::GetArticle, ['id' => 'a-1', ...])
- *         ->refuse(Operation::CreateArticle, 'validation-failed', 422, members: ['errors' => [...]]);
+ *         ->refuse(Operation::CreateArticle, 'validation-failed', 422, 'The request is invalid.', members: ['errors' => [...]]);
  *     $service = new MyService($fake->client());
  *     ...
  *     $fake->lastCall(Operation::CreateArticle)->body;
@@ -45,6 +45,9 @@ final class FakeClient
     public const string BASE_URL = 'https://site.test';
     public const string ADMINISTRATOR_TOKEN = 'fake-administrator-token';
     public const string MEMBER_TOKEN = 'fake-member-token';
+
+    /** The members RFC 9457 defines, which an extension member may not reuse. */
+    private const array STANDARD_MEMBERS = ['type', 'title', 'status', 'detail', 'instance'];
 
     private readonly Client $client;
 
@@ -127,19 +130,27 @@ final class FakeClient
 
     /**
      * Arranges the next answer to an operation as a refusal: the RFC 9457
-     * problem the site would send.
+     * problem the site would send. A 401 carries the bearer challenge the
+     * site sends unless `$headers` gives another.
      *
      * @param string $type the problem type, such as `validation-failed`, or a full type URI
-     * @param array<string, mixed> $members the problem's other members, such as `errors`
+     * @param string $title the problem's short summary, such as `The request is invalid.`
+     * @param array<string, mixed> $members the problem's extension members, such as `errors`; never a standard member
      * @param array<string, string> $headers such as `Retry-After`
      */
-    public function refuse(Operation $operation, string $type, int $status, ?string $title = null, ?string $detail = null, array $members = [], #[\SensitiveParameter] array $headers = []): self
+    public function refuse(Operation $operation, string $type, int $status, string $title, ?string $detail = null, array $members = [], #[\SensitiveParameter] array $headers = []): self
     {
         if ($status < 400 || $status > 599) {
             throw new LogicException(sprintf('A refusal is a 4xx or 5xx, not %d.', $status));
         }
+        // The site refuses to build a problem whose extensions reuse these
+        // names, so a reader of `status` always gets the status.
+        $clash = array_intersect(array_keys($members), self::STANDARD_MEMBERS);
+        if ($clash !== []) {
+            throw new LogicException(sprintf('A problem\'s extension members may not reuse a standard member: %s.', implode(', ', $clash)));
+        }
         $type = str_contains($type, ':') ? $type : ApiException::TYPE_BASE . $type;
-        $problem = ['type' => $type, 'title' => $title ?? $type, 'status' => $status, ...($detail === null ? [] : ['detail' => $detail]), ...$members];
+        $problem = ['type' => $type, 'title' => $title, 'status' => $status, ...($detail === null ? [] : ['detail' => $detail]), ...$members];
         $this->answers[$operation->value][] = ['status' => $status, 'body' => $problem, 'headers' => $headers, 'problem' => true];
 
         return $this;
@@ -201,6 +212,11 @@ final class FakeClient
         $this->answers[$operation->value] = $queue;
 
         $response = $this->responses->createResponse($answer['status'])->withHeader(Header::REQUEST_ID, $requestId);
+        // The site challenges every 401: plainly when no token was sent, as
+        // an invalid token when one was.
+        if ($answer['status'] === 401) {
+            $response = $response->withHeader(Header::WWW_AUTHENTICATE, $authorization === '' ? 'Bearer' : 'Bearer error="invalid_token"');
+        }
         foreach ($answer['headers'] as $name => $value) {
             $response = $response->withHeader($name, $value);
         }
