@@ -69,7 +69,7 @@ final readonly class KeySet
     }
 
     /**
-     * @return array{keys: list<array<string, mixed>>, fetched_at: int}|null
+     * @return array{keys: list<array<array-key, mixed>>, fetched_at: int}|null
      */
     private function cached(): ?array
     {
@@ -84,7 +84,7 @@ final readonly class KeySet
     }
 
     /**
-     * @return array{keys: list<array<string, mixed>>, fetched_at: int}
+     * @return array{keys: list<array<array-key, mixed>>, fetched_at: int}
      */
     private function fetch(): array
     {
@@ -105,7 +105,7 @@ final readonly class KeySet
     }
 
     /**
-     * @return list<array<string, mixed>>|null
+     * @return list<array<array-key, mixed>>|null
      */
     private static function keys(string $body): ?array
     {
@@ -118,7 +118,7 @@ final readonly class KeySet
         $objects = [];
         foreach ($keys as $key) {
             if (is_array($key)) {
-                $objects[] = Json::stringKeys($key);
+                $objects[] = $key;
             }
         }
 
@@ -130,7 +130,7 @@ final readonly class KeySet
      * a signing key; a key without `alg` is taken for the algorithm its type
      * implies, which is unambiguous for RSA and for the P-256 curve.
      *
-     * @param list<array<string, mixed>> $keys
+     * @param list<array<array-key, mixed>> $keys
      * @param list<string> $algorithms
      */
     private static function find(array $keys, string $kid, array $algorithms): ?Key

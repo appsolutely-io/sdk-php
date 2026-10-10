@@ -11,10 +11,8 @@ use Appsolutely\Sdk\Oidc\ClientAuthentication;
 use Appsolutely\Sdk\Oidc\IdToken;
 use Appsolutely\Sdk\Oidc\OpenIdClient;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
-use Appsolutely\Sdk\Tests\Support\FrozenClock;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
 final class TokenEndpointTest extends TestCase
@@ -179,10 +177,12 @@ final class TokenEndpointTest extends TestCase
         $provider = new FakeProvider();
         $provider->token = fn(): ResponseInterface => $provider->json(['access_token' => 'at', 'token_type' => 'mac', 'expires_in' => 60]);
 
+        $original = $this->originalIdToken($provider);
+
         $this->expectException(UnexpectedResponseException::class);
         $this->expectExceptionMessage('token_type');
 
-        $provider->oidc()->machineToken();
+        $provider->oidc()->refresh('rt-1', $original);
     }
 
     public function testRefreshSendsTheRefreshGrantAndVerifiesARefreshedIdTokenWithoutANonce(): void
@@ -330,70 +330,6 @@ final class TokenEndpointTest extends TestCase
 
         self::assertFalse($parameter->allowsNull());
         self::assertFalse($parameter->isOptional());
-    }
-
-    public function testTheMachineTokenUsesClientCredentialsAndIsCachedUntilShortlyBeforeItExpires(): void
-    {
-        $provider = new FakeProvider();
-        $issued = 0;
-        $provider->token = function (RequestInterface $request) use ($provider, &$issued): ResponseInterface {
-            $issued++;
-
-            return $provider->json(['access_token' => 'machine-' . $issued, 'token_type' => 'Bearer', 'expires_in' => 600]);
-        };
-
-        $first = $provider->oidc()->machineToken(['entitlements:read']);
-        $provider->clock->advance(500);
-        $second = $provider->oidc()->machineToken(['entitlements:read']);
-        $provider->clock->advance(60);
-        $third = $provider->oidc()->machineToken(['entitlements:read']);
-
-        self::assertSame('machine-1', $first->accessToken);
-        self::assertSame('machine-1', $second->accessToken);
-        self::assertSame('machine-2', $third->accessToken);
-        self::assertSame(
-            ['grant_type' => 'client_credentials', 'scope' => 'entitlements:read'],
-            FakeProvider::form($provider->requestsTo('POST', self::TOKEN_URL)[0]),
-        );
-    }
-
-    /**
-     * The cached copy is rebuilt from a stored timestamp; it must come back
-     * in the injected clock's zone like the fresh one, not the PHP default.
-     */
-    public function testACachedMachineTokenExpiresInTheClocksTimeZone(): void
-    {
-        $provider = new FakeProvider(new FrozenClock('2026-10-08T14:00:00+02:00'));
-        $provider->token = fn(): ResponseInterface => $provider->json(['access_token' => 'machine', 'token_type' => 'Bearer', 'expires_in' => 600]);
-        $defaultZone = date_default_timezone_get();
-        date_default_timezone_set('America/New_York');
-
-        try {
-            $fresh = $provider->oidc()->machineToken();
-            $cached = $provider->oidc()->machineToken();
-        } finally {
-            date_default_timezone_set($defaultZone);
-        }
-
-        self::assertCount(1, $provider->requestsTo('POST', self::TOKEN_URL));
-        self::assertSame('2026-10-08T14:10:00+02:00', $fresh->expiresAt?->format(DATE_ATOM));
-        self::assertSame('2026-10-08T14:10:00+02:00', $cached->expiresAt?->format(DATE_ATOM));
-    }
-
-    public function testMachineTokensForDifferentScopesAreCachedApart(): void
-    {
-        $provider = new FakeProvider();
-        $issued = 0;
-        $provider->token = function () use ($provider, &$issued): ResponseInterface {
-            $issued++;
-
-            return $provider->json(['access_token' => 'machine-' . $issued, 'token_type' => 'Bearer', 'expires_in' => 600]);
-        };
-
-        $a = $provider->oidc()->machineToken(['a']);
-        $b = $provider->oidc()->machineToken(['b']);
-
-        self::assertNotSame($a->accessToken, $b->accessToken);
     }
 
     /**

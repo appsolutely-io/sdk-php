@@ -12,6 +12,7 @@ use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
+use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Http\Json;
 use Appsolutely\Sdk\Support\Untrusted;
@@ -21,7 +22,7 @@ use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 
 /**
- * OpenID Connect sign-in and OAuth 2.0 tokens against one Appsolutely issuer.
+ * OpenID Connect sign-in of a site's members against the site's own issuer.
  *
  * A sign-in is two requests apart: authorizationUrl() before the redirect,
  * exchangeCallback() when the member comes back with the AuthorizationRequest
@@ -41,12 +42,6 @@ final readonly class OpenIdClient
         'response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'nonce', 'code_challenge', 'code_challenge_method', 'max_age',
         'request', 'request_uri', 'response_mode', 'claims',
     ];
-
-    /**
-     * A cached machine token is replaced this long before it expires, so a
-     * request that starts with it does not reach the API with a dead token.
-     */
-    private const int MACHINE_TOKEN_MARGIN = 60;
 
     private Discovery $discovery;
 
@@ -265,14 +260,14 @@ final readonly class OpenIdClient
      * section 5.3.2 requires the client to check that both describe the same
      * member, since the access token alone does not say whose it is.
      *
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public function userInfo(#[\SensitiveParameter] string $accessToken, ?string $expectedSubject = null): array
     {
         $endpoint = $this->metadata()->userInfoEndpoint
             ?? throw new DiscoveryException('The provider publishes no userinfo_endpoint.');
 
-        $response = $this->http->get($endpoint, ['Authorization' => 'Bearer ' . $accessToken]);
+        $response = $this->http->get($endpoint, [Header::AUTHORIZATION => 'Bearer ' . $accessToken]);
         $claims = $this->successfulJson($response, $endpoint);
 
         $subject = $claims['sub'] ?? null;
@@ -312,60 +307,8 @@ final readonly class OpenIdClient
     }
 
     /**
-     * A client_credentials token for the party's own API calls, reused from
-     * the cache until shortly before it expires.
-     *
-     * @param list<string> $scopes
-     */
-    public function machineToken(array $scopes = []): TokenSet
-    {
-        sort($scopes);
-        $scope = implode(' ', $scopes);
-        $key = 'appsolutely.oidc.machine_token.' . hash('sha256', $this->config->issuer . "\n" . $this->config->clientId . "\n" . $scope);
-        $now = $this->clock->now()->getTimestamp();
-
-        $cached = $this->cache->get($key);
-        if (
-            is_array($cached)
-            && is_string($cached['access_token'] ?? null)
-            && is_string($cached['token_type'] ?? null)
-            && is_int($cached['expires_at'] ?? null)
-            && $cached['expires_at'] - self::MACHINE_TOKEN_MARGIN > $now
-        ) {
-            $cachedScope = $cached['scope'] ?? null;
-
-            return new TokenSet(
-                $cached['access_token'],
-                $cached['token_type'],
-                $this->clock->now()->setTimestamp($cached['expires_at']),
-                scope: is_string($cachedScope) ? $cachedScope : null,
-            );
-        }
-
-        $request = ['grant_type' => 'client_credentials'];
-        if ($scope !== '') {
-            $request['scope'] = $scope;
-        }
-        $tokens = $this->tokenSet($this->tokenRequest($request), null, idTokenRequired: false);
-
-        if ($tokens->expiresAt !== null) {
-            $ttl = $tokens->expiresAt->getTimestamp() - $now - self::MACHINE_TOKEN_MARGIN;
-            if ($ttl > 0) {
-                $this->cache->set($key, [
-                    'access_token' => $tokens->accessToken,
-                    'token_type' => $tokens->tokenType,
-                    'expires_at' => $tokens->expiresAt->getTimestamp(),
-                    'scope' => $tokens->scope,
-                ], $ttl);
-            }
-        }
-
-        return $tokens;
-    }
-
-    /**
      * @param array<string, string> $fields
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     private function tokenRequest(#[\SensitiveParameter] array $fields): array
     {
@@ -386,7 +329,7 @@ final readonly class OpenIdClient
     {
         return match ($this->config->clientAuthentication) {
             ClientAuthentication::ClientSecretBasic => [$fields, [
-                'Authorization' => 'Basic ' . base64_encode(urlencode($this->config->clientId) . ':' . urlencode($this->config->clientSecret())),
+                Header::AUTHORIZATION => 'Basic ' . base64_encode(urlencode($this->config->clientId) . ':' . urlencode($this->config->clientSecret())),
             ]],
             ClientAuthentication::ClientSecretPost => [
                 [...$fields, 'client_id' => $this->config->clientId, 'client_secret' => $this->config->clientSecret()],
@@ -396,7 +339,7 @@ final readonly class OpenIdClient
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     private function successfulJson(ResponseInterface $response, string $endpoint): array
     {
@@ -413,7 +356,7 @@ final readonly class OpenIdClient
     /**
      * RFC 6749 section 5.1.
      *
-     * @param array<string, mixed> $fields
+     * @param array<array-key, mixed> $fields
      */
     private function tokenSet(#[\SensitiveParameter] array $fields, ?string $nonce, bool $idTokenRequired, ?int $maxAge = null): TokenSet
     {

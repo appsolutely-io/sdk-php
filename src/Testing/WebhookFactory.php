@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Testing;
 
 use Appsolutely\Sdk\Clock\SystemClock;
+use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Webhooks\Secret;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -66,9 +67,9 @@ final readonly class WebhookFactory
         $timestamp = $attemptedAt ?? $now->getTimestamp();
 
         return new SignedWebhook($id, $body, [
-            'webhook-id' => $id,
-            'webhook-timestamp' => (string) $timestamp,
-            'webhook-signature' => implode(' ', array_map(
+            Header::WEBHOOK_ID => $id,
+            Header::WEBHOOK_TIMESTAMP => (string) $timestamp,
+            Header::WEBHOOK_SIGNATURE => implode(' ', array_map(
                 static fn(Secret $secret): string => 'v1,' . $secret->sign($id, $timestamp, $body),
                 $this->secrets,
             )),

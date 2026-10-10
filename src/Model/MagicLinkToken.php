@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Appsolutely\Sdk\Model;
+
+use DateTimeImmutable;
+
+/**
+ * The member token a magic link was exchanged for, and what it may do.
+ */
+final readonly class MagicLinkToken
+{
+    /** @internal */
+    public const string SCHEMA = 'MagicLinkToken';
+
+    /**
+     * @param string $token the member's bearer token; pass it to Client::forMember()
+     * @param list<string> $abilities what the token may do, such as `me:read`
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
+     */
+    public function __construct(
+        #[\SensitiveParameter]
+        public string $token,
+        public array $abilities,
+        public ?DateTimeImmutable $expiresAt,
+        #[\SensitiveParameter]
+        public array $extra = [],
+    ) {}
+
+    /** @internal */
+    public static function from(#[\SensitiveParameter] Fields $json): self
+    {
+        return new self(
+            token: $json->string('token'),
+            abilities: $json->strings('abilities'),
+            expiresAt: $json->nullableTime('expires_at'),
+            extra: $json->extra(),
+        );
+    }
+
+    /**
+     * What var_dump() and print_r() show: the token is replaced.
+     *
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        return ['token' => '[redacted]', 'abilities' => $this->abilities, 'expiresAt' => $this->expiresAt];
+    }
+}

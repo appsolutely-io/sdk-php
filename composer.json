@@ -1,9 +1,9 @@
 {
     "name": "appsolutely/sdk-php",
-    "description": "Framework-free PHP client for Appsolutely relying parties: OpenID Connect sign-in, the machine token for the party's API calls, and verified Standard Webhooks deliveries.",
+    "description": "Framework-free PHP client for one Appsolutely site: OpenID Connect sign-in of its members, the Site API as its administrator or a member, and verified Standard Webhooks deliveries.",
     "type": "library",
     "license": "MIT",
-    "keywords": ["appsolutely", "openid-connect", "oauth2", "pkce", "standard-webhooks", "sdk"],
+    "keywords": ["appsolutely", "api-client", "openid-connect", "oauth2", "pkce", "problem-details", "standard-webhooks", "sdk"],
     "homepage": "https://github.com/appsolutely-io/sdk-php",
     "support": {
         "issues": "https://github.com/appsolutely-io/sdk-php/issues",
@@ -28,10 +28,11 @@
         "php-http/client-common": "^2.7",
         "php-http/message": "^1.16",
         "php-http/mock-client": "^1.6.1",
-        "phpstan/phpstan": "^2.1",
-        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpstan/phpstan": "^2.3.1",
+        "phpstan/phpstan-strict-rules": "^2.1",
         "phpunit/phpunit": "^12.5 || ^13.0",
-        "standard-webhooks/standard-webhooks": "1.0.2"
+        "standard-webhooks/standard-webhooks": "1.0.2",
+        "symfony/yaml": "^7.3 || ^8.0"
     },
     "autoload": {
         "psr-4": {
@@ -59,6 +60,7 @@
         "analyse": "phpstan analyse --no-progress",
         "cs": "php-cs-fixer check --diff",
         "cs:fix": "php-cs-fixer fix",
+        "pin-contract": "@php tools/pin-contract.php",
         "check": [
             "@composer validate --strict",
             "@cs",
@@ -71,6 +73,7 @@
         "analyse": "Run PHPStan at level max with strict rules.",
         "cs": "Check coding style (PER-CS 3.0) without changing files.",
         "cs:fix": "Fix coding style (PER-CS 3.0) in place.",
+        "pin-contract": "Copy the Site API document from a checkout of the site software at a ref (composer pin-contract -- <checkout> <ref>) and record its commit in Contract::REVISION.",
         "check": "Validate composer.json, then run cs, analyse and test."
     },
     "minimum-stability": "stable"

@@ -47,8 +47,25 @@ final readonly class HttpTransport
     public function postForm(string $url, #[\SensitiveParameter] array $fields, #[\SensitiveParameter] array $headers = []): ResponseInterface
     {
         $request = $this->request('POST', $url, $headers)
-            ->withHeader('Content-Type', 'application/x-www-form-urlencoded')
+            ->withHeader(Header::CONTENT_TYPE, MediaType::FORM_URLENCODED)
             ->withBody($this->streams->createStream(http_build_query($fields, '', '&', PHP_QUERY_RFC1738)));
+
+        return $this->send($request);
+    }
+
+    /**
+     * Any method, with a JSON body when one is given.
+     *
+     * @param array<string, string> $headers
+     */
+    public function json(string $method, string $url, #[\SensitiveParameter] array $headers = [], ?string $body = null): ResponseInterface
+    {
+        $request = $this->request($method, $url, $headers);
+        if ($body !== null) {
+            $request = $request
+                ->withHeader(Header::CONTENT_TYPE, MediaType::JSON)
+                ->withBody($this->streams->createStream($body));
+        }
 
         return $this->send($request);
     }
@@ -59,8 +76,8 @@ final readonly class HttpTransport
     private function request(string $method, string $url, #[\SensitiveParameter] array $headers): RequestInterface
     {
         $request = $this->requests->createRequest($method, $url)
-            ->withHeader('User-Agent', Sdk::userAgent())
-            ->withHeader('Accept', 'application/json');
+            ->withHeader(Header::USER_AGENT, Sdk::userAgent())
+            ->withHeader(Header::ACCEPT, MediaType::JSON);
 
         foreach ($headers as $name => $value) {
             $request = $request->withHeader($name, $value);

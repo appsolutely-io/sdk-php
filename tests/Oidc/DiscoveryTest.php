@@ -43,6 +43,7 @@ final class DiscoveryTest extends TestCase
         $provider->discovery['issuer'] = FakeProvider::ISSUER . '/';
         $config = $provider->config();
         $client = new Client(new Config(
+            baseUrl: FakeProvider::BASE_URL,
             issuer: FakeProvider::ISSUER . '/',
             clientId: $config->clientId,
             clientSecret: FakeProvider::CLIENT_SECRET,
