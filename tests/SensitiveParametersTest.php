@@ -75,9 +75,9 @@ final class SensitiveParametersTest extends TestCase
     /**
      * The site's JSON carries members' names, addresses and codes. Every
      * parameter that holds it is marked, in a method or a closure, whatever
-     * it is named: one typed Fields, the array a Fields is built from, and
-     * an array handed straight to Fields::of() or Fields::ofDelivery(). The
-     * source is read as tokens, as reflection does not reach closures.
+     * it is named: one typed Fields, and an array handed straight to
+     * Fields::of() or Fields::ofDelivery(). The source is read as tokens,
+     * as reflection does not reach closures.
      */
     public function testEveryParameterHoldingTheSitesJsonIsMarkedSensitive(): void
     {
@@ -101,6 +101,18 @@ final class SensitiveParametersTest extends TestCase
             }
         }
 
+        self::assertSame([], $unmarked, 'Not marked #[\\SensitiveParameter].');
+        self::assertGreaterThan(0, $checked);
+    }
+
+    /**
+     * The array a Fields is built from, by its constructor or a static
+     * factory returning one, is the site's JSON too.
+     */
+    public function testEveryArrayAFieldsIsBuiltFromIsMarkedSensitive(): void
+    {
+        $unmarked = [];
+        $checked = 0;
         foreach ((new ReflectionClass(Fields::class))->getMethods() as $method) {
             $returnType = $method->getReturnType();
             if (!$method->isConstructor() && !($method->isStatic() && $returnType instanceof ReflectionNamedType && $returnType->getName() === 'self')) {
