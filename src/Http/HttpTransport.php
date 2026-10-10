@@ -54,6 +54,23 @@ final readonly class HttpTransport
     }
 
     /**
+     * Any method, with a JSON body when one is given.
+     *
+     * @param array<string, string> $headers
+     */
+    public function json(string $method, string $url, #[\SensitiveParameter] array $headers = [], ?string $body = null): ResponseInterface
+    {
+        $request = $this->request($method, $url, $headers);
+        if ($body !== null) {
+            $request = $request
+                ->withHeader('Content-Type', 'application/json')
+                ->withBody($this->streams->createStream($body));
+        }
+
+        return $this->send($request);
+    }
+
+    /**
      * @param array<string, string> $headers
      */
     private function request(string $method, string $url, #[\SensitiveParameter] array $headers): RequestInterface

@@ -130,6 +130,34 @@ $_SESSION['appsolutely_tokens'] = [
 
 The same client reads the member's UserInfo claims (`userInfo($accessToken, $memberId)`) and revokes a token (`revoke()`). OAuth errors become `Exception\OAuthException` with the error code in `$exception->error`. Every exception an integrator may catch lives in the `Appsolutely\Sdk\Exception` namespace and implements `Exception\AppsolutelyException`. A refused argument is an `Exception\InvalidArgumentValueException`, or a subclass naming what was refused (`InvalidConfigException` for a `Config` value, `InvalidSecretException` for a webhook signing secret).
 
+## Calling the Site API
+
+`$client->api()` calls the site's API as its administrator, with the token from `Config`; `$client->forMember($accessToken)->api()` makes the same calls as a signed-in member, with the access token their sign-in returned. Paths are the ones the site's API document names:
+
+```php
+use Appsolutely\Sdk\Exception\ApiException;
+use Appsolutely\Sdk\Exception\NotFoundException;
+use Appsolutely\Sdk\Exception\ValidationFailedException;
+
+$article = $client->api()->get('/api/v1/articles/' . rawurlencode($id))->data;
+
+$me = $client->forMember($tokens->accessToken)->api()->get('/api/v1/me')->data;
+
+try {
+    $client->api()->patch('/api/v1/articles/' . rawurlencode($id), ['title' => $title]);
+} catch (ValidationFailedException $exception) {
+    $errors = $exception->errors;          // ['title' => ['The title field is required.']]
+} catch (NotFoundException) {
+    // gone in the meantime
+}
+```
+
+Every call sends `Accept: application/json, application/problem+json`, the SDK's `User-Agent` and an `X-Request-Id`: a fresh UUID, or the one you pass as `requestId:` to tie the call to your own logs. A success is an `Api\ApiResponse`: the decoded resource in `$data` (null for a `204`), `$status`, `$location` for a created resource, `$requestId` as the site answered it, and `$rateLimit`, the budget the site states in its `RateLimit-Policy` and `RateLimit` headers, by quota name (`$response->rateLimit->quota('api:authenticated')?->remaining`).
+
+A refusal is thrown as an `Exception\ApiException` built from the site's RFC 9457 problem: `$type` (branch on it, or on `hasType('validation-failed')`), `$title`, `$status`, `$detail`, `$errors`, `$requestId`, `$retryAfter`, `$challenge` (the `WWW-Authenticate` header) and any other member through `extension('required_ability')`. `ValidationFailedException`, `NotFoundException`, `UnauthenticatedException`, `ForbiddenException`, `ConflictException`, `RateLimitedException` and `ServiceUnavailableException` extend it for the cases you are likely to handle; an answer that is not a problem (a proxy's error page) is an `ApiException` with `$isProblem` false and the raw `$body`. A request that never got an answer is an `Exception\TransportException`.
+
+When the site refuses a token with `UnauthenticatedException`, renew it rather than retrying: refused credentials count against a budget of their own, and a client that keeps sending a dead token locks out every caller behind the same address.
+
 ## Verifying webhook deliveries
 
 Deliveries follow [Standard Webhooks](https://www.standardwebhooks.com/). Verify the raw request body, before any framework parses it:
