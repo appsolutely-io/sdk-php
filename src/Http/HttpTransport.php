@@ -47,7 +47,7 @@ final readonly class HttpTransport
     public function postForm(string $url, #[\SensitiveParameter] array $fields, #[\SensitiveParameter] array $headers = []): ResponseInterface
     {
         $request = $this->request('POST', $url, $headers)
-            ->withHeader(Header::CONTENT_TYPE, 'application/x-www-form-urlencoded')
+            ->withHeader(Header::CONTENT_TYPE, MediaType::FORM_URLENCODED)
             ->withBody($this->streams->createStream(http_build_query($fields, '', '&', PHP_QUERY_RFC1738)));
 
         return $this->send($request);
