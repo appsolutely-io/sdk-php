@@ -84,6 +84,29 @@ final class PinContractTest extends TestCase
         self::assertFileDoesNotExist($this->scratch . '/package/tests/Contract/openapi.yaml');
     }
 
+    public function testWhenTheRevisionCannotBeWrittenTheDocumentIsNotPinnedEither(): void
+    {
+        $this->commitDocument(self::DOCUMENT);
+        $before = (string) file_get_contents($this->scratch . '/package/src/Contract.php');
+        // A directory where the revision's temporary file would go makes
+        // that write fail whoever runs the suite.
+        mkdir($this->scratch . '/package/src/Contract.php.pinning');
+
+        [$exitCode, $output] = $this->pin('main');
+
+        self::assertNotSame(0, $exitCode, $output);
+        self::assertFileDoesNotExist($this->scratch . '/package/tests/Contract/openapi.yaml');
+        self::assertFileDoesNotExist($this->scratch . '/package/tests/Contract/openapi.yaml.pinning');
+        self::assertSame($before, file_get_contents($this->scratch . '/package/src/Contract.php'));
+    }
+
+    public function testTheUsageNamesEveryOption(): void
+    {
+        [, $output] = $this->execute([PHP_BINARY, dirname(__DIR__, 2) . '/tools/pin-contract.php']);
+
+        self::assertStringContainsString('--root=', $output);
+    }
+
     public function testBothArgumentsAreRequired(): void
     {
         [$exitCode, $output] = $this->execute([PHP_BINARY, dirname(__DIR__, 2) . '/tools/pin-contract.php', '--root=' . $this->scratch . '/package', $this->scratch . '/site']);

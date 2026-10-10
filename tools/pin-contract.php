@@ -5,12 +5,15 @@ declare(strict_types=1);
 /*
  * Pins the Site API document this client is held to:
  *
- *     composer pin-contract -- <site-software checkout> <ref>
+ *     composer pin-contract -- [--root=<package>] <site-software checkout> <ref>
  *
  * copies `docs/api/openapi.yaml` as it is at <ref> (a commit, a branch or a
  * tag) into tests/Contract/openapi.yaml and writes the commit <ref> names into
  * Contract::REVISION. Both are written by the same run so they cannot name
- * different commits. Nothing is written when either cannot be read.
+ * different commits: both are written to temporary files first and only then
+ * renamed into place, so nothing is changed when either cannot be read or
+ * written. `--root=` pins another copy of this package than the one the tool
+ * sits in.
  */
 
 const DOCUMENT = 'docs/api/openapi.yaml';
@@ -50,19 +53,54 @@ function git(string $checkout, array $arguments): array
     return [proc_close($process), $output, $error];
 }
 
-function write(string $path, string $contents): void
+/**
+ * Writes every file beside its path first, and renames them into place only
+ * once all are written; a failure removes the temporary files written so far.
+ *
+ * @param array<string, string> $files contents by path
+ */
+function writeAll(array $files): void
 {
-    $temporary = $path . '.pinning';
-    if (file_put_contents($temporary, $contents) !== strlen($contents) || !rename($temporary, $path)) {
-        fail(sprintf('%s could not be written.', $path));
+    $written = [];
+    foreach ($files as $path => $contents) {
+        $temporary = $path . '.pinning';
+        if (@file_put_contents($temporary, $contents) !== strlen($contents)) {
+            if (is_file($temporary)) {
+                $written[] = $temporary;
+            }
+            removeAll($written);
+            fail(sprintf('%s could not be written.', $path));
+        }
+        $written[] = $temporary;
+    }
+
+    foreach ($files as $path => $contents) {
+        if (!@rename($path . '.pinning', $path)) {
+            removeAll($written);
+            fail(sprintf('%s could not be written.', $path));
+        }
     }
 }
+
+/**
+ * @param list<string> $paths
+ */
+function removeAll(array $paths): void
+{
+    foreach ($paths as $path) {
+        if (is_file($path)) {
+            unlink($path);
+        }
+    }
+}
+
+const USAGE = "Usage: composer pin-contract -- [--root=<package>] <site-software checkout> <ref>\n\nCopies " . DOCUMENT . " at <ref> into tests/Contract/openapi.yaml and records the commit in Contract::REVISION.\n--root=<package> pins another copy of this package than the one the tool sits in.";
 
 $root = dirname(__DIR__);
 $arguments = [];
 $given = $_SERVER['argv'] ?? null;
 if (!is_array($given)) {
-    fail('Run it from the command line: composer pin-contract -- <site-software checkout> <ref>');
+    fail(USAGE);
 }
 foreach (array_slice($given, 1) as $argument) {
     if (!is_string($argument)) {
@@ -76,7 +114,7 @@ foreach (array_slice($given, 1) as $argument) {
 }
 
 if (count($arguments) !== 2) {
-    fail("Usage: composer pin-contract -- <site-software checkout> <ref>\n\nCopies " . DOCUMENT . ' at <ref> into tests/Contract/openapi.yaml and records the commit in Contract::REVISION.');
+    fail(USAGE);
 }
 [$checkout, $ref] = $arguments;
 
@@ -101,7 +139,9 @@ if ($pinned === null || $count !== 1) {
     fail(sprintf('%s does not hold exactly one REVISION constant to write.', $contractPath));
 }
 
-write($root . '/tests/Contract/openapi.yaml', $document);
-write($contractPath, $pinned);
+writeAll([
+    $root . '/tests/Contract/openapi.yaml' => $document,
+    $contractPath => $pinned,
+]);
 
 fwrite(STDOUT, sprintf("Pinned %s at %s (%s).\n", DOCUMENT, $commit, $ref));
