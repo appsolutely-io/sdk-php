@@ -30,15 +30,13 @@ use ReflectionClass;
 use StandardWebhooks\Webhook;
 
 /**
- * Each fixture under Fixtures/ is the `data` of one delivery as the site
- * writes it: the fields, their order, null where the site sends null, times
- * as RFC 3339 UTC to the second, ids as strings and amounts as integer minor
- * units. Record events carry the record exactly as the site's REST API
- * serves it, built from the same payload definition, so they read the
- * record fixtures the API tests read (SiteFixture), with whatever the event
- * adds beside the record. The fixture's bytes go into a body that is signed
- * with the Standard Webhooks reference library and verified, so every case
- * runs the path a real delivery takes.
+ * Each delivery's `data` is a fixture read through SiteFixture: a record
+ * event carries the record exactly as the site's REST API serves it, built
+ * from the same payload definition, so it reads the record fixture the API
+ * tests read, with whatever the event adds beside the record; an event that
+ * carries no API record has a fixture of its own. The fixture's bytes go
+ * into a body that is signed with the Standard Webhooks reference library
+ * and verified, so every case runs the path a real delivery takes.
  */
 final class TypedEventTest extends TestCase
 {
@@ -69,17 +67,9 @@ final class TypedEventTest extends TestCase
         return TypedEvent::from($envelope);
     }
 
-    private static function fixture(string $name): string
-    {
-        $data = file_get_contents(__DIR__ . '/Fixtures/' . $name . '.json');
-        self::assertIsString($data);
-
-        return trim($data);
-    }
-
     public function testThePingCarriesTheSubscriptionsReference(): void
     {
-        $event = self::deliver(EventType::WEBHOOK_PING, self::fixture('ping'), 'test');
+        $event = self::deliver(EventType::WEBHOOK_PING, SiteFixture::json('ping'), 'test');
 
         self::assertInstanceOf(PingEvent::class, $event);
         self::assertSame('9d3f2b1c-5e7a-4c8b-a1f0-2e6d4b8c0a97', $event->subscriptionId);
@@ -122,7 +112,7 @@ final class TypedEventTest extends TestCase
 
     public function testAnErasedAccountHasNoAddressNoGrantsAndEmptyTotals(): void
     {
-        $event = self::deliver(EventType::ACCOUNT_ERASED, self::fixture('account-erased'));
+        $event = self::deliver(EventType::ACCOUNT_ERASED, SiteFixture::json('account-erased'));
 
         self::assertInstanceOf(AccountEvent::class, $event);
         self::assertSame('erased', $event->state->status);
@@ -371,7 +361,7 @@ final class TypedEventTest extends TestCase
     #[DataProvider('refundTypes')]
     public function testARefundEventNamesTheRefundByItsReference(string $type): void
     {
-        $event = self::deliver($type, self::fixture('refund'));
+        $event = self::deliver($type, SiteFixture::json('refund'));
 
         self::assertInstanceOf(RefundEvent::class, $event);
         self::assertSame('RF-9K2M4Q6T8W1Z', $event->refund->id);
@@ -380,7 +370,7 @@ final class TypedEventTest extends TestCase
 
     public function testAReferralRewardNamesTheReferrerTheCodeThePaymentAndTheReward(): void
     {
-        $event = self::deliver(EventType::REFERRAL_REWARD_ISSUED, self::fixture('referral-reward'));
+        $event = self::deliver(EventType::REFERRAL_REWARD_ISSUED, SiteFixture::json('referral-reward'));
 
         self::assertInstanceOf(ReferralRewardIssuedEvent::class, $event);
         self::assertSame('5f0c2a9e8b7d41c3a6e2f9b1d0c8a7e65f4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d', $event->subject);
@@ -431,7 +421,7 @@ final class TypedEventTest extends TestCase
     #[DataProvider('subscriptionTypes')]
     public function testEverySubscriptionEventCarriesTheSubscription(string $type): void
     {
-        $event = self::deliver($type, self::fixture('subscription'));
+        $event = self::deliver($type, SiteFixture::json('subscription'));
 
         self::assertInstanceOf(SubscriptionEvent::class, $event);
         $subscription = $event->subscription;
@@ -463,7 +453,7 @@ final class TypedEventTest extends TestCase
     #[DataProvider('periodTypes')]
     public function testAStartOrRenewalNamesThePeriodTheMemberIsNowIn(string $type): void
     {
-        $event = self::deliver($type, self::fixture('subscription-period'));
+        $event = self::deliver($type, SiteFixture::json('subscription-period'));
 
         self::assertInstanceOf(SubscriptionEvent::class, $event);
         self::assertNotNull($event->period);
@@ -474,7 +464,7 @@ final class TypedEventTest extends TestCase
 
     public function testAPeriodAwaitingAnAnswerHasAStartAndAStatusButNoEnd(): void
     {
-        $data = str_replace('"pending_period":null', '"pending_period":{"start":"2026-11-08T00:00:00Z","status":"pending"}', self::fixture('subscription'));
+        $data = SiteFixture::json('subscription', ['pending_period' => ['start' => '2026-11-08T00:00:00Z', 'status' => 'pending']]);
         $event = self::deliver(EventType::SUBSCRIPTION_PAYMENT_DUE, $data);
 
         self::assertInstanceOf(SubscriptionEvent::class, $event);
