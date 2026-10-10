@@ -36,7 +36,7 @@ class ApiException extends RuntimeException implements AppsolutelyException
     /**
      * @internal built by the client from the site's answer
      *
-     * @param array<string, list<string>> $errors
+     * @param array<array-key, list<string>> $errors field => messages; a field named by a number, such as "0", is an int key, as PHP makes it
      * @param array<array-key, mixed> $problem
      */
     final public function __construct(
@@ -142,7 +142,7 @@ class ApiException extends RuntimeException implements AppsolutelyException
     /**
      * The `errors` member as field => messages, dropping what is not.
      *
-     * @return array<string, list<string>>
+     * @return array<array-key, list<string>>
      */
     private static function errors(mixed $errors): array
     {
@@ -155,7 +155,7 @@ class ApiException extends RuntimeException implements AppsolutelyException
             if (!is_array($messages)) {
                 continue;
             }
-            $fields[(string) $field] = array_values(array_filter($messages, is_string(...)));
+            $fields[$field] = array_values(array_filter($messages, is_string(...)));
         }
 
         return $fields;

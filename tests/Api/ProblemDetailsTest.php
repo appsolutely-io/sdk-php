@@ -54,6 +54,13 @@ final class ProblemDetailsTest extends TestCase
         self::assertStringContainsString('req-from-site', $exception->getMessage());
     }
 
+    public function testAFieldNamedByANumberKeepsTheIntegerKeyPhpGivesIt(): void
+    {
+        $exception = self::exception(self::json(422, '{"type":"https://appsolutely.io/problems/validation-failed","title":"T","errors":{"0":["First."],"items.0":["Second."]}}', 'application/problem+json'));
+
+        self::assertSame([0 => ['First.'], 'items.0' => ['Second.']], $exception->errors);
+    }
+
     public function testTheRequestIdSentIsKeptWhenTheAnswerNamesNone(): void
     {
         self::assertSame('req-sent', self::exception(self::problem(404, ['type' => 'https://appsolutely.io/problems/not-found', 'title' => 'Not found.', 'status' => 404]), 'req-sent')->requestId);
