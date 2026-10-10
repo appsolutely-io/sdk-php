@@ -1,0 +1,1 @@
+{"subject":"5f0c2a9e8b7d41c3a6e2f9b1d0c8a7e65f4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d","sequence":42,"status":"active","email":"ada@example.com","email_verified":true,"entitlements":[{"key":"seats","label":"Team seats","quantity":3,"expires_at":"2026-10-22T00:00:00Z"},{"key":"reports.export","label":"Report export","quantity":1,"expires_at":null}],"totals":{"seats":3,"reports.export":1}}
