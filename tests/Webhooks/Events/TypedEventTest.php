@@ -7,7 +7,11 @@ namespace Appsolutely\Sdk\Tests\Webhooks\Events;
 use Appsolutely\Sdk\Exception\UnexpectedPayloadException;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
 use Appsolutely\Sdk\Webhooks\Events\AccountEvent;
+use Appsolutely\Sdk\Webhooks\Events\ArticleEvent;
+use Appsolutely\Sdk\Webhooks\Events\FormSubmittedEvent;
+use Appsolutely\Sdk\Webhooks\Events\PageEvent;
 use Appsolutely\Sdk\Webhooks\Events\PingEvent;
+use Appsolutely\Sdk\Webhooks\Events\ProductEvent;
 use Appsolutely\Sdk\Webhooks\Events\TypedEvent;
 use Appsolutely\Sdk\Webhooks\Events\UnknownEvent;
 use Appsolutely\Sdk\Webhooks\EventType;
@@ -78,9 +82,7 @@ final class TypedEventTest extends TestCase
      */
     public static function accountTypes(): iterable
     {
-        foreach (AccountEvent::TYPES as $type) {
-            yield $type => [$type];
-        }
+        return self::each(AccountEvent::TYPES);
     }
 
     #[DataProvider('accountTypes')]
@@ -123,6 +125,136 @@ final class TypedEventTest extends TestCase
         $this->expectExceptionMessage('The account.suspended delivery\'s data.sequence is missing.');
 
         self::deliver(EventType::ACCOUNT_SUSPENDED, '{"subject":"s","status":"suspended","email":null,"email_verified":false,"entitlements":[],"totals":{}}');
+    }
+
+    /**
+     * @param list<string> $types
+     * @return iterable<string, array{string}>
+     */
+    private static function each(array $types): iterable
+    {
+        foreach ($types as $type) {
+            yield $type => [$type];
+        }
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function articleTypes(): iterable
+    {
+        return self::each(ArticleEvent::TYPES);
+    }
+
+    #[DataProvider('articleTypes')]
+    public function testEveryArticleEventCarriesTheArticle(string $type): void
+    {
+        $event = self::deliver($type, self::fixture('article'));
+
+        self::assertInstanceOf(ArticleEvent::class, $event);
+        $article = $event->article;
+        self::assertSame('8c1d4e2f-3a5b-4c6d-9e7f-0a1b2c3d4e5f', $article->id);
+        self::assertSame('Release notes', $article->title);
+        self::assertSame('release-notes', $article->slug);
+        self::assertNull($article->keywords);
+        self::assertSame('https://shop.example.com/storage/articles/cover.jpg', $article->cover);
+        self::assertSame(1, $article->status);
+        self::assertNull($article->sort);
+        self::assertSame('2026-10-01T09:00:00+00:00', $article->publishedAt->format(DATE_RFC3339));
+        self::assertNull($article->expiredAt);
+        self::assertSame('2026-09-30T16:20:00+00:00', $article->createdAt->format(DATE_RFC3339));
+        self::assertSame('2026-10-08T11:59:58+00:00', $article->updatedAt->format(DATE_RFC3339));
+        self::assertCount(1, $article->categories ?? []);
+        self::assertSame('2b4d6f8a-1c3e-4a5b-8d7f-9e0a1b2c3d4e', $article->categories[0]->id ?? null);
+        self::assertSame('News', $article->categories[0]->title ?? null);
+        self::assertSame([], $article->extra);
+    }
+
+    public function testAnArticleWithoutItsCategoriesHasNullRatherThanNone(): void
+    {
+        $event = self::deliver(EventType::ARTICLE_DELETED, '{"id":"a","title":"t","slug":null,"description":null,"keywords":null,"cover":null,"status":0,"sort":null,"published_at":"2026-10-01T09:00:00Z","expired_at":null,"created_at":"2026-09-30T16:20:00Z","updated_at":"2026-10-08T11:59:58Z"}');
+
+        self::assertInstanceOf(ArticleEvent::class, $event);
+        self::assertNull($event->article->categories);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function pageTypes(): iterable
+    {
+        return self::each(PageEvent::TYPES);
+    }
+
+    #[DataProvider('pageTypes')]
+    public function testEveryPageEventCarriesThePage(string $type): void
+    {
+        $event = self::deliver($type, self::fixture('page'));
+
+        self::assertInstanceOf(PageEvent::class, $event);
+        $page = $event->page;
+        self::assertSame('6e8f0a2b-4c6d-4e8f-a0b2-c4d6e8f0a2b4', $page->id);
+        self::assertSame('About', $page->name);
+        self::assertSame('About us', $page->title);
+        self::assertSame('about', $page->slug);
+        self::assertSame('en', $page->language);
+        self::assertNull($page->parentId);
+        self::assertSame(1, $page->status);
+        self::assertSame('2026-09-01T00:00:00+00:00', $page->publishedAt->format(DATE_RFC3339));
+        self::assertSame('2026-08-30T10:00:00+00:00', $page->createdAt?->format(DATE_RFC3339));
+        self::assertSame('2026-10-08T11:59:58+00:00', $page->updatedAt->format(DATE_RFC3339));
+        self::assertSame([], $page->extra);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function productTypes(): iterable
+    {
+        return self::each(ProductEvent::TYPES);
+    }
+
+    #[DataProvider('productTypes')]
+    public function testEveryProductEventCarriesTheProductWithItsPrices(string $type): void
+    {
+        $event = self::deliver($type, self::fixture('product'));
+
+        self::assertInstanceOf(ProductEvent::class, $event);
+        $product = $event->product;
+        self::assertSame('3a5c7e9b-1d3f-4b5d-8f1a-3c5e7a9b1d3f', $product->id);
+        self::assertSame('subscription', $product->type);
+        self::assertSame('Team plan', $product->title);
+        self::assertSame(1900, $product->price);
+        self::assertNull($product->originalPrice);
+        self::assertSame('USD', $product->currency);
+        self::assertCount(2, $product->prices);
+        self::assertSame('EUR', $product->prices[1]->currency);
+        self::assertSame(1700, $product->prices[1]->price);
+        self::assertSame(1900, $product->prices[1]->originalPrice);
+        self::assertSame(1, $product->status);
+        self::assertSame(10, $product->sort);
+        self::assertSame([], $product->extra);
+    }
+
+    public function testAFormSubmissionCarriesTheEntryAndItsForm(): void
+    {
+        $event = self::deliver(EventType::FORM_SUBMITTED, self::fixture('form-entry'));
+
+        self::assertInstanceOf(FormSubmittedEvent::class, $event);
+        $entry = $event->entry;
+        self::assertSame('0d2f4b6a-8c0e-4a2c-9e4a-6c8e0a2c4e6a', $entry->id);
+        self::assertSame('contact', $entry->formSlug);
+        self::assertSame('Ada Lovelace', $entry->name);
+        self::assertSame('Ada', $entry->firstName);
+        self::assertSame('Lovelace', $entry->lastName);
+        self::assertSame('ada@example.com', $entry->email);
+        self::assertNull($entry->mobile);
+        self::assertSame(['message' => 'Hello', 'topics' => ['billing']], $entry->data);
+        self::assertFalse($entry->isSpam);
+        self::assertSame('2026-10-08T11:59:57+00:00', $entry->submittedAt->format(DATE_RFC3339));
+        self::assertSame([], $entry->extra);
+        self::assertSame('Contact', $event->form->name);
+        self::assertSame('contact', $event->form->slug);
     }
 
     public function testAnUnknownTypeIsAGenericEventWithItsDataStillReadable(): void

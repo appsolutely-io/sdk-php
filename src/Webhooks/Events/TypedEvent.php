@@ -39,6 +39,10 @@ abstract readonly class TypedEvent
         $type = $envelope->type;
 
         return match (true) {
+            in_array($type, ArticleEvent::TYPES, true) => ArticleEvent::read($envelope, $fields),
+            in_array($type, PageEvent::TYPES, true) => PageEvent::read($envelope, $fields),
+            in_array($type, FormSubmittedEvent::TYPES, true) => FormSubmittedEvent::read($envelope, $fields),
+            in_array($type, ProductEvent::TYPES, true) => ProductEvent::read($envelope, $fields),
             in_array($type, AccountEvent::TYPES, true) => AccountEvent::read($envelope, $fields),
             $type === EventType::WEBHOOK_PING => PingEvent::read($envelope, $fields),
             default => new UnknownEvent($envelope),
