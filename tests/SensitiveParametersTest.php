@@ -217,6 +217,14 @@ final class SensitiveParametersTest extends TestCase
         return $handed;
     }
 
+    public function testEveryExceptionNamesAParameterThatExists(): void
+    {
+        foreach (self::NOT_SENSITIVE as [$class, $method, $name]) {
+            self::assertTrue(method_exists($class, $method), sprintf('NOT_SENSITIVE names %s::%s(), which no longer exists; drop the entry.', $class, $method));
+            self::assertContains($name, array_map(static fn(ReflectionParameter $parameter): string => $parameter->getName(), (new \ReflectionMethod($class, $method))->getParameters()), sprintf('NOT_SENSITIVE names %s::%s() $%s, which no longer exists; drop the entry.', $class, $method, $name));
+        }
+    }
+
     public function testParametersNamedGenericallyButCarryingTokensAreMarkedSensitive(): void
     {
         foreach (self::SENSITIVE_PARAMETERS as [$class, $method, $name]) {
