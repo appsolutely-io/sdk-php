@@ -18,12 +18,16 @@ final class ConfigTest extends TestCase
     public function testItKeepsWhatItWasGivenVerbatim(): void
     {
         $config = new Config(
+            baseUrl: 'https://site.example.com',
             issuer: 'https://login.example.com',
             clientId: 'client-1',
             clientSecret: 'secret-1',
+            apiToken: '7|admin-token',
         );
 
+        self::assertSame('https://site.example.com', $config->baseUrl);
         self::assertSame('https://login.example.com', $config->issuer);
+        self::assertSame('7|admin-token', $config->apiToken());
         self::assertSame('client-1', $config->clientId);
         self::assertSame('secret-1', $config->clientSecret());
         self::assertNull($config->httpClient);
@@ -32,14 +36,34 @@ final class ConfigTest extends TestCase
         self::assertNull($config->logger);
     }
 
-    public function testTheSecretIsNotAPublicProperty(): void
+    public function testTheAdministratorTokenIsOptional(): void
     {
-        $property = new \ReflectionProperty(Config::class, 'clientSecret');
+        self::assertNull((new Config('https://site.example.com', 'https://login.example.com', 'id', 'secret'))->apiToken());
+    }
+
+    public function testABaseUrlWithOnlyATrailingSlashIsAccepted(): void
+    {
+        self::assertSame('https://site.example.com/', (new Config('https://site.example.com/', 'https://login.example.com', 'id', 'secret'))->baseUrl);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function secretProperties(): iterable
+    {
+        yield 'client secret' => ['clientSecret'];
+        yield 'administrator token' => ['apiToken'];
+    }
+
+    #[DataProvider('secretProperties')]
+    public function testASecretIsNotAPublicProperty(string $name): void
+    {
+        $property = new \ReflectionProperty(Config::class, $name);
 
         self::assertFalse($property->isPublic());
     }
 
-    public function testDumpingTheConfigOrTheClientsBuiltOnItHidesTheSecret(): void
+    public function testDumpingTheConfigOrTheClientsBuiltOnItHidesTheSecrets(): void
     {
         $provider = new FakeProvider();
         $config = $provider->config();
@@ -50,8 +74,10 @@ final class ConfigTest extends TestCase
             var_dump($object);
             $dumped = (string) ob_get_clean();
 
-            self::assertStringNotContainsString(FakeProvider::CLIENT_SECRET, $dumped);
-            self::assertStringNotContainsString(FakeProvider::CLIENT_SECRET, print_r($object, true));
+            foreach ([FakeProvider::CLIENT_SECRET, FakeProvider::API_TOKEN] as $secret) {
+                self::assertStringNotContainsString($secret, $dumped);
+                self::assertStringNotContainsString($secret, print_r($object, true));
+            }
         }
         self::assertStringContainsString('[redacted]', print_r($config, true));
     }
@@ -98,7 +124,8 @@ final class ConfigTest extends TestCase
     #[DataProvider('loopbackIssuers')]
     public function testPlainHttpIsAcceptedForALoopbackHost(string $issuer): void
     {
-        self::assertSame($issuer, (new Config($issuer, 'id', 'secret'))->issuer);
+        self::assertSame($issuer, (new Config($issuer, $issuer, 'id', 'secret'))->issuer);
+        self::assertSame($issuer, (new Config($issuer, $issuer, 'id', 'secret'))->baseUrl);
     }
 
     /**
@@ -128,10 +155,27 @@ final class ConfigTest extends TestCase
     public function testAnIssuerThatParsersReadDifferentlyIsRefused(string $issuer): void
     {
         try {
-            new Config($issuer, 'id', 'secret');
+            new Config('https://site.example.com', $issuer, 'id', 'secret');
             self::fail('Config accepted an ambiguous issuer.');
         } catch (InvalidConfigException $exception) {
+            self::assertStringContainsString('The issuer', $exception->getMessage());
             self::assertStringContainsString('user info', $exception->getMessage());
+            self::assertDoesNotMatchRegularExpression('/[^\x20-\x7E]/', $exception->getMessage());
+        }
+    }
+
+    /**
+     * The base URL receives the administrator token on every call, so it is
+     * held to the issuer's rules.
+     */
+    #[DataProvider('ambiguousIssuers')]
+    public function testABaseUrlThatParsersReadDifferentlyIsRefused(string $baseUrl): void
+    {
+        try {
+            new Config($baseUrl, 'https://login.example.com', 'id', 'secret');
+            self::fail('Config accepted an ambiguous base URL.');
+        } catch (InvalidConfigException $exception) {
+            self::assertStringContainsString('The base URL', $exception->getMessage());
             self::assertDoesNotMatchRegularExpression('/[^\x20-\x7E]/', $exception->getMessage());
         }
     }
@@ -148,7 +192,7 @@ final class ConfigTest extends TestCase
     #[DataProvider('acceptedLeeways')]
     public function testAClockLeewayFromZeroToFiveMinutesIsAccepted(int $leeway): void
     {
-        self::assertSame($leeway, (new Config('https://login.example.com', 'id', 'secret', clockLeeway: $leeway))->clockLeeway);
+        self::assertSame($leeway, (new Config('https://site.example.com', 'https://login.example.com', 'id', 'secret', clockLeeway: $leeway))->clockLeeway);
     }
 
     /**
@@ -166,32 +210,43 @@ final class ConfigTest extends TestCase
         $this->expectException(InvalidConfigException::class);
         $this->expectExceptionMessage('clock leeway');
 
-        new Config('https://login.example.com', 'id', 'secret', clockLeeway: $leeway);
+        new Config('https://site.example.com', 'https://login.example.com', 'id', 'secret', clockLeeway: $leeway);
     }
 
     /**
-     * @return iterable<string, array{string, string, string}>
+     * @return iterable<string, array{string, string, string, string, ?string}>
      */
     public static function invalid(): iterable
     {
-        yield 'issuer over plain http' => ['http://login.example.com', 'id', 'secret'];
+        yield 'base URL over plain http' => ['http://site.example.com', 'https://login.example.com', 'id', 'secret', null];
+        yield 'base URL without a host' => ['https://', 'https://login.example.com', 'id', 'secret', null];
+        yield 'base URL that is not a URL' => ['site.example.com', 'https://login.example.com', 'id', 'secret', null];
+        yield 'base URL with a query' => ['https://site.example.com?x=1', 'https://login.example.com', 'id', 'secret', null];
+        yield 'base URL with a fragment' => ['https://site.example.com#x', 'https://login.example.com', 'id', 'secret', null];
+        // Every path the client calls is absolute from the site's origin.
+        yield 'base URL with a path' => ['https://site.example.com/shop', 'https://login.example.com', 'id', 'secret', null];
+        yield 'empty administrator token' => ['https://site.example.com', 'https://login.example.com', 'id', 'secret', ''];
+        yield 'administrator token with a line break' => ['https://site.example.com', 'https://login.example.com', 'id', 'secret', "token\r\nX-Forged: 1"];
+        yield 'administrator token with a space' => ['https://site.example.com', 'https://login.example.com', 'id', 'secret', 'two words'];
+        yield 'administrator token beyond ASCII' => ['https://site.example.com', 'https://login.example.com', 'id', 'secret', "t\u{00E9}"];
+        yield 'issuer over plain http' => ['https://site.example.com', 'http://login.example.com', 'id', 'secret', null];
         // Whether a *.localhost name resolves to the loopback interface is up
         // to the resolver, so only the three exact loopback forms are trusted.
-        yield 'issuer over plain http on a localhost subdomain' => ['http://login.localhost', 'id', 'secret'];
-        yield 'issuer over plain http on another 127/8 address' => ['http://127.0.0.2', 'id', 'secret'];
-        yield 'issuer without a host' => ['https://', 'id', 'secret'];
-        yield 'issuer that is not a URL' => ['login.example.com', 'id', 'secret'];
-        yield 'issuer with a query' => ['https://login.example.com?x=1', 'id', 'secret'];
-        yield 'issuer with a fragment' => ['https://login.example.com#x', 'id', 'secret'];
-        yield 'empty client id' => ['https://login.example.com', '', 'secret'];
-        yield 'empty client secret' => ['https://login.example.com', 'id', ''];
+        yield 'issuer over plain http on a localhost subdomain' => ['https://site.example.com', 'http://login.localhost', 'id', 'secret', null];
+        yield 'issuer over plain http on another 127/8 address' => ['https://site.example.com', 'http://127.0.0.2', 'id', 'secret', null];
+        yield 'issuer without a host' => ['https://site.example.com', 'https://', 'id', 'secret', null];
+        yield 'issuer that is not a URL' => ['https://site.example.com', 'login.example.com', 'id', 'secret', null];
+        yield 'issuer with a query' => ['https://site.example.com', 'https://login.example.com?x=1', 'id', 'secret', null];
+        yield 'issuer with a fragment' => ['https://site.example.com', 'https://login.example.com#x', 'id', 'secret', null];
+        yield 'empty client id' => ['https://site.example.com', 'https://login.example.com', '', 'secret', null];
+        yield 'empty client secret' => ['https://site.example.com', 'https://login.example.com', 'id', '', null];
     }
 
     #[DataProvider('invalid')]
-    public function testItRefusesAnInvalidValueAtConstruction(string $issuer, string $clientId, string $clientSecret): void
+    public function testItRefusesAnInvalidValueAtConstruction(string $baseUrl, string $issuer, string $clientId, string $clientSecret, ?string $apiToken): void
     {
         try {
-            new Config($issuer, $clientId, $clientSecret);
+            new Config($baseUrl, $issuer, $clientId, $clientSecret, $apiToken);
             self::fail('Config accepted an invalid value.');
         } catch (InvalidConfigException $exception) {
             self::assertInstanceOf(AppsolutelyException::class, $exception);

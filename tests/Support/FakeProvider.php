@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Support;
 
+use Appsolutely\Sdk\Api\RetryPolicy;
 use Appsolutely\Sdk\Cache\InMemoryCache;
 use Appsolutely\Sdk\Client;
 use Appsolutely\Sdk\Config;
@@ -17,16 +18,20 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * An in-memory stand-in for an Appsolutely sign-in host, shaped like aio's
- * discovery document, key set and token endpoint.
+ * An in-memory stand-in for a site: its OpenID provider, shaped like the
+ * site's discovery document, key set and token endpoint, and its API, whose
+ * answers a test supplies through $site.
  */
 final class FakeProvider
 {
+    public const string BASE_URL = 'https://site.example.com';
     public const string ISSUER = 'https://login.example.com';
     public const string CLIENT_ID = 'client-123';
     public const string CLIENT_SECRET = 's3cret/with+chars';
+    public const string API_TOKEN = '7|admin-token-value';
 
     public readonly FrozenClock $clock;
+    public readonly RecordingSleeper $sleeper;
     public readonly InMemoryCache $cache;
     public readonly MockClient $http;
     public readonly Psr17Factory $factory;
@@ -56,10 +61,18 @@ final class FakeProvider
     /** @var (callable(RequestInterface): ResponseInterface)|null */
     public $revoke = null;
 
+    /**
+     * Answers every request under BASE_URL.
+     *
+     * @var (callable(RequestInterface): ResponseInterface)|null
+     */
+    public $site = null;
+
     public function __construct(?FrozenClock $clock = null)
     {
         $this->clock = $clock ?? new FrozenClock();
         $this->cache = new InMemoryCache($this->clock);
+        $this->sleeper = new RecordingSleeper($this->clock);
         $this->factory = new Psr17Factory();
         $this->http = new MockClient($this->factory);
         $this->rsa = SigningKey::rsa('rsa-1');
@@ -85,9 +98,11 @@ final class FakeProvider
     public function config(ClientAuthentication $authentication = ClientAuthentication::ClientSecretBasic, int $leeway = 60, ?LoggerInterface $logger = null): Config
     {
         return new Config(
+            baseUrl: self::BASE_URL,
             issuer: self::ISSUER,
             clientId: self::CLIENT_ID,
             clientSecret: self::CLIENT_SECRET,
+            apiToken: self::API_TOKEN,
             httpClient: $this->http,
             requestFactory: $this->factory,
             streamFactory: $this->factory,
@@ -96,7 +111,26 @@ final class FakeProvider
             logger: $logger,
             clientAuthentication: $authentication,
             clockLeeway: $leeway,
+            retryPolicy: new RetryPolicy(sleeper: $this->sleeper),
         );
+    }
+
+    public function client(?string $apiToken = self::API_TOKEN, ?RetryPolicy $retryPolicy = null, ?LoggerInterface $logger = null): Client
+    {
+        return new Client(new Config(
+            baseUrl: self::BASE_URL,
+            issuer: self::ISSUER,
+            clientId: self::CLIENT_ID,
+            clientSecret: self::CLIENT_SECRET,
+            apiToken: $apiToken,
+            httpClient: $this->http,
+            requestFactory: $this->factory,
+            streamFactory: $this->factory,
+            cache: $this->cache,
+            clock: $this->clock,
+            logger: $logger,
+            retryPolicy: $retryPolicy ?? new RetryPolicy(sleeper: $this->sleeper),
+        ));
     }
 
     public function oidc(ClientAuthentication $authentication = ClientAuthentication::ClientSecretBasic, int $leeway = 60, ?LoggerInterface $logger = null): OpenIdClient
@@ -134,6 +168,32 @@ final class FakeProvider
         }
 
         return $response;
+    }
+
+    /**
+     * An RFC 9457 refusal shaped as the site sends it.
+     *
+     * @param array<string, mixed> $extensions
+     * @param array<string, string> $headers
+     */
+    public function problem(int $status, string $slug, array $extensions = [], array $headers = []): ResponseInterface
+    {
+        $response = $this->json(['type' => 'https://appsolutely.io/problems/' . $slug, 'title' => $slug, 'status' => $status, ...$extensions], $status, $headers);
+
+        return $response->withHeader('Content-Type', 'application/problem+json');
+    }
+
+    /**
+     * The requests that reached the site's API, in order.
+     *
+     * @return list<RequestInterface>
+     */
+    public function siteRequests(): array
+    {
+        return array_values(array_filter(
+            $this->http->getRequests(),
+            static fn(RequestInterface $request): bool => str_starts_with((string) $request->getUri(), self::BASE_URL . '/'),
+        ));
     }
 
     /**
@@ -183,6 +243,9 @@ final class FakeProvider
         }
         if ($method === 'POST' && $url === self::ISSUER . '/oauth/revoke' && $this->revoke !== null) {
             return ($this->revoke)($request);
+        }
+        if (str_starts_with($url, self::BASE_URL . '/') && $this->site !== null) {
+            return ($this->site)($request);
         }
 
         return $this->json(['error' => 'not_found'], 404);
