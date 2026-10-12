@@ -6,7 +6,13 @@ namespace Appsolutely\Sdk\Tests;
 
 use Appsolutely\Sdk\Cache\InMemoryCache;
 use Appsolutely\Sdk\Model\Entitlement;
+use Appsolutely\Sdk\Model\FeatureKey;
 use Appsolutely\Sdk\Model\Fields;
+use Appsolutely\Sdk\Model\ProductFeatureValue;
+use Appsolutely\Sdk\Model\Role;
+use Appsolutely\Sdk\Resource\Backend\FeatureKeys;
+use Appsolutely\Sdk\Resource\Backend\FeatureValues;
+use Appsolutely\Sdk\Resource\Backend\Roles;
 use Appsolutely\Sdk\Tests\Support\SourceTokens;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -45,10 +51,19 @@ final class SensitiveParametersTest extends TestCase
 
     /**
      * Named like a secret, yet not one: a PSR-16 cache key, a key id, the
-     * name of what an entitlement grants.
+     * name of what an entitlement grants, of a feature or of a role.
      */
     private const array NOT_SENSITIVE = [
         [Entitlement::class, '__construct', 'key'],
+        [FeatureKey::class, '__construct', 'key'],
+        [ProductFeatureValue::class, '__construct', 'key'],
+        [Role::class, '__construct', 'key'],
+        [FeatureKeys::class, 'create', 'key'],
+        [FeatureKeys::class, 'retire', 'key'],
+        [FeatureValues::class, 'set', 'key'],
+        [FeatureValues::class, 'delete', 'key'],
+        [Roles::class, 'create', 'key'],
+        [Roles::class, 'retire', 'key'],
         [InMemoryCache::class, 'get', 'key'],
         [InMemoryCache::class, 'set', 'key'],
         [InMemoryCache::class, 'delete', 'key'],

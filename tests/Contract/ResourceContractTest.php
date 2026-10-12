@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Contract;
 
 use Appsolutely\Sdk\Api\AdministratorApi;
-use Appsolutely\Sdk\Api\BackendApi;
 use Appsolutely\Sdk\Api\Audience;
+use Appsolutely\Sdk\Api\BackendApi;
 use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\MemberApi;
 use Appsolutely\Sdk\Api\Operation;
@@ -17,9 +17,14 @@ use Appsolutely\Sdk\Config;
 use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\MediaType;
 use Appsolutely\Sdk\Model\Fields;
+use Appsolutely\Sdk\Model\MagicLinkToken;
+use Appsolutely\Sdk\Model\PushDevice;
+use Appsolutely\Sdk\Model\Redelivery;
+use Appsolutely\Sdk\Model\Referral;
 use Appsolutely\Sdk\Model\SyncPull;
 use Appsolutely\Sdk\Model\SyncPush;
 use Appsolutely\Sdk\Model\SyncResult;
+use Appsolutely\Sdk\Model\WebhookDelivery;
 use Appsolutely\Sdk\Tests\Support\SourceTokens;
 use Appsolutely\Sdk\Tests\Support\UntypedRecord;
 use DateTimeImmutable;
@@ -119,7 +124,32 @@ final class ResourceContractTest extends TestCase
         'store' => 'app_store',
         'storefront' => 'US',
         'status' => 'failed',
+        'value' => true,
+        'platform' => 'ios',
+        'osVersion' => '17.4',
     ];
+
+    /**
+     * Operations whose success the document leaves an open object, with the
+     * model that reads what the site sends: none of them is held to a schema
+     * here. Each entry fails once the document names a schema for the answer,
+     * and the model is then held to it.
+     */
+    private const array UNTYPED_ANSWERS = [
+        'getMeReferral' => Referral::class,
+        'tokenMagicLink' => MagicLinkToken::class,
+        'createMePushDevice' => PushDevice::class,
+        'redeliverDelivery' => Redelivery::class,
+        'redeliverWebhookDelivery' => WebhookDelivery::class,
+    ];
+
+    /**
+     * Array query parameters the document names without the brackets PHP
+     * needs to read a repeated key as a list: the site reads `subjects[]`,
+     * and a client sending `subjects` once per value is answered for the last
+     * one only. Each entry fails once the document names the brackets.
+     */
+    private const array NAMED_WITHOUT_BRACKETS = ['listAccountStates' => ['subjects']];
 
     /**
      * The query name a cursor list carries from its second page on.
@@ -142,7 +172,8 @@ final class ResourceContractTest extends TestCase
         $documented = [];
         foreach (Document::operations()[$id]['parameters'] as $parameter) {
             if (($parameter['in'] ?? null) === 'query' && is_string($parameter['name'] ?? null)) {
-                $documented[$parameter['name']] = $parameter;
+                $name = in_array($parameter['name'], self::NAMED_WITHOUT_BRACKETS[$id] ?? [], true) ? $parameter['name'] . '[]' : $parameter['name'];
+                $documented[$name] = $parameter;
             }
         }
 
@@ -285,6 +316,26 @@ final class ResourceContractTest extends TestCase
         self::assertReadsMatch($schema, $fields->reads(), $class);
     }
 
+    public function testEachAnswerReadWithoutASchemaIsStillUntyped(): void
+    {
+        foreach (array_keys(self::UNTYPED_ANSWERS) as $id) {
+            $operation = Operation::from($id);
+            $response = Document::map(Document::map(Document::operations()[$id]['operation']['responses'] ?? null)[$operation->successStatus()] ?? null);
+            $schema = Document::map(Document::map(Document::map($response['content'] ?? null)['application/json'] ?? null)['schema'] ?? null);
+            self::assertNull(Document::refName($schema), sprintf('The pinned document now names a schema for the answer of %s: drop it from UNTYPED_ANSWERS and give its model that SCHEMA.', $id));
+        }
+    }
+
+    public function testEachArrayQueryNamedWithoutItsBracketsIsStillSo(): void
+    {
+        foreach (self::NAMED_WITHOUT_BRACKETS as $id => $names) {
+            $documented = array_column(array_filter(Document::operations()[$id]['parameters'], static fn(array $parameter): bool => ($parameter['in'] ?? null) === 'query'), 'name');
+            foreach ($names as $name) {
+                self::assertContains($name, $documented, sprintf('The pinned document no longer names %s "%s" without brackets: drop it from NAMED_WITHOUT_BRACKETS.', $id, $name));
+            }
+        }
+    }
+
     public function testEverySchemaASuccessAnswersIsReadByAModel(): void
     {
         $read = [];
@@ -381,6 +432,23 @@ final class ResourceContractTest extends TestCase
 
             public function sendRequest(RequestInterface $request): ResponseInterface
             {
+                // The backend's sign-in, which only a backend method makes
+                // and which is not one of the calls held to the document.
+                $path = $request->getUri()->getPath();
+                if ($path === '/.well-known/openid-configuration' || $path === '/oauth/token') {
+                    return Psr17FactoryDiscovery::findResponseFactory()->createResponse(200)
+                        ->withHeader(Header::CONTENT_TYPE, MediaType::JSON)
+                        ->withBody(Psr17FactoryDiscovery::findStreamFactory()->createStream(json_encode($path === '/oauth/token' ? ['access_token' => 'contract-backend-token', 'token_type' => 'Bearer', 'expires_in' => 3600] : [
+                            'issuer' => 'https://site.test',
+                            'authorization_endpoint' => 'https://site.test/oauth/authorize',
+                            'token_endpoint' => 'https://site.test/oauth/token',
+                            'jwks_uri' => 'https://site.test/oauth/jwks.json',
+                            'response_types_supported' => ['code'],
+                            'subject_types_supported' => ['public'],
+                            'id_token_signing_alg_values_supported' => ['RS256'],
+                        ], JSON_THROW_ON_ERROR)));
+                }
+
                 $names = [];
                 $query = $request->getUri()->getQuery();
                 foreach ($query === '' ? [] : explode('&', $query) as $pair) {
@@ -404,11 +472,17 @@ final class ResourceContractTest extends TestCase
             requestFactory: Psr17FactoryDiscovery::findRequestFactory(),
             streamFactory: Psr17FactoryDiscovery::findStreamFactory(),
             retryPolicy: RetryPolicy::none(),
+            backendClientId: 'contract-backend',
+            backendClientSecret: 'contract-backend-secret',
         ));
 
         [$class, $name] = explode('::', $endpoint['method'], 2);
         self::assertTrue(class_exists($class));
-        $root = ($endpoint['roots'][0] ?? null) === MemberApi::class ? $client->forMember('contract-member-token')->api() : $client->api();
+        $root = match ($endpoint['roots'][0] ?? null) {
+            MemberApi::class => $client->forMember('contract-member-token')->api(),
+            BackendApi::class => $client->backend(),
+            default => $client->api(),
+        };
         $method = new ReflectionMethod($class, $name);
         $arguments = [];
         foreach ($method->getParameters() as $parameter) {
