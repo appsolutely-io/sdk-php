@@ -21,6 +21,8 @@ use Appsolutely\Sdk\Webhooks\Events\PingEvent;
 use Appsolutely\Sdk\Webhooks\Events\ProductEvent;
 use Appsolutely\Sdk\Webhooks\Events\ReferralRewardIssuedEvent;
 use Appsolutely\Sdk\Webhooks\Events\RefundEvent;
+use Appsolutely\Sdk\Webhooks\Events\RoleAssignmentChangedEvent;
+use Appsolutely\Sdk\Webhooks\Events\RotationEndingEvent;
 use Appsolutely\Sdk\Webhooks\Events\SubscriptionEvent;
 use Appsolutely\Sdk\Webhooks\Events\TypedEvent;
 use Appsolutely\Sdk\Webhooks\Events\UnknownEvent;
@@ -123,6 +125,29 @@ final class TypedEventTest extends TestCase
         self::assertSame(Subscription::BILLED_BY_SITE, $state->subscriptions[0]->billedBy);
         self::assertNull($state->subscriptions[0]->manageUrl);
         self::assertSame([], $state->extra);
+    }
+
+    public function testARoleChangeCarriesTheMembersWholeSetAndItsSequence(): void
+    {
+        $event = self::deliver(EventType::ROLE_ASSIGNMENT_CHANGED, '{"subject":"member-sub","role":"editor","change":"added","cause":"app","roles":["editor","viewer"],"sequence":7}');
+
+        self::assertInstanceOf(RoleAssignmentChangedEvent::class, $event);
+        self::assertSame('member-sub', $event->subject);
+        self::assertSame('editor', $event->role);
+        self::assertSame(RoleAssignmentChangedEvent::CHANGE_ADDED, $event->change);
+        self::assertSame(RoleAssignmentChangedEvent::CAUSE_APP, $event->cause);
+        self::assertSame(['editor', 'viewer'], $event->roles);
+        self::assertSame(7, $event->sequence);
+    }
+
+    public function testAnEndingRotationNamesTheEndpointAndWhenTheOldSecretStops(): void
+    {
+        $event = self::deliver(EventType::WEBHOOK_ROTATION_ENDING, '{"endpoint_id":"12","rotation_started_at":"2026-10-07T12:00:00Z","completes_at":"2026-10-08T12:00:00Z"}');
+
+        self::assertInstanceOf(RotationEndingEvent::class, $event);
+        self::assertSame('12', $event->endpointId);
+        self::assertSame('2026-10-07T12:00:00+00:00', $event->rotationStartedAt->format(DATE_RFC3339));
+        self::assertSame('2026-10-08T12:00:00+00:00', $event->completesAt->format(DATE_RFC3339));
     }
 
     public function testAnErasedAccountHasNoAddressNoGrantsAndEmptyTotals(): void
@@ -507,7 +532,8 @@ final class TypedEventTest extends TestCase
             'referral.reward_issued',
             'product.created', 'product.updated', 'product.deleted',
             'account.suspended', 'account.reinstated', 'account.erased', 'account.entitlements_changed', 'account.email_changed',
-            'webhook.ping',
+            'role.assignment_changed',
+            'webhook.ping', 'webhook.rotation_ending',
         ];
 
         $named = array_values((new ReflectionClass(EventType::class))->getConstants());
@@ -528,7 +554,9 @@ final class TypedEventTest extends TestCase
             SubscriptionEvent::TYPES,
             ProductEvent::TYPES,
             AccountEvent::TYPES,
+            RoleAssignmentChangedEvent::TYPES,
             [EventType::WEBHOOK_PING],
+            RotationEndingEvent::TYPES,
         );
         sort($families);
         self::assertSame($expected, $families);
