@@ -77,7 +77,7 @@ final class MemberTest extends TestCase
         self::assertSame('London', $listed[0]->city);
         self::assertSame('N1 1AA', $listed[0]->postcode);
         self::assertSame('POST /api/v1/me/addresses', $site->line(1));
-        self::assertSame('address-form-7', $site->request(1)->getHeaderLine('Idempotency-Key'));
+        self::assertSame('"address-form-7"', $site->request(1)->getHeaderLine('Idempotency-Key'));
         self::assertSame(['name' => 'Ada Lovelace', 'address' => '1 Main St', 'country' => 'GB'], $site->body(1));
         self::assertSame('addr-2', $filed->value->id);
         self::assertSame('address-form-7', $filed->idempotencyKey);

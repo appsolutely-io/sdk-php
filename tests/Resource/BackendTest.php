@@ -80,7 +80,7 @@ final class BackendTest extends TestCase
         $result = self::backend($site)->checkoutSessions()->create('member-sub', [['product' => 'mug', 'quantity' => 2]], 'https://app.example.com/thanks', 'https://app.example.com/cart', idempotencyKey: 'cart-9');
 
         self::assertSame('POST /api/v1/checkout-sessions', $site->line());
-        self::assertSame('cart-9', $site->request()->getHeaderLine('Idempotency-Key'));
+        self::assertSame('"cart-9"', $site->request()->getHeaderLine('Idempotency-Key'));
         self::assertSame(['subject' => 'member-sub', 'lines' => [['product' => 'mug', 'quantity' => 2]], 'success_url' => 'https://app.example.com/thanks', 'cancel_url' => 'https://app.example.com/cart', 'promotion_code' => null], $site->body());
         self::assertSame('https://site.example.com/checkout/cs_1', $result->value->url);
         self::assertSame('mug', $result->value->lines[0]->product);

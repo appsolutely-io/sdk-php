@@ -37,21 +37,39 @@ final class RetryTest extends TestCase
         $response = $provider->client()->forMember('member-token')->api()->raw()->postIdempotent('/api/v1/me/addresses', ['line1' => '1 Main St']);
 
         $request = $provider->siteRequests()[0];
-        self::assertMatchesRegularExpression(self::UUID_V4, $request->getHeaderLine('Idempotency-Key'));
-        self::assertSame($request->getHeaderLine('Idempotency-Key'), $response->idempotencyKey);
+        self::assertMatchesRegularExpression(self::UUID_V4, (string) $response->idempotencyKey);
+        self::assertSame('"' . $response->idempotencyKey . '"', $request->getHeaderLine('Idempotency-Key'));
         self::assertSame('{"line1":"1 Main St"}', (string) $request->getBody());
         self::assertTrue($response->replayed);
         self::assertSame(['id' => 'addr-1'], $response->data);
     }
 
-    public function testACallerSuppliedKeyIsSentAsItIs(): void
+    /**
+     * The key goes out as an RFC 9651 String, the form the Idempotency-Key
+     * draft defines and the site accepts, so a key holding characters a
+     * bare token cannot (a colon, a space, a quote, a backslash) arrives as
+     * it was given.
+     *
+     * @return iterable<string, array{string, string}>
+     */
+    public static function sentKeys(): iterable
+    {
+        yield 'a colon and spaces' => ['order 42: create article', '"order 42: create article"'];
+        yield 'a double quote' => ['say "hi"', '"say \\"hi\\""'];
+        yield 'a backslash' => ['C:\\orders\\42', '"C:\\\\orders\\\\42"'];
+        yield 'a leading and a trailing space' => [' padded ', '" padded "'];
+        yield 'the longest key, every character escaped' => [str_repeat('"', 255), '"' . str_repeat('\\"', 255) . '"'];
+    }
+
+    #[DataProvider('sentKeys')]
+    public function testACallerSuppliedKeyIsSentAsAStructuredFieldString(string $key, string $header): void
     {
         $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->json(['id' => 'a-1'], 201));
 
-        $response = $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', ['title' => 'T'], idempotencyKey: 'order 42: create article');
+        $response = $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', ['title' => 'T'], idempotencyKey: $key);
 
-        self::assertSame('order 42: create article', $provider->siteRequests()[0]->getHeaderLine('Idempotency-Key'));
-        self::assertSame('order 42: create article', $response->idempotencyKey);
+        self::assertSame($header, $provider->siteRequests()[0]->getHeaderLine('Idempotency-Key'));
+        self::assertSame($key, $response->idempotencyKey);
         self::assertFalse($response->replayed);
     }
 
@@ -78,8 +96,8 @@ final class RetryTest extends TestCase
         yield 'longer than 255 characters' => [str_repeat('k', 256)];
         yield 'a line break' => ["key\r\nX-Forged: 1"];
         yield 'beyond ASCII' => ["cl\u{00E9}"];
-        yield 'a leading space, which a header would lose' => [' key'];
-        yield 'a trailing space, which a header would lose' => ['key '];
+        yield 'a tab' => ["key\tvalue"];
+        yield 'a delete character' => ["key\x7F"];
     }
 
     #[DataProvider('refusedKeys')]
@@ -125,7 +143,7 @@ final class RetryTest extends TestCase
         $response = $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', ['title' => 'T'], idempotencyKey: 'k-1');
 
         self::assertSame([2.0], $provider->sleeper->sleeps);
-        self::assertSame(['k-1', 'k-1'], array_map(static fn(RequestInterface $request): string => $request->getHeaderLine('Idempotency-Key'), $provider->siteRequests()));
+        self::assertSame(['"k-1"', '"k-1"'], array_map(static fn(RequestInterface $request): string => $request->getHeaderLine('Idempotency-Key'), $provider->siteRequests()));
         self::assertTrue($response->replayed);
     }
 

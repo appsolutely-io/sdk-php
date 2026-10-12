@@ -140,14 +140,15 @@ final readonly class SiteApi
      * for the operations the site's API document gives an Idempotency-Key.
      *
      * @param array<string, mixed> $body
-     * @param string|null $idempotencyKey a key for this one operation, 1 to 255 printable ASCII characters;
-     *                                    a fresh UUID when none is given. Never reuse one for a different request.
+     * @param string|null $idempotencyKey a key for this one operation, 1 to 255 printable ASCII characters
+     *                                    (spaces included); a fresh UUID when none is given. Never reuse one
+     *                                    for a different request.
      */
     public function postIdempotent(string $path, #[\SensitiveParameter] array $body = [], ?string $idempotencyKey = null, ?string $requestId = null): ApiResponse
     {
         $idempotencyKey ??= Uuid::v4();
-        if (preg_match('/^[\x21-\x7E](?:[\x20-\x7E]{0,253}[\x21-\x7E])?$/D', $idempotencyKey) !== 1) {
-            throw new InvalidArgumentValueException('An Idempotency-Key must be 1 to 255 printable ASCII characters, not starting or ending with a space.');
+        if (preg_match('/^[\x20-\x7E]{1,255}$/D', $idempotencyKey) !== 1) {
+            throw new InvalidArgumentValueException('An Idempotency-Key must be 1 to 255 printable ASCII characters.');
         }
 
         return $this->call('POST', $path, [], $body, $requestId, retryable: true, idempotencyKey: $idempotencyKey);
@@ -264,7 +265,7 @@ final readonly class SiteApi
         }
         $renewed = false;
         if ($idempotencyKey !== null) {
-            $headers[Header::IDEMPOTENCY_KEY] = $idempotencyKey;
+            $headers[Header::IDEMPOTENCY_KEY] = self::structuredFieldString($idempotencyKey);
         }
         $encoded = $body === null ? null : self::encode($body);
 
@@ -420,8 +421,18 @@ final readonly class SiteApi
     }
 
     /**
-     * 1 to 255 visible ASCII characters, the site's rule for a key and a
-     * safe one for any header value.
+     * The key as an RFC 9651 String (section 4.1.6), the form the IETF
+     * Idempotency-Key draft defines: quoted, with `\` and `"` escaped, so
+     * a key holding a space, a colon or a quote arrives as it was given
+     * rather than as a bare token the site would refuse.
+     */
+    private static function structuredFieldString(string $value): string
+    {
+        return '"' . addcslashes($value, '"\\') . '"';
+    }
+
+    /**
+     * 1 to 255 visible ASCII characters, a safe rule for any header value.
      */
     private static function assertHeaderValue(string $name, string $value): void
     {
