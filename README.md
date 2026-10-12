@@ -13,7 +13,7 @@ Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://git
 
 ## Installation
 
-The repository is private for now, so Composer installs it from GitHub with a token that can read it:
+The package is not on Packagist yet, so Composer installs it from its GitHub repository:
 
 ```json
 {
