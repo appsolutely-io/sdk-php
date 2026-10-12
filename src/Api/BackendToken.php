@@ -25,6 +25,12 @@ final readonly class BackendToken
      */
     public const int EXPIRY_MARGIN = 60;
 
+    /**
+     * Seconds a token answered without `expires_in` is taken to live: short,
+     * since the site did not say, yet long enough not to ask on every call.
+     */
+    public const int DEFAULT_LIFETIME = 300;
+
     private const string KEY_PREFIX = 'appsolutely.backend.token.';
 
     private string $key;
@@ -93,7 +99,7 @@ final readonly class BackendToken
         $tokens = $this->oidc->clientCredentials($this->clientId, $this->clientSecret, $this->scopes, $this->authentication);
 
         $now = $this->clock->now()->getTimestamp();
-        $usableUntil = $tokens->expiresAt === null ? $now : $tokens->expiresAt->getTimestamp() - self::EXPIRY_MARGIN;
+        $usableUntil = ($tokens->expiresAt?->getTimestamp() ?? $now + self::DEFAULT_LIFETIME) - self::EXPIRY_MARGIN;
         if ($usableUntil > $now) {
             $this->cache->set($this->key, ['token' => $tokens->accessToken, 'usable_until' => $usableUntil], $usableUntil - $now);
         }

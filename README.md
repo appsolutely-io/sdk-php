@@ -214,7 +214,7 @@ Feeds exist for articles, form entries, orders, pages and products. A `410` `cur
 
 ### The site's backend
 
-The backend's token is asked for when first needed and kept in the cache from `Config` until a minute before it expires, so under PHP-FPM it is asked for once per token, not once per request. When the site answers `invalid-token`, a new one is asked for and the call sent again, once.
+The backend's token is asked for when first needed and kept in the cache from `Config` until a minute before it expires, so under PHP-FPM it is asked for once per token, not once per request. A token answered without `expires_in` is taken to live five minutes. When the site answers `invalid-token`, a new one is asked for and the call sent again, once.
 
 ```php
 $backend = $client->backend();
