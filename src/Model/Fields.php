@@ -112,6 +112,15 @@ final class Fields
         return array_values($this->reads->getArrayCopy());
     }
 
+    /**
+     * A member whose type the record it belongs to names, as decoded; null
+     * when it is null or missing.
+     */
+    public function any(string $name): mixed
+    {
+        return $this->value($name);
+    }
+
     public function string(string $name): string
     {
         return $this->nullableString($name) ?? $this->missing($name);

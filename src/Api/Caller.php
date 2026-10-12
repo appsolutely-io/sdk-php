@@ -56,6 +56,7 @@ final readonly class Caller
         return match ($operation->method()) {
             'GET' => $this->api->get($url, $query),
             'POST' => $this->api->post($url, $body ?? []),
+            'PUT' => $this->api->put($url, $body ?? []),
             'PATCH' => $this->api->patch($url, $body ?? []),
             'DELETE' => $this->api->delete($url, $query),
             default => throw new LogicException(sprintf('%s uses %s, which the client does not send.', $operation->value, $operation->method())),
@@ -99,15 +100,16 @@ final readonly class Caller
      *
      * @param Closure(Fields): T $read
      * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query
+     * @param array<string, string> $path
      * @return Page<T>
      */
-    public function onlyPage(Operation $operation, string $schema, Closure $read, #[\SensitiveParameter] array $query = []): Page
+    public function onlyPage(Operation $operation, string $schema, Closure $read, #[\SensitiveParameter] array $query = [], array $path = []): Page
     {
         if ($operation->isCursorList()) {
             throw new LogicException(sprintf('%s is a cursor list.', $operation->value));
         }
 
-        return Page::fromResponse($this->send($operation, [], $query), $operation->path())
+        return Page::fromResponse($this->send($operation, $path, $query), $operation->path($path))
             ->map(static fn(#[\SensitiveParameter] array $item): mixed => $read(Fields::of($item, $schema)));
     }
 

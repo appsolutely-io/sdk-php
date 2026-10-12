@@ -22,10 +22,19 @@ final readonly class BillingEntry
      *
      * @param 'app_store'|'google_play'|'direct' $store
      * @param string|null $storefront the store's two-letter region; required unless $store is `direct`
+     * @param string|null $storeToken the token the store handed the app for this tap, once an entry answered `needs_store_token`
+     * @param 'ios'|'ipados'|'macos'|'tvos'|'visionos'|'watchos'|null $platform the Apple platform the app runs on, kept with the tap
+     * @param string|null $osVersion the system's version, such as `17.4`: an entry the system does not support is answered unavailable
      */
     #[Endpoint(Operation::GetMeBillingEntry)]
-    public function get(string $store, ?string $storefront = null): BillingEntryModel
+    public function get(string $store, ?string $storefront = null, #[\SensitiveParameter] ?string $storeToken = null, ?string $platform = null, ?string $osVersion = null): BillingEntryModel
     {
-        return $this->caller->read(Operation::GetMeBillingEntry, BillingEntryModel::SCHEMA, BillingEntryModel::from(...), query: ['store' => $store, 'storefront' => $storefront]);
+        return $this->caller->read(Operation::GetMeBillingEntry, BillingEntryModel::SCHEMA, BillingEntryModel::from(...), query: [
+            'store' => $store,
+            'storefront' => $storefront,
+            'store_token' => $storeToken,
+            'platform' => $platform,
+            'os_version' => $osVersion,
+        ]);
     }
 }

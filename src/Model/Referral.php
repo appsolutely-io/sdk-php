@@ -9,8 +9,11 @@ namespace Appsolutely\Sdk\Model;
  */
 final readonly class Referral
 {
-    /** @internal */
-    public const string SCHEMA = 'Referral';
+    /**
+     * @internal how messages name what the site answered, which the document
+     * leaves an open object rather than a schema of its own
+     */
+    public const string NAME = 'Referral';
 
     /**
      * @param string $code the code the member shares

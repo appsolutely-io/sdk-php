@@ -58,15 +58,66 @@ enum Operation: string
     case PullSyncMeAddress = 'pullSync.meAddress';
     case PushSyncMeAddress = 'pushSync.meAddress';
     case PullSyncMeOrder = 'pullSync.meOrder';
+    case CreateMeCheckoutSession = 'createMeCheckoutSession';
+    case GetMeCheckoutSession = 'getMeCheckoutSession';
+    case CreateMePortalSession = 'createMePortalSession';
+    case IntentsMeStorePurchase = 'intentsMeStorePurchase';
+    case TransactionsMeStorePurchase = 'transactionsMeStorePurchase';
+    case ListMeSubscriptions = 'listMeSubscriptions';
+    case CancelMeSubscription = 'cancelMeSubscription';
+    case ResumeMeSubscription = 'resumeMeSubscription';
+    case ChangeMeSubscription = 'changeMeSubscription';
+
+    case GetClient = 'getClient';
+    case ListBackendEntitlements = 'listBackendEntitlements';
+    case GetBackendEntitlement = 'getBackendEntitlement';
+    case ListWebhookEndpoints = 'listWebhookEndpoints';
+    case CreateWebhookEndpoint = 'createWebhookEndpoint';
+    case DisableWebhookEndpoint = 'disableWebhookEndpoint';
+    case EnableWebhookEndpoint = 'enableWebhookEndpoint';
+    case TestDeliveriesWebhookEndpoint = 'test-deliveriesWebhookEndpoint';
+    case StartWebhookEndpointsSecretRotation = 'startWebhookEndpoints.secretRotation';
+    case CompleteWebhookEndpointsSecretRotation = 'completeWebhookEndpoints.secretRotation';
+    case CancelWebhookEndpointsSecretRotation = 'cancelWebhookEndpoints.secretRotation';
+    case ListDeliveries = 'listDeliveries';
+    case RedeliverDelivery = 'redeliverDelivery';
+    case CreateCheckoutSession = 'createCheckoutSession';
+    case GetCheckoutSession = 'getCheckoutSession';
+    case CreatePortalSession = 'createPortalSession';
+    case IntentsStorePurchase = 'intentsStorePurchase';
+    case TransactionsStorePurchase = 'transactionsStorePurchase';
+    case AttachTestClock = 'attachTestClock';
+    case AdvanceTestClock = 'advanceTestClock';
+    case ListReturnTargets = 'listReturnTargets';
+    case CreateReturnTarget = 'createReturnTarget';
+    case DeleteReturnTarget = 'deleteReturnTarget';
+    case ListFeatureKeys = 'listFeatureKeys';
+    case CreateFeatureKey = 'createFeatureKey';
+    case RetireFeatureKey = 'retireFeatureKey';
+    case ListProductFeatureValues = 'listProductFeatureValues';
+    case UpdateProductFeatureValue = 'updateProductFeatureValue';
+    case DeleteProductFeatureValue = 'deleteProductFeatureValue';
+    case ListRoles = 'listRoles';
+    case CreateRole = 'createRole';
+    case RetireRole = 'retireRole';
+    case ListRoleAssignments = 'listRoleAssignments';
+    case GetRoleAssignment = 'getRoleAssignment';
+    case AssignRoleAssignment = 'assignRoleAssignment';
+    case RevokeRoleAssignment = 'revokeRoleAssignment';
+    case CreateSeat = 'createSeat';
+    case DeleteSeat = 'deleteSeat';
+    case ListSeatPools = 'listSeatPools';
 
     public function method(): string
     {
         return match ($this) {
             self::RequestMagicLink, self::TokenMagicLink, self::CreateArticle, self::RedeliverWebhookDelivery,
             self::PushSyncArticle, self::CreateMeAddress, self::CreateMePushDevice, self::UnregisterMePushDevice,
-            self::PushSyncMeAddress => 'POST',
+            self::PushSyncMeAddress,
+            self::CreateMeCheckoutSession, self::CreateMePortalSession, self::IntentsMeStorePurchase, self::TransactionsMeStorePurchase, self::CancelMeSubscription, self::ResumeMeSubscription, self::ChangeMeSubscription, self::CreateWebhookEndpoint, self::DisableWebhookEndpoint, self::EnableWebhookEndpoint, self::TestDeliveriesWebhookEndpoint, self::StartWebhookEndpointsSecretRotation, self::CompleteWebhookEndpointsSecretRotation, self::CancelWebhookEndpointsSecretRotation, self::RedeliverDelivery, self::CreateCheckoutSession, self::CreatePortalSession, self::IntentsStorePurchase, self::TransactionsStorePurchase, self::AttachTestClock, self::AdvanceTestClock, self::CreateReturnTarget, self::CreateFeatureKey, self::RetireFeatureKey, self::CreateRole, self::RetireRole, self::CreateSeat => 'POST',
             self::UpdateArticle, self::UpdateMe, self::UpdateMeAddress => 'PATCH',
-            self::DeleteMeAddress => 'DELETE',
+            self::UpdateProductFeatureValue, self::AssignRoleAssignment => 'PUT',
+            self::DeleteMeAddress, self::DeleteReturnTarget, self::DeleteProductFeatureValue, self::RevokeRoleAssignment, self::DeleteSeat => 'DELETE',
             default => 'GET',
         };
     }
@@ -112,6 +163,48 @@ enum Operation: string
             self::RewardsMeReferral => '/api/v1/me/referral/rewards',
             self::PullSyncMeAddress, self::PushSyncMeAddress => '/api/v1/sync/me-addresses',
             self::PullSyncMeOrder => '/api/v1/sync/me-orders',
+            self::CreateMeCheckoutSession => '/api/v1/me/checkout-sessions',
+            self::GetMeCheckoutSession => '/api/v1/me/checkout-sessions/{session}',
+            self::CreateMePortalSession => '/api/v1/me/portal-sessions',
+            self::IntentsMeStorePurchase => '/api/v1/me/store-purchases/intents',
+            self::TransactionsMeStorePurchase => '/api/v1/me/store-purchases/transactions',
+            self::ListMeSubscriptions => '/api/v1/me/subscriptions',
+            self::CancelMeSubscription => '/api/v1/me/subscriptions/{subscription}/cancellation',
+            self::ResumeMeSubscription => '/api/v1/me/subscriptions/{subscription}/resumption',
+            self::ChangeMeSubscription => '/api/v1/me/subscriptions/{subscription}/changes',
+            self::GetClient => '/api/v1/client',
+            self::ListBackendEntitlements => '/api/v1/entitlements',
+            self::GetBackendEntitlement => '/api/v1/entitlements/{sub}',
+            self::ListWebhookEndpoints, self::CreateWebhookEndpoint => '/api/v1/webhook-endpoints',
+            self::DisableWebhookEndpoint => '/api/v1/webhook-endpoints/{endpoint}/disable',
+            self::EnableWebhookEndpoint => '/api/v1/webhook-endpoints/{endpoint}/enable',
+            self::TestDeliveriesWebhookEndpoint => '/api/v1/webhook-endpoints/{endpoint}/test-deliveries',
+            self::StartWebhookEndpointsSecretRotation => '/api/v1/webhook-endpoints/{endpoint}/secret-rotations',
+            self::CompleteWebhookEndpointsSecretRotation => '/api/v1/webhook-endpoints/{endpoint}/secret-rotations/complete',
+            self::CancelWebhookEndpointsSecretRotation => '/api/v1/webhook-endpoints/{endpoint}/secret-rotations/cancel',
+            self::ListDeliveries => '/api/v1/deliveries',
+            self::RedeliverDelivery => '/api/v1/deliveries/{event}/redeliveries',
+            self::CreateCheckoutSession => '/api/v1/checkout-sessions',
+            self::GetCheckoutSession => '/api/v1/checkout-sessions/{session}',
+            self::CreatePortalSession => '/api/v1/portal-sessions',
+            self::IntentsStorePurchase => '/api/v1/store-purchases/intents',
+            self::TransactionsStorePurchase => '/api/v1/store-purchases/transactions',
+            self::AttachTestClock => '/api/v1/subscriptions/{subscription}/test-clock',
+            self::AdvanceTestClock => '/api/v1/subscriptions/{subscription}/test-clock/advance',
+            self::ListReturnTargets, self::CreateReturnTarget => '/api/v1/return-targets',
+            self::DeleteReturnTarget => '/api/v1/return-targets/{target}',
+            self::ListFeatureKeys, self::CreateFeatureKey => '/api/v1/feature-keys',
+            self::RetireFeatureKey => '/api/v1/feature-keys/{key}/retirement',
+            self::ListProductFeatureValues => '/api/v1/products/{product}/feature-values',
+            self::UpdateProductFeatureValue, self::DeleteProductFeatureValue => '/api/v1/products/{product}/feature-values/{key}',
+            self::ListRoles, self::CreateRole => '/api/v1/roles',
+            self::RetireRole => '/api/v1/roles/{key}/retirement',
+            self::ListRoleAssignments => '/api/v1/role-assignments',
+            self::GetRoleAssignment => '/api/v1/role-assignments/{sub}',
+            self::AssignRoleAssignment, self::RevokeRoleAssignment => '/api/v1/role-assignments/{sub}/{key}',
+            self::CreateSeat => '/api/v1/seats',
+            self::DeleteSeat => '/api/v1/seats/{sub}',
+            self::ListSeatPools => '/api/v1/seat-pools/{payer}',
         };
     }
 
@@ -150,7 +243,9 @@ enum Operation: string
             self::GetMe, self::UpdateMe, self::ListMeAddresses, self::CreateMeAddress, self::UpdateMeAddress,
             self::DeleteMeAddress, self::GetMeBillingEntry, self::ListMeEntitlements, self::ListMeOrders,
             self::GetMeOrder, self::CreateMePushDevice, self::UnregisterMePushDevice, self::GetMeReferral,
-            self::RewardsMeReferral, self::PullSyncMeAddress, self::PushSyncMeAddress, self::PullSyncMeOrder => Audience::Member,
+            self::RewardsMeReferral, self::PullSyncMeAddress, self::PushSyncMeAddress, self::PullSyncMeOrder,
+            self::CreateMeCheckoutSession, self::GetMeCheckoutSession, self::CreateMePortalSession, self::IntentsMeStorePurchase, self::TransactionsMeStorePurchase, self::ListMeSubscriptions, self::CancelMeSubscription, self::ResumeMeSubscription, self::ChangeMeSubscription => Audience::Member,
+            self::GetClient, self::ListBackendEntitlements, self::GetBackendEntitlement, self::ListWebhookEndpoints, self::CreateWebhookEndpoint, self::DisableWebhookEndpoint, self::EnableWebhookEndpoint, self::TestDeliveriesWebhookEndpoint, self::StartWebhookEndpointsSecretRotation, self::CompleteWebhookEndpointsSecretRotation, self::CancelWebhookEndpointsSecretRotation, self::ListDeliveries, self::RedeliverDelivery, self::CreateCheckoutSession, self::GetCheckoutSession, self::CreatePortalSession, self::IntentsStorePurchase, self::TransactionsStorePurchase, self::AttachTestClock, self::AdvanceTestClock, self::ListReturnTargets, self::CreateReturnTarget, self::DeleteReturnTarget, self::ListFeatureKeys, self::CreateFeatureKey, self::RetireFeatureKey, self::ListProductFeatureValues, self::UpdateProductFeatureValue, self::DeleteProductFeatureValue, self::ListRoles, self::CreateRole, self::RetireRole, self::ListRoleAssignments, self::GetRoleAssignment, self::AssignRoleAssignment, self::RevokeRoleAssignment, self::CreateSeat, self::DeleteSeat, self::ListSeatPools => Audience::Backend,
             default => Audience::Administrator,
         };
     }
@@ -160,11 +255,23 @@ enum Operation: string
      */
     public function successStatus(): int
     {
+        return $this->successStatuses()[0];
+    }
+
+    /**
+     * Every status the site answers a success with, the one above first: a
+     * create that finds what it would have made answers it with 200.
+     *
+     * @return non-empty-list<int>
+     */
+    public function successStatuses(): array
+    {
         return match ($this) {
-            self::TokenMagicLink, self::CreateArticle, self::CreateMeAddress => 201,
-            self::RequestMagicLink, self::RedeliverWebhookDelivery => 202,
-            self::DeleteMeAddress, self::UnregisterMePushDevice => 204,
-            default => 200,
+            self::TokenMagicLink, self::CreateArticle, self::CreateMeAddress, self::CreateSeat, self::CreateWebhookEndpoint, self::StartWebhookEndpointsSecretRotation => [201],
+            self::CreateCheckoutSession, self::CreateFeatureKey, self::CreateMeCheckoutSession, self::CreateMePortalSession, self::CreatePortalSession, self::CreateReturnTarget, self::CreateRole => [201, 200],
+            self::RequestMagicLink, self::RedeliverWebhookDelivery, self::RedeliverDelivery, self::ResumeMeSubscription, self::TestDeliveriesWebhookEndpoint => [202],
+            self::DeleteMeAddress, self::UnregisterMePushDevice, self::DeleteProductFeatureValue, self::DeleteReturnTarget, self::DeleteSeat, self::RevokeRoleAssignment => [204],
+            default => [200],
         };
     }
 
@@ -175,7 +282,8 @@ enum Operation: string
     public function takesIdempotencyKey(): bool
     {
         return match ($this) {
-            self::CreateArticle, self::CreateMeAddress, self::RedeliverWebhookDelivery => true,
+            self::CreateArticle, self::CreateMeAddress, self::RedeliverWebhookDelivery,
+            self::AdvanceTestClock, self::AttachTestClock, self::CancelMeSubscription, self::ChangeMeSubscription, self::CreateCheckoutSession, self::CreateMeCheckoutSession, self::CreateMePortalSession, self::CreatePortalSession, self::CreateWebhookEndpoint, self::RedeliverDelivery, self::ResumeMeSubscription, self::StartWebhookEndpointsSecretRotation => true,
             default => false,
         };
     }
@@ -190,7 +298,8 @@ enum Operation: string
     {
         return match ($this) {
             self::ListArticles, self::ListFormEntries, self::ListOrders, self::ListPages, self::ListProducts,
-            self::ListWebhookDeliveries, self::ListMeAddresses, self::ListMeOrders, self::RewardsMeReferral => true,
+            self::ListWebhookDeliveries, self::ListMeAddresses, self::ListMeOrders, self::RewardsMeReferral,
+            self::ListBackendEntitlements, self::ListDeliveries, self::ListRoleAssignments, self::ListWebhookEndpoints => true,
             default => false,
         };
     }
