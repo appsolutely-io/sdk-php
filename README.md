@@ -356,7 +356,7 @@ $filed->idempotencyKey;   // the key that was sent; send it again to retry the s
 
 Untyped, the same is `raw()->postIdempotent($path, $body, $key)`.
 
-Reads and keyed writes are retried after a network failure, a `429`, a `503`, and, for a keyed write, the `409` of an attempt with the same key still running. Each wait is what the site asks in `Retry-After` (or, on a `429` without it, until the spent quota in `RateLimit` turns over), otherwise a jittered backoff doubling from half a second. Other refusals are thrown at once, and so is a `500` under a key, whose outcome only reading the current state can settle; send the operation again under a new key if it still needs doing. Other writes (`update()`, `delete()`, a sync push, and `raw()`'s `post()`, `put()`, `patch()` and `delete()`) are never retried. Tune or turn this off in `Config`:
+Reads and keyed writes are retried after a network failure, a `429`, a `502`, a `503` or a `504`, a read also after a `500`, and, for a keyed write, the `409` of an attempt with the same key still running. Each wait is what the site asks in `Retry-After` (or, on a `429` without it, until the spent quota in `RateLimit` turns over), otherwise a jittered backoff doubling from half a second. Other refusals are thrown at once, and so is a `500` under a key, whose outcome only reading the current state can settle; send the operation again under a new key if it still needs doing. Other writes (`update()`, `delete()`, a sync push, and `raw()`'s `post()`, `put()`, `patch()` and `delete()`) are never retried. Tune or turn this off in `Config`:
 
 ```php
 use Appsolutely\Sdk\Api\RetryPolicy;

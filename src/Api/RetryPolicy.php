@@ -12,9 +12,9 @@ use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
  * How Site API calls that may safely be repeated are retried: reads, and
  * writes sent with an Idempotency-Key, which the site answers with the first
  * answer instead of running again. They are retried after a network
- * failure, a 429, a 503, and (for a keyed write) the 409 of a request with
- * the same key still running. A write without a key is never retried, nor
- * is any other refusal.
+ * failure, a 429, a 502, a 503 or a 504, a read also after a 500, and a
+ * keyed write after the 409 of a request with the same key still running.
+ * A write without a key is never retried, nor is any other refusal.
  *
  * Each wait is what the site asks in Retry-After (or, on a 429 without it,
  * until the spent RateLimit quota turns over); failing that, a backoff that

@@ -304,15 +304,19 @@ final readonly class SiteApi
 
     /**
      * Seconds to wait before retrying after this refusal, or null when it is
-     * not one a retry can change: a 429 or a 503, or the 409
-     * `idempotency-key-in-use` of a keyed request still running, waiting
-     * what the site asks.
+     * not one a retry can change: a 429; a 502, 503 or 504, a gateway or the
+     * site failing before an answer; the 409 `idempotency-key-in-use` of a
+     * keyed request still running; and, for a read only, a 500. A keyed
+     * write's 500 is thrown: its outcome is unknown, and only reading the
+     * current state can settle it. The wait is what the site asks, or the
+     * policy's backoff.
      */
     private function delay(ApiException $exception, bool $keyed, int $retry): ?float
     {
         $asked = match (true) {
             $exception->status === 429 => $exception->retryAfter ?? $exception->rateLimit->exhausted()?->reset,
-            $exception->status === 503 => $exception->retryAfter,
+            in_array($exception->status, [502, 503, 504], true) => $exception->retryAfter,
+            $exception->status === 500 && !$keyed => $exception->retryAfter,
             $exception->status === 409 && $keyed && $exception->hasType('idempotency-key-in-use') => $exception->retryAfter,
             default => false,
         };

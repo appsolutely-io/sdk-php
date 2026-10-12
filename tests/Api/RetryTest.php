@@ -184,6 +184,77 @@ final class RetryTest extends TestCase
         self::assertCount(2, $provider->siteRequests());
     }
 
+    /**
+     * A gateway that lost or timed out on the site's answer: the request may
+     * or may not have run, which a key (or a read) makes safe to repeat.
+     *
+     * @return iterable<string, array{int}>
+     */
+    public static function gatewayFailures(): iterable
+    {
+        yield 'bad gateway' => [502];
+        yield 'gateway timeout' => [504];
+    }
+
+    #[DataProvider('gatewayFailures')]
+    public function testAGatewayFailureIsRetriedForAKeyedWrite(int $status): void
+    {
+        $provider = self::answeringInTurn(
+            static fn(FakeProvider $provider): ResponseInterface => $provider->factory->createResponse($status),
+            static fn(FakeProvider $provider): ResponseInterface => $provider->json([], 201, ['Idempotent-Replayed' => 'true']),
+        );
+
+        $response = $provider->client()->api()->raw()->postIdempotent('/api/v1/articles', [], idempotencyKey: 'k-1');
+
+        self::assertTrue($response->replayed);
+        self::assertCount(2, $provider->siteRequests());
+        self::assertCount(1, $provider->sleeper->sleeps);
+    }
+
+    #[DataProvider('gatewayFailures')]
+    public function testAGatewayFailureIsRetriedForARead(int $status): void
+    {
+        $provider = self::answeringInTurn(
+            static fn(FakeProvider $provider): ResponseInterface => $provider->factory->createResponse($status),
+            static fn(FakeProvider $provider): ResponseInterface => $provider->json(['id' => 'a-1']),
+        );
+
+        $provider->client()->api()->raw()->get('/api/v1/articles/a-1');
+
+        self::assertCount(2, $provider->siteRequests());
+    }
+
+    #[DataProvider('gatewayFailures')]
+    public function testAGatewayFailureIsNotRetriedForAnUnkeyedWrite(int $status): void
+    {
+        $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->factory->createResponse($status));
+
+        try {
+            $provider->client()->api()->raw()->post('/api/v1/articles', []);
+            self::fail('No exception was thrown.');
+        } catch (ApiException) {
+        }
+
+        self::assertCount(1, $provider->siteRequests());
+    }
+
+    /**
+     * A read cannot change anything, so a server error on one is worth
+     * another try; under a key the same 500 means an outcome only reading
+     * the current state can settle, and is thrown (see finalRefusals).
+     */
+    public function testAServerErrorIsRetriedForARead(): void
+    {
+        $provider = self::answeringInTurn(
+            static fn(FakeProvider $provider): ResponseInterface => $provider->problem(500, 'internal'),
+            static fn(FakeProvider $provider): ResponseInterface => $provider->json(['id' => 'a-1']),
+        );
+
+        $provider->client()->api()->raw()->get('/api/v1/articles/a-1');
+
+        self::assertCount(2, $provider->siteRequests());
+    }
+
     public function testAReadIsRetriedLikeAKeyedWrite(): void
     {
         $provider = self::answeringInTurn(
