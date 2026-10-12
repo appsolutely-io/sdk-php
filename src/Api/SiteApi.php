@@ -303,15 +303,16 @@ final readonly class SiteApi
 
     /**
      * Seconds to wait before retrying after this refusal, or null when it is
-     * not one a retry can change: a 429 or a 503, or the 409 of a keyed
-     * request still in flight, waiting what the site asks.
+     * not one a retry can change: a 429 or a 503, or the 409
+     * `idempotency-key-in-use` of a keyed request still running, waiting
+     * what the site asks.
      */
     private function delay(ApiException $exception, bool $keyed, int $retry): ?float
     {
         $asked = match (true) {
             $exception->status === 429 => $exception->retryAfter ?? $exception->rateLimit->exhausted()?->reset,
             $exception->status === 503 => $exception->retryAfter,
-            $exception->status === 409 && $keyed && $exception->hasType('idempotency-request-in-flight') => $exception->retryAfter,
+            $exception->status === 409 && $keyed && $exception->hasType('idempotency-key-in-use') => $exception->retryAfter,
             default => false,
         };
 

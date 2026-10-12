@@ -96,7 +96,7 @@ final class ProblemDetailsTest extends TestCase
         yield 'forbidden' => [403, 'forbidden', ForbiddenException::class];
         yield 'missing ability' => [403, 'missing-ability', ForbiddenException::class];
         yield 'conflict' => [409, 'subscription-inactive', ConflictException::class];
-        yield 'request in flight' => [409, 'idempotency-request-in-flight', ConflictException::class];
+        yield 'request in flight' => [409, 'idempotency-key-in-use', ConflictException::class];
         yield 'rate limited' => [429, 'too-many-requests', RateLimitedException::class];
         yield 'service unavailable' => [503, 'standing-unavailable', ServiceUnavailableException::class];
         yield 'bad request' => [400, 'idempotency-key-invalid', ApiException::class];

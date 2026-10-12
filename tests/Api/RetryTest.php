@@ -118,7 +118,7 @@ final class RetryTest extends TestCase
     public function testARequestStillInFlightIsRetriedAfterTheSecondsTheSiteAsks(): void
     {
         $provider = self::answeringInTurn(
-            static fn(FakeProvider $provider): ResponseInterface => $provider->problem(409, 'idempotency-request-in-flight', headers: ['Retry-After' => '2']),
+            static fn(FakeProvider $provider): ResponseInterface => $provider->problem(409, 'idempotency-key-in-use', headers: ['Retry-After' => '2']),
             static fn(FakeProvider $provider): ResponseInterface => $provider->json(['id' => 'a-1'], 201, ['Idempotent-Replayed' => 'true']),
         );
 
@@ -321,7 +321,7 @@ final class RetryTest extends TestCase
     {
         $logger = new RecordingLogger();
         $provider = self::answeringInTurn(
-            static fn(FakeProvider $provider): ResponseInterface => $provider->problem(409, 'idempotency-request-in-flight', headers: ['Retry-After' => '2']),
+            static fn(FakeProvider $provider): ResponseInterface => $provider->problem(409, 'idempotency-key-in-use', headers: ['Retry-After' => '2']),
             static fn(FakeProvider $provider): ResponseInterface => $provider->json([], 201),
         );
 
@@ -334,7 +334,7 @@ final class RetryTest extends TestCase
 
     public function testAConflictOutsideAKeyedWriteIsThrown(): void
     {
-        $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->problem(409, 'idempotency-request-in-flight', headers: ['Retry-After' => '1']));
+        $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->problem(409, 'idempotency-key-in-use', headers: ['Retry-After' => '1']));
 
         try {
             $provider->client()->api()->raw()->get('/api/v1/articles/a-1');

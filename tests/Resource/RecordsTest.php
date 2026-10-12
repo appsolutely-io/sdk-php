@@ -160,9 +160,9 @@ final class RecordsTest extends TestCase
     public function testARedeliveryStillRunningUnderTheKeyIsRetriedThenThrown(): void
     {
         $site = (new SiteRecorder())
-            ->problem(409, 'idempotency-request-in-flight', [])
-            ->problem(409, 'idempotency-request-in-flight', [])
-            ->problem(409, 'idempotency-request-in-flight', []);
+            ->problem(409, 'idempotency-key-in-use', [])
+            ->problem(409, 'idempotency-key-in-use', [])
+            ->problem(409, 'idempotency-key-in-use', []);
 
         try {
             $site->provider->client()->api()->webhookDeliveries()->redeliver('sub-1', 'msg_1', idempotencyKey: 'k-1');
