@@ -24,6 +24,7 @@
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.95",
+        "guzzlehttp/guzzle": "^7.9",
         "nyholm/psr7": "^1.8.2",
         "php-http/client-common": "^2.7",
         "php-http/message": "^1.16",
@@ -32,6 +33,7 @@
         "phpstan/phpstan-strict-rules": "^2.1",
         "phpunit/phpunit": "^12.5 || ^13.0",
         "standard-webhooks/standard-webhooks": "1.0.2",
+        "symfony/http-client": "^7.3 || ^8.0",
         "symfony/yaml": "^7.3 || ^8.0"
     },
     "autoload": {

@@ -83,6 +83,24 @@ The backend client is the machine client registered for your app's backend, apar
 
 In production, pass your application's shared PSR-16 cache (Redis, Memcached, APCu or your framework's cache). Without one, the client falls back to a cache in memory that lives as long as the PHP process; under PHP-FPM that is a single request, so every request fetches the discovery document and the signing keys again. The fallback exists so the client works anywhere, not for production.
 
+### Timeouts
+
+PSR-18 has no portable way to set a timeout, and Guzzle's default is to wait forever. When you pass no HTTP client, the SDK finds one and, if it is Guzzle or Symfony HttpClient, builds it with `Config::$timeout` (30 seconds per request by default) and `Config::$connectTimeout` (10 seconds to connect; Symfony HttpClient has no separate connect limit, so its idle timeout is the request timeout). Thirty seconds is above the 20 seconds the site may hold a keyed write that repeats one still running, and far below the minutes a stuck connection would otherwise hold a worker; Stripe's PHP library, for comparison, waits 80 seconds per request and 30 to connect. Any other client it finds is used as it is, with a warning in the log.
+
+A client you pass in keeps its own timeouts, so build it with them:
+
+```php
+use GuzzleHttp\Client as Guzzle;
+use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpClient\Psr18Client;
+
+$http = new Guzzle(['timeout' => 30, 'connect_timeout' => 10]);
+// or
+$http = new Psr18Client(HttpClient::create(['timeout' => 30, 'max_duration' => 30]));
+
+$client = new Client(new Config(/* ... */, httpClient: $http));
+```
+
 ## Signing a member in with OpenID Connect
 
 Two requests: one sends the member to the site's sign-in page, the other receives them back.

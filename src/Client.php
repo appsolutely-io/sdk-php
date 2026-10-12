@@ -12,6 +12,7 @@ use Appsolutely\Sdk\Cache\InMemoryCache;
 use Appsolutely\Sdk\Clock\SystemClock;
 use Appsolutely\Sdk\Exception\InvalidConfigException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
+use Appsolutely\Sdk\Http\ClientTimeouts;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Oidc\OpenIdClient;
 use Http\Discovery\Exception\NotFoundException;
@@ -36,9 +37,12 @@ final readonly class Client
 
     public function __construct(Config $config)
     {
+        $clock = $config->clock ?? new SystemClock();
+        $logger = $config->logger ?? new NullLogger();
+
         try {
             $http = new HttpTransport(
-                $config->httpClient ?? Psr18ClientDiscovery::find(),
+                $config->httpClient ?? ClientTimeouts::apply(Psr18ClientDiscovery::find(), $config->timeout, $config->connectTimeout, $logger),
                 $config->requestFactory ?? Psr17FactoryDiscovery::findRequestFactory(),
                 $config->streamFactory ?? Psr17FactoryDiscovery::findStreamFactory(),
             );
@@ -50,8 +54,6 @@ final readonly class Client
             );
         }
 
-        $clock = $config->clock ?? new SystemClock();
-        $logger = $config->logger ?? new NullLogger();
         $cache = $config->cache ?? new InMemoryCache($clock);
 
         $this->oidc = new OpenIdClient(
