@@ -29,6 +29,8 @@ final class FakeProvider
     public const string CLIENT_ID = 'client-123';
     public const string CLIENT_SECRET = 's3cret/with+chars';
     public const string API_TOKEN = '7|admin-token-value';
+    public const string BACKEND_CLIENT_ID = 'backend-456';
+    public const string BACKEND_CLIENT_SECRET = 'b4ckend/s3cret+chars';
 
     public readonly FrozenClock $clock;
     public readonly RecordingSleeper $sleeper;
@@ -130,6 +132,32 @@ final class FakeProvider
             clock: $this->clock,
             logger: $logger,
             retryPolicy: $retryPolicy ?? new RetryPolicy(sleeper: $this->sleeper),
+        ));
+    }
+
+    /**
+     * A client holding the site backend's machine credential beside the
+     * member sign-in client.
+     *
+     * @param list<string> $scopes
+     */
+    public function backendClient(array $scopes = [], ClientAuthentication $authentication = ClientAuthentication::ClientSecretBasic, ?RetryPolicy $retryPolicy = null): Client
+    {
+        return new Client(new Config(
+            baseUrl: self::BASE_URL,
+            issuer: self::ISSUER,
+            clientId: self::CLIENT_ID,
+            clientSecret: self::CLIENT_SECRET,
+            httpClient: $this->http,
+            requestFactory: $this->factory,
+            streamFactory: $this->factory,
+            cache: $this->cache,
+            clock: $this->clock,
+            clientAuthentication: $authentication,
+            retryPolicy: $retryPolicy ?? new RetryPolicy(sleeper: $this->sleeper),
+            backendClientId: self::BACKEND_CLIENT_ID,
+            backendClientSecret: self::BACKEND_CLIENT_SECRET,
+            backendScopes: $scopes,
         ));
     }
 
