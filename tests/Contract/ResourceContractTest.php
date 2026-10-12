@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Contract;
 
 use Appsolutely\Sdk\Api\AdministratorApi;
+use Appsolutely\Sdk\Api\BackendApi;
 use Appsolutely\Sdk\Api\Audience;
 use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\MemberApi;
@@ -90,6 +91,7 @@ final class ResourceContractTest extends TestCase
             $expected = match ($endpoint['operation']->audience()) {
                 Audience::Anyone, Audience::Administrator => [AdministratorApi::class],
                 Audience::Member => [MemberApi::class],
+                Audience::Backend => [BackendApi::class],
             };
 
             self::assertSame($expected, $endpoint['roots'], sprintf('%s calls %s, an operation for %s, from %s.', $endpoint['method'], $endpoint['operation']->value, $endpoint['operation']->audience()->name, $endpoint['roots'] === [] ? 'no client' : implode(' and ', $endpoint['roots'])));
@@ -312,14 +314,14 @@ final class ResourceContractTest extends TestCase
 
     /**
      * Each method marked with the operation it calls, and the clients
-     * (AdministratorApi, MemberApi) it is reached from.
+     * (AdministratorApi, MemberApi, BackendApi) it is reached from.
      *
      * @return list<array{operation: Operation, method: string, roots: list<class-string>}>
      */
     private static function endpoints(): array
     {
         $roots = [];
-        foreach ([AdministratorApi::class, MemberApi::class] as $root) {
+        foreach ([AdministratorApi::class, MemberApi::class, BackendApi::class] as $root) {
             foreach (self::reachable($root) as $class) {
                 $roots[$class][] = $root;
             }
