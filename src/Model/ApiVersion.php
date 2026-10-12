@@ -24,8 +24,8 @@ final readonly class ApiVersion
     public function __construct(
         public string $version,
         public string $status,
-        public ?DateTimeImmutable $deprecation,
-        public ?DateTimeImmutable $sunset,
+        public ?DateTimeImmutable $deprecatedAt,
+        public ?DateTimeImmutable $sunsetAt,
         public ?string $successor,
         public ?string $documentation,
         public array $extra = [],
@@ -37,8 +37,8 @@ final readonly class ApiVersion
         return new self(
             version: $json->string('version'),
             status: $json->string('status'),
-            deprecation: $json->nullableTime('deprecation'),
-            sunset: $json->nullableTime('sunset'),
+            deprecatedAt: $json->nullableTime('deprecated_at'),
+            sunsetAt: $json->nullableTime('sunset_at'),
             successor: $json->nullableString('successor'),
             documentation: $json->nullableString('documentation'),
             extra: $json->extra(),

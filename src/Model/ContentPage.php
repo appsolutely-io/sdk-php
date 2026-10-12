@@ -17,19 +17,21 @@ final readonly class ContentPage
     public const string SCHEMA = 'Page';
 
     /**
-     * @param string|null $parentId the id of the page this one sits under
+     * @param string $reference the page's stable reference, which another page's `parent` names
+     * @param string|null $parent the `reference` of the page this one sits under, null at the top
      * @param int|null $status 1 when active, 0 when not
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,
+        public string $reference,
         public ?string $name,
         public ?string $title,
         public ?string $slug,
         public ?string $description,
         public ?string $keywords,
         public ?string $language,
-        public ?string $parentId,
+        public ?string $parent,
         public ?int $status,
         public DateTimeImmutable $publishedAt,
         public ?DateTimeImmutable $expiredAt,
@@ -43,13 +45,14 @@ final readonly class ContentPage
     {
         return new self(
             id: $json->string('id'),
+            reference: $json->string('reference'),
             name: $json->nullableString('name'),
             title: $json->nullableString('title'),
             slug: $json->nullableString('slug'),
             description: $json->nullableString('description'),
             keywords: $json->nullableString('keywords'),
             language: $json->nullableString('language'),
-            parentId: $json->nullableString('parent_id'),
+            parent: $json->nullableString('parent'),
             status: $json->nullableInt('status'),
             publishedAt: $json->time('published_at'),
             expiredAt: $json->nullableTime('expired_at'),

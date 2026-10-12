@@ -201,7 +201,7 @@ final class TypedEventTest extends TestCase
         self::assertSame('About us', $page->title);
         self::assertSame('about', $page->slug);
         self::assertSame('en', $page->language);
-        self::assertNull($page->parentId);
+        self::assertNull($page->parent);
         self::assertSame(1, $page->status);
         self::assertSame('2026-09-01T00:00:00+00:00', $page->publishedAt->format(DATE_RFC3339));
         self::assertSame('2026-08-30T10:00:00+00:00', $page->createdAt?->format(DATE_RFC3339));
@@ -241,12 +241,12 @@ final class TypedEventTest extends TestCase
 
     public function testAFormSubmissionCarriesTheEntryAndItsForm(): void
     {
-        $event = self::deliver(EventType::FORM_SUBMITTED, SiteFixture::json('form-entry', ['form' => ['name' => 'Contact', 'slug' => 'contact']]));
+        $event = self::deliver(EventType::FORM_SUBMITTED, SiteFixture::json('form-entry', ['form_name' => 'Contact']));
 
         self::assertInstanceOf(FormSubmittedEvent::class, $event);
         $entry = $event->entry;
         self::assertSame('0d2f4b6a-8c0e-4a2c-9e4a-6c8e0a2c4e6a', $entry->id);
-        self::assertSame('contact', $entry->formSlug);
+        self::assertSame('contact', $entry->form);
         self::assertSame('Ada Lovelace', $entry->name);
         self::assertSame('Ada', $entry->firstName);
         self::assertSame('Lovelace', $entry->lastName);
@@ -256,15 +256,13 @@ final class TypedEventTest extends TestCase
         self::assertFalse($entry->isSpam);
         self::assertSame('2026-10-08T11:59:57+00:00', $entry->submittedAt->format(DATE_RFC3339));
         self::assertSame([], $entry->extra);
-        self::assertSame('Contact', $event->form->name);
-        self::assertSame('contact', $event->form->slug);
+        self::assertSame('Contact', $event->formName);
     }
 
     private static function assertTheOrder(Order $order, string $status): void
     {
         self::assertSame('7b9d1f3a-5c7e-4a9b-b1d3-f5a7c9e1b3d5', $order->id);
         self::assertNull($order->subjectReference);
-        self::assertNull($order->couponCode);
         self::assertSame($status, $order->status);
         self::assertSame('production', $order->mode);
         self::assertNull($order->subscriptionStartState);
@@ -282,7 +280,7 @@ final class TypedEventTest extends TestCase
         self::assertCount(1, $order->items);
         $line = $order->items[0];
         self::assertSame('1c3e5a7b-9d1f-4b3c-8e5a-7c9e1b3d5f7a', $line->id);
-        self::assertSame('3a5c7e9b-1d3f-4b5d-8f1a-3c5e7a9b1d3f', $line->productId);
+        self::assertSame('team-plan', $line->product);
         self::assertSame(1, $line->quantity);
         self::assertSame(1900, $line->price);
         self::assertSame('USD', $line->currency);

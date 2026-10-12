@@ -20,7 +20,7 @@ final readonly class SyncPush
      *
      * @internal
      */
-    public const array SCHEMAS = ['ArticleSyncPush', 'UserAddressSyncPush'];
+    public const array SCHEMAS = ['SyncPushResults'];
 
     /**
      * @param list<SyncResult<T>> $results

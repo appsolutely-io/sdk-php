@@ -20,6 +20,7 @@ use Appsolutely\Sdk\Model\SyncPull;
 use Appsolutely\Sdk\Model\SyncPush;
 use Appsolutely\Sdk\Model\SyncResult;
 use Appsolutely\Sdk\Tests\Support\SourceTokens;
+use Appsolutely\Sdk\Tests\Support\UntypedRecord;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Http\Discovery\Psr17FactoryDiscovery;
@@ -566,6 +567,9 @@ final class ResourceContractTest extends TestCase
             }
         }
         $name = Document::refName($items);
+        if ($name === null && in_array('object', (array) ($items['type'] ?? []), true) && ($items['additionalProperties'] ?? false) === true) {
+            return UntypedRecord::class;
+        }
         self::assertNotNull($name, sprintf('%s.%s names no schema.', $schema, $field));
         if (in_array($name, SyncResult::SCHEMAS, true)) {
             return self::recordModel($name, 'server_record');

@@ -234,7 +234,7 @@ $member->sync()->addresses()->pull($cursor);                 // and ->push(), an
 The version record, the API document and the magic-link sign-in are open to anyone, so the client sends them without a credential even when it holds the administrator token:
 
 ```php
-$version = $client->api()->version();         // ->status, ->deprecation, ->sunset, ->successor
+$version = $client->api()->version();         // ->status, ->deprecatedAt, ->sunsetAt, ->successor
 $document = $client->api()->openApiDocument();
 
 $client->api()->magicLink()->request($email, ['me:read', 'me:write'], 'Ada\'s phone', $codeChallenge);

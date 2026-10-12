@@ -10,6 +10,8 @@ use Closure;
  * What changed in one resource since a cursor: the records created or
  * changed, and the ones deleted. Keep $nextCursor and pull from it next
  * time; it is present on the last page too, as the point to resume from.
+ * It is null only when a first pull found the resource empty, and the next
+ * pull starts from the beginning again.
  *
  * @template-covariant T
  */
@@ -20,7 +22,7 @@ final readonly class SyncPull
      *
      * @internal
      */
-    public const array SCHEMAS = ['ArticleSyncPull', 'FormEntrySyncPull', 'OrderSyncPull', 'PageSyncPull', 'ProductSyncPull', 'UserAddressSyncPull'];
+    public const array SCHEMAS = ['ArticleFeed', 'FormEntryFeed', 'OrderFeed', 'PageFeed', 'ProductFeed', 'UserAddressFeed'];
 
     /**
      * @param list<T> $upserts the records created or changed
@@ -31,7 +33,7 @@ final readonly class SyncPull
     public function __construct(
         public array $upserts,
         public array $tombstones,
-        public string $nextCursor,
+        public ?string $nextCursor,
         public bool $hasMore,
         public array $extra = [],
     ) {}
@@ -49,7 +51,7 @@ final readonly class SyncPull
         return new self(
             upserts: array_map($record, $json->objects('upserts')),
             tombstones: array_map(SyncTombstone::from(...), $json->objects('tombstones')),
-            nextCursor: $json->string('next_cursor'),
+            nextCursor: $json->nullableString('next_cursor'),
             hasMore: $json->bool('has_more'),
             extra: $json->extra(),
         );

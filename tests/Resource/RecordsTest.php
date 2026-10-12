@@ -70,7 +70,7 @@ final class RecordsTest extends TestCase
         self::assertTrue($order->taxIncluded);
         self::assertSame(1900, $order->totalAmount);
         self::assertSame('final', $order->totalShown);
-        self::assertSame('3a5c7e9b-1d3f-4b5d-8f1a-3c5e7a9b1d3f', $order->items[0]->productId);
+        self::assertSame('team-plan', $order->items[0]->product);
         self::assertSame(1, $order->items[0]->quantity);
         self::assertSame(1900, $order->items[0]->price);
         self::assertSame('USD', $order->items[0]->currency);
@@ -103,7 +103,7 @@ final class RecordsTest extends TestCase
         self::assertSame('GET /api/v1/form-entries?limit=25', $site->line(0));
         self::assertSame('c2', $page->nextCursor);
         self::assertSame('GET /api/v1/form-entries/fe-2', $site->line(1));
-        self::assertSame('contact', $entry->formSlug);
+        self::assertSame('contact', $entry->form);
         self::assertSame('Ada', $entry->firstName);
         self::assertSame('ada@example.com', $entry->email);
         self::assertSame(['message' => 'Hello', 'topics' => ['billing']], $entry->data);
