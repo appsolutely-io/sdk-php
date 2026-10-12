@@ -55,6 +55,8 @@ final readonly class Config
      *                                     signs members in; with its secret, Client::backend() calls as it
      * @param list<string> $backendScopes the scopes to ask the backend's token for; none asks for every scope the
      *                                    machine client is registered with
+     * @param ClientAuthentication|null $backendClientAuthentication how the backend's client authenticates to the
+     *                                                               token endpoint; null for $clientAuthentication
      */
     public function __construct(
         public string $baseUrl,
@@ -77,6 +79,7 @@ final readonly class Config
         #[\SensitiveParameter]
         private ?string $backendClientSecret = null,
         public array $backendScopes = [],
+        public ?ClientAuthentication $backendClientAuthentication = null,
     ) {
         self::assertBaseUrl($baseUrl);
         self::assertIssuer($issuer);
@@ -166,6 +169,7 @@ final readonly class Config
             'backendClientId' => $this->backendClientId,
             'backendClientSecret' => $this->backendClientSecret === null ? null : '[redacted]',
             'backendScopes' => $this->backendScopes,
+            'backendClientAuthentication' => $this->backendClientAuthentication,
         ];
     }
 

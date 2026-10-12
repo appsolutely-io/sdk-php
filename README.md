@@ -57,6 +57,9 @@ $apiToken = getenv('APPSOLUTELY_API_TOKEN');
 if ($clientId === false || $clientSecret === false || $apiToken === false) {
     throw new RuntimeException('Set APPSOLUTELY_CLIENT_ID, APPSOLUTELY_CLIENT_SECRET and APPSOLUTELY_API_TOKEN.');
 }
+// The backend's machine client is optional, and its id and secret go together: both set, or neither.
+$backendClientId = getenv('APPSOLUTELY_BACKEND_CLIENT_ID') ?: null;
+$backendClientSecret = getenv('APPSOLUTELY_BACKEND_CLIENT_SECRET') ?: null;
 
 $client = new Client(new Config(
     baseUrl: 'https://shop.example.com',           // the site's origin, without a path
@@ -72,7 +75,7 @@ $client = new Client(new Config(
 
 The administrator token is a long-lived credential issued on the site's API-token screen; it is sent on the calls your server makes on its own behalf. Leave it out when your server only acts for signed-in members. Keep it, like the client secret, out of version control.
 
-The backend client is the machine client registered for your app's backend, apart from the client that signs members in; `Client::backend()` calls as it (see [The site's backend](#the-sites-backend)). `backendScopes` narrows what its token may do; without it, the token carries every scope the client is registered with.
+The backend client is the machine client registered for your app's backend, apart from the client that signs members in; `Client::backend()` calls as it (see [The site's backend](#the-sites-backend)). `backendScopes` narrows what its token may do; without it, the token carries every scope the client is registered with. `backendClientAuthentication` says how that client authenticates to the token endpoint when it differs from the sign-in client's `clientAuthentication`.
 
 `Config` also takes a PSR-18 client and PSR-17 factories, a PSR-20 clock, a PSR-3 logger, the token-endpoint authentication (`client_secret_basic` by default, or `ClientAuthentication::ClientSecretPost`), the clock leeway for ID tokens (60 seconds by default) and the retry policy for Site API calls (see [Writes that must happen once](#writes-that-must-happen-once)).
 

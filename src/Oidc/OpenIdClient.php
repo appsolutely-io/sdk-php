@@ -237,21 +237,21 @@ final readonly class OpenIdClient
     }
 
     /**
-     * A token for a machine client of the issuer (RFC 6749 section 4.4),
-     * authenticated the way this client's Config says.
+     * A token for a machine client of the issuer (RFC 6749 section 4.4).
      *
      * @internal used by Client::backend(), which caches what it returns
      *
      * @param list<string> $scopes none asks for every scope the client is registered with
+     * @param ClientAuthentication|null $authentication null to authenticate the way this client's Config says
      */
-    public function clientCredentials(string $clientId, #[\SensitiveParameter] string $clientSecret, array $scopes = []): TokenSet
+    public function clientCredentials(string $clientId, #[\SensitiveParameter] string $clientSecret, array $scopes = [], ?ClientAuthentication $authentication = null): TokenSet
     {
         $request = ['grant_type' => 'client_credentials'];
         if ($scopes !== []) {
             $request['scope'] = implode(' ', $scopes);
         }
 
-        return $this->tokenSet($this->tokenRequest($request, $clientId, $clientSecret), null, idTokenRequired: false);
+        return $this->tokenSet($this->tokenRequest($request, $clientId, $clientSecret, $authentication), null, idTokenRequired: false);
     }
 
     /**
@@ -314,7 +314,7 @@ final readonly class OpenIdClient
             $fields['token_type_hint'] = $tokenTypeHint;
         }
 
-        [$fields, $headers] = $this->authenticate($fields, $this->config->clientId, $this->config->clientSecret());
+        [$fields, $headers] = $this->authenticate($fields, $this->config->clientId, $this->config->clientSecret(), $this->config->clientAuthentication);
         $response = $this->http->postForm($endpoint, $fields, $headers);
         $status = $response->getStatusCode();
 
@@ -328,10 +328,10 @@ final readonly class OpenIdClient
      * @param array<string, string> $fields
      * @return array<array-key, mixed>
      */
-    private function tokenRequest(#[\SensitiveParameter] array $fields, ?string $clientId = null, #[\SensitiveParameter] ?string $clientSecret = null): array
+    private function tokenRequest(#[\SensitiveParameter] array $fields, ?string $clientId = null, #[\SensitiveParameter] ?string $clientSecret = null, ?ClientAuthentication $authentication = null): array
     {
         $endpoint = $this->metadata()->tokenEndpoint;
-        [$fields, $headers] = $this->authenticate($fields, $clientId ?? $this->config->clientId, $clientSecret ?? $this->config->clientSecret());
+        [$fields, $headers] = $this->authenticate($fields, $clientId ?? $this->config->clientId, $clientSecret ?? $this->config->clientSecret(), $authentication ?? $this->config->clientAuthentication);
 
         return $this->successfulJson($this->http->postForm($endpoint, $fields, $headers), $endpoint);
     }
@@ -343,9 +343,9 @@ final readonly class OpenIdClient
      * @param array<string, string> $fields
      * @return array{array<string, string>, array<string, string>}
      */
-    private function authenticate(#[\SensitiveParameter] array $fields, string $clientId, #[\SensitiveParameter] string $clientSecret): array
+    private function authenticate(#[\SensitiveParameter] array $fields, string $clientId, #[\SensitiveParameter] string $clientSecret, ClientAuthentication $authentication): array
     {
-        return match ($this->config->clientAuthentication) {
+        return match ($authentication) {
             ClientAuthentication::ClientSecretBasic => [$fields, [
                 Header::AUTHORIZATION => 'Basic ' . base64_encode(urlencode($clientId) . ':' . urlencode($clientSecret)),
             ]],

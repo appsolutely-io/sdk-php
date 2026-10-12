@@ -73,6 +73,7 @@ final readonly class Client
             $config->backendClientId,
             $backendSecret,
             $config->backendScopes,
+            $config->backendClientAuthentication,
         )));
     }
 

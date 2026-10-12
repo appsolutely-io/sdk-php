@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Api;
 
+use Appsolutely\Sdk\Oidc\ClientAuthentication;
 use Appsolutely\Sdk\Oidc\OpenIdClient;
 use Psr\Clock\ClockInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -40,6 +41,7 @@ final readonly class BackendToken
         #[\SensitiveParameter]
         private string $clientSecret,
         private array $scopes,
+        private ?ClientAuthentication $authentication = null,
     ) {
         // Lengths first, so no two (issuer, client, scopes) join to one string.
         $scope = implode(' ', $scopes);
@@ -88,7 +90,7 @@ final readonly class BackendToken
 
     private function fetch(): string
     {
-        $tokens = $this->oidc->clientCredentials($this->clientId, $this->clientSecret, $this->scopes);
+        $tokens = $this->oidc->clientCredentials($this->clientId, $this->clientSecret, $this->scopes, $this->authentication);
 
         $now = $this->clock->now()->getTimestamp();
         $usableUntil = $tokens->expiresAt === null ? $now : $tokens->expiresAt->getTimestamp() - self::EXPIRY_MARGIN;
