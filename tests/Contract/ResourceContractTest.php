@@ -14,6 +14,7 @@ use Appsolutely\Sdk\Api\Paginator;
 use Appsolutely\Sdk\Api\RetryPolicy;
 use Appsolutely\Sdk\Client;
 use Appsolutely\Sdk\Config;
+use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\MediaType;
 use Appsolutely\Sdk\Model\Fields;
@@ -42,7 +43,8 @@ use Throwable;
  * request a method sends goes to the method and path of the operation it is
  * marked with and, on every page, carries the query parameters its
  * operation documents and no others and cannot leave out a required one,
- * and every model reads only fields its schema defines and every field the
+ * every method reads its answer as the schema the document gives it, and
+ * every model reads only fields its schema defines and every field the
  * schema requires.
  */
 final class ResourceContractTest extends TestCase
@@ -138,6 +140,11 @@ final class ResourceContractTest extends TestCase
      * @var list<mixed>
      */
     private static array $bodies = [];
+
+    /**
+     * What the last drive() threw, null when it returned.
+     */
+    private static ?Throwable $failure = null;
 
     /**
      * The query name a cursor list carries from its second page on.
@@ -367,15 +374,8 @@ final class ResourceContractTest extends TestCase
         }
         $read = [...$read, ...SyncPull::SCHEMAS, ...SyncPush::SCHEMAS, ...SyncResult::SCHEMAS];
 
-        foreach (Document::operations() as $id => $documented) {
-            $success = [];
-            foreach (Document::map($documented['operation']['responses'] ?? null) as $code => $response) {
-                if ((int) $code === Operation::from($id)->successStatus()) {
-                    $success = Document::map(Document::map($response)['content'] ?? null);
-                }
-            }
-            $schema = Document::map(Document::map($success['application/json'] ?? null)['schema'] ?? null);
-            $name = Document::refName($schema);
+        foreach (array_keys(Document::operations()) as $id) {
+            $name = self::successSchema($id);
             if ($name === null) {
                 continue;
             }
@@ -384,6 +384,58 @@ final class ResourceContractTest extends TestCase
                 self::assertContains($answered, $read, sprintf('%s answers the schema %s, which no model reads.', $id, $answered));
             }
         }
+    }
+
+    /**
+     * The schema a method reads its answer as is learnt by answering it with
+     * an empty object, or a page of one empty item: the model refuses it at
+     * its first required field, naming the schema it was handed. That must
+     * be the schema the document gives the operation's success answer, or
+     * the items of its page, so a method that reads its answer as another
+     * schema fails, even where the two share their required fields.
+     */
+    #[DataProvider('documentedOperations')]
+    public function testEveryMethodReadsItsAnswerAsTheSchemaItsOperationDocuments(string $id): void
+    {
+        $endpoint = self::endpointOf($id);
+        $documented = self::successSchema($id);
+        if ($documented === null) {
+            self::addToAssertionCount(1);
+
+            return;
+        }
+        $answered = self::answeredSchemas($documented);
+        $page = $answered !== [$documented];
+        self::assertCount(1, $answered, sprintf('%s answers %s, a page whose items name no schema.', $id, $documented));
+
+        self::drive($endpoint, optional: false, answer: $page ? ['data' => [[]]] : []);
+        $failure = self::$failure;
+        self::assertInstanceOf(UnexpectedResponseException::class, $failure, sprintf('%s read an empty %s without refusing it, so the schema it reads it as is not learnt: %s', $endpoint['method'], $page ? 'page item' : 'object', $failure === null ? 'it returned.' : $failure::class . ': ' . $failure->getMessage()));
+        self::assertMatchesRegularExpression(self::READ_AS, $failure->getMessage());
+        preg_match(self::READ_AS, $failure->getMessage(), $match);
+
+        self::assertSame($answered[0], $match[1] ?? null, sprintf('%s reads the answer of %s as the schema %s; the document gives it %s.', $endpoint['method'], $id, $match[1] ?? 'none', $answered[0]));
+    }
+
+    /**
+     * How a model's refusal of an answer names the schema it read it as.
+     */
+    private const string READ_AS = '/^The site answered a "([^"]+)" object /';
+
+    /**
+     * The name of the schema an operation's success answers with as JSON, or
+     * null when it answers none.
+     */
+    private static function successSchema(string $id): ?string
+    {
+        $success = [];
+        foreach (Document::map(Document::operations()[$id]['operation']['responses'] ?? null) as $code => $response) {
+            if ((int) $code === Operation::from($id)->successStatus()) {
+                $success = Document::map(Document::map($response)['content'] ?? null);
+            }
+        }
+
+        return Document::refName(Document::map(Document::map($success['application/json'] ?? null)['schema'] ?? null));
     }
 
     /**
@@ -442,12 +494,17 @@ final class ResourceContractTest extends TestCase
      * throw on reading a page where it expects its own answer: that is the
      * expected end of its run, as only what it sent is asked.
      *
+     * Given an `$answer`, every request is answered with it instead and the
+     * run may end in a throw wherever it reads it; what it threw is kept in
+     * $failure.
+     *
      * @param array{operation: Operation, method: string, roots: list<class-string>} $endpoint
+     * @param array<array-key, mixed>|null $answer
      * @return non-empty-list<list<string>>
      */
-    private static function drive(array $endpoint, bool $optional): array
+    private static function drive(array $endpoint, bool $optional, ?array $answer = null): array
     {
-        $site = new class ($endpoint['operation']->successStatus()) implements ClientInterface {
+        $site = new class ($endpoint['operation']->successStatus(), $answer) implements ClientInterface {
             /** @var list<list<string>> */
             public array $queries = [];
 
@@ -457,7 +514,10 @@ final class ResourceContractTest extends TestCase
             /** @var list<string> each request's method and path, `GET /api/v1/pages` */
             public array $lines = [];
 
-            public function __construct(private readonly int $status) {}
+            /**
+             * @param array<array-key, mixed>|null $answer
+             */
+            public function __construct(private readonly int $status, private readonly ?array $answer) {}
 
             public function sendRequest(RequestInterface $request): ResponseInterface
             {
@@ -483,7 +543,7 @@ final class ResourceContractTest extends TestCase
                 foreach ($query === '' ? [] : explode('&', $query) as $pair) {
                     $names[] = rawurldecode(explode('=', $pair, 2)[0]);
                 }
-                $page = $this->queries === [] ? ['data' => [], 'next_cursor' => 'next-page'] : ['data' => []];
+                $page = $this->answer ?? ($this->queries === [] ? ['data' => [], 'next_cursor' => 'next-page'] : ['data' => []]);
                 $this->queries[] = $names;
                 $this->lines[] = $request->getMethod() . ' ' . $path;
                 $body = (string) $request->getBody();
@@ -543,6 +603,10 @@ final class ResourceContractTest extends TestCase
         $queries = $site->queries;
         if ($queries === []) {
             self::fail(sprintf('%s sent no request: %s', $endpoint['method'], $failure === null ? 'it returned without one.' : $failure::class . ': ' . $failure->getMessage()));
+        }
+        self::$failure = $failure;
+        if ($answer !== null) {
+            return $queries;
         }
         if ($paged) {
             self::assertNull($failure, sprintf('%s threw after %d request(s), before its list was walked to the end: %s', $endpoint['method'], count($queries), $failure === null ? '' : $failure::class . ': ' . $failure->getMessage()));
