@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Appsolutely\Sdk\Model;
+
+/**
+ * What the site made of a store purchase it was handed.
+ */
+final readonly class StorePurchaseTransaction
+{
+    /** @internal */
+    public const string SCHEMA = 'StorePurchaseTransaction';
+
+    /**
+     * @param string $outcome what the site did with the purchase
+     * @param string|null $subscriptionId the subscription it started or renewed
+     * @param string|null $status that subscription's status
+     * @param string|null $kind `subscription`, `one_time` or `consumable`
+     * @param string|null $environment `production` or `sandbox`
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
+     */
+    public function __construct(
+        public string $outcome,
+        public ?string $subscriptionId,
+        public ?string $status,
+        public ?string $kind,
+        public ?string $environment,
+        public array $extra = [],
+    ) {}
+
+    /** @internal */
+    public static function from(#[\SensitiveParameter] Fields $json): self
+    {
+        return new self(
+            outcome: $json->string('outcome'),
+            subscriptionId: $json->nullableString('subscription_id'),
+            status: $json->nullableString('status'),
+            kind: $json->nullableString('kind'),
+            environment: $json->nullableString('environment'),
+            extra: $json->extra(),
+        );
+    }
+}

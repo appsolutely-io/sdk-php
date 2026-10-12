@@ -50,7 +50,9 @@ abstract readonly class TypedEvent
             in_array($type, ReferralRewardIssuedEvent::TYPES, true) => ReferralRewardIssuedEvent::read($envelope, $fields),
             in_array($type, ProductEvent::TYPES, true) => ProductEvent::read($envelope, $fields),
             in_array($type, AccountEvent::TYPES, true) => AccountEvent::read($envelope, $fields),
+            in_array($type, RoleAssignmentChangedEvent::TYPES, true) => RoleAssignmentChangedEvent::read($envelope, $fields),
             $type === EventType::WEBHOOK_PING => PingEvent::read($envelope, $fields),
+            in_array($type, RotationEndingEvent::TYPES, true) => RotationEndingEvent::read($envelope, $fields),
             default => new UnknownEvent($envelope),
         };
     }

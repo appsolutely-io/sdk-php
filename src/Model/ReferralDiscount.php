@@ -9,9 +9,6 @@ namespace Appsolutely\Sdk\Model;
  */
 final readonly class ReferralDiscount
 {
-    /** @internal */
-    public const string SCHEMA = 'ReferralDiscount';
-
     /**
      * @param string $type such as `percent` or `fixed`
      * @param int $value a percentage, or an amount in the minor units of $currency

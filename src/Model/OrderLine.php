@@ -13,13 +13,13 @@ final readonly class OrderLine
     public const string SCHEMA = 'OrderLineSummary';
 
     /**
-     * @param string|null $productId the product's id, null once the product is gone
+     * @param string|null $product the product's slug, null once the product is gone
      * @param string $currency ISO 4217
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,
-        public ?string $productId,
+        public ?string $product,
         public int $quantity,
         public int $price,
         public string $currency,
@@ -31,7 +31,7 @@ final readonly class OrderLine
     {
         return new self(
             id: $json->string('id'),
-            productId: $json->nullableString('product_id'),
+            product: $json->nullableString('product'),
             quantity: $json->int('quantity'),
             price: $json->int('price'),
             currency: $json->string('currency'),

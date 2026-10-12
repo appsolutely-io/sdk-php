@@ -44,7 +44,7 @@ final readonly class PushDevices
             'metadata' => $metadata,
         ], static fn(mixed $value): bool => $value !== null);
 
-        return $this->caller->read(Operation::CreateMePushDevice, PushDevice::SCHEMA, PushDevice::from(...), body: $device);
+        return $this->caller->read(Operation::CreateMePushDevice, PushDevice::NAME, PushDevice::from(...), body: $device);
     }
 
     /**

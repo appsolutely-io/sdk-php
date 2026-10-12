@@ -64,6 +64,6 @@ final readonly class MagicLink
             'lost_second_factor' => $lostSecondFactor,
         ], static fn(mixed $value): bool => $value !== null);
 
-        return $this->caller->read(Operation::TokenMagicLink, MagicLinkToken::SCHEMA, MagicLinkToken::from(...), body: $body);
+        return $this->caller->read(Operation::TokenMagicLink, MagicLinkToken::NAME, MagicLinkToken::from(...), body: $body);
     }
 }

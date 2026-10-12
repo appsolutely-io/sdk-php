@@ -23,8 +23,8 @@ final class PublicOperationsTest extends TestCase
         $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->json([
             'version' => 'v1',
             'status' => 'deprecated',
-            'deprecation' => '2026-10-01T00:00:00Z',
-            'sunset' => '2027-04-01T09:30:00+02:00',
+            'deprecated_at' => '2026-10-01T00:00:00Z',
+            'sunset_at' => '2027-04-01T09:30:00+02:00',
             'successor' => 'v2',
             'documentation' => null,
             'added_later' => true,
@@ -38,8 +38,8 @@ final class PublicOperationsTest extends TestCase
         self::assertFalse($request->hasHeader('Authorization'));
         self::assertSame('v1', $version->version);
         self::assertSame('deprecated', $version->status);
-        self::assertSame('2026-10-01T00:00:00+00:00', $version->deprecation?->format(DATE_ATOM));
-        self::assertSame('2027-04-01T07:30:00+00:00', $version->sunset?->format(DATE_ATOM));
+        self::assertSame('2026-10-01T00:00:00+00:00', $version->deprecatedAt?->format(DATE_ATOM));
+        self::assertSame('2027-04-01T07:30:00+00:00', $version->sunsetAt?->format(DATE_ATOM));
         self::assertSame('v2', $version->successor);
         self::assertNull($version->documentation);
         self::assertTrue($version->extra['added_later']);

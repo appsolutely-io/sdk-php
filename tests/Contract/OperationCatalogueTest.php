@@ -19,6 +19,21 @@ use PHPUnit\Framework\TestCase;
 final class OperationCatalogueTest extends TestCase
 {
     /**
+     * Operations the site answers only for a token that the document lists
+     * no security for. Each entry fails once the document lists one, so it is
+     * dropped then.
+     */
+    private const array DOCUMENTED_WITHOUT_ITS_TOKEN = ['getClient'];
+
+    /**
+     * The paths a site answers only for its backend's machine token. The
+     * document gives every operation that needs a token the same bearer
+     * scheme, so whose token an operation takes is not in it: these are the
+     * site's own routes, as it serves them.
+     */
+    private const string BACKEND_PATHS = '#^/api/v1/(client|entitlements|webhook-endpoints|deliveries|checkout-sessions|portal-sessions|store-purchases|return-targets|feature-keys|roles|role-assignments|seats|seat-pools)(/|$)|^/api/v1/subscriptions/\{subscription\}/test-clock|^/api/v1/products/\{product\}/feature-values#';
+
+    /**
      * @return iterable<string, array{string}>
      */
     public static function documentedOperations(): iterable
@@ -37,10 +52,19 @@ final class OperationCatalogueTest extends TestCase
         self::assertNotNull($operation, sprintf('The document\'s %s %s (%s) has no Operation case.', $documented['method'], $documented['path'], $id));
         self::assertSame($documented['method'], $operation->method(), $id);
         self::assertSame($documented['path'], $operation->template(), $id);
-        self::assertSame(self::successStatus($documented['operation']), $operation->successStatus(), $id);
+        $statuses = $operation->successStatuses();
+        sort($statuses);
+        self::assertSame(self::successStatuses($documented['operation']), $statuses, $id);
         self::assertSame(self::takesIdempotencyKey($documented['parameters']), $operation->takesIdempotencyKey(), $id);
         self::assertSame(self::isCursorList($documented), $operation->isCursorList(), $id);
         self::assertSame(self::audience($documented), $operation->audience(), $id);
+    }
+
+    public function testEachOperationDocumentedWithoutItsTokenIsStillSo(): void
+    {
+        foreach (self::DOCUMENTED_WITHOUT_ITS_TOKEN as $id) {
+            self::assertSame([], Document::operations()[$id]['operation']['security'] ?? Document::get()['security'] ?? [], sprintf('The pinned document now lists the security of %s: drop it from DOCUMENTED_WITHOUT_ITS_TOKEN.', $id));
+        }
     }
 
     public function testEveryCaseIsADocumentedOperation(): void
@@ -84,13 +108,15 @@ final class OperationCatalogueTest extends TestCase
 
     /**
      * @param array<array-key, mixed> $operation
+     * @return list<int>
      */
-    private static function successStatus(array $operation): int
+    private static function successStatuses(array $operation): array
     {
-        $codes = array_values(array_filter(array_keys(Document::map($operation['responses'] ?? null)), static fn(string $code): bool => $code[0] === '2'));
-        self::assertCount(1, $codes);
+        $codes = array_map(intval(...), array_values(array_filter(array_keys(Document::map($operation['responses'] ?? null)), static fn(string|int $code): bool => ((string) $code)[0] === '2')));
+        self::assertNotSame([], $codes);
+        sort($codes);
 
-        return (int) $codes[0];
+        return $codes;
     }
 
     /**
@@ -123,7 +149,7 @@ final class OperationCatalogueTest extends TestCase
         $responses = Document::map($documented['operation']['responses'] ?? null);
         $success = [];
         foreach ($responses as $code => $response) {
-            if ((int) $code === self::successStatus($documented['operation'])) {
+            if ($success === [] && in_array((int) $code, self::successStatuses($documented['operation']), true)) {
                 $success = Document::map($response);
             }
         }
@@ -143,10 +169,14 @@ final class OperationCatalogueTest extends TestCase
     private static function audience(array $documented): Audience
     {
         $security = $documented['operation']['security'] ?? Document::get()['security'] ?? [];
-        if ($security === []) {
+        if ($security === [] && !in_array($documented['operation']['operationId'] ?? null, self::DOCUMENTED_WITHOUT_ITS_TOKEN, true)) {
             return Audience::Anyone;
         }
 
-        return preg_match('#^/api/v1/(me(/|$)|sync/me-)#', $documented['path']) === 1 ? Audience::Member : Audience::Administrator;
+        return match (true) {
+            preg_match('#^/api/v1/(me(/|$)|sync/me-)#', $documented['path']) === 1 => Audience::Member,
+            preg_match(self::BACKEND_PATHS, $documented['path']) === 1 => Audience::Backend,
+            default => Audience::Administrator,
+        };
     }
 }

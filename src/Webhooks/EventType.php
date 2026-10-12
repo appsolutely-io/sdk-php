@@ -85,8 +85,14 @@ final class EventType
     /** The address changed, or whether it is verified did. */
     public const string ACCOUNT_EMAIL_CHANGED = 'account.email_changed';
 
+    /** One of the app's roles was given to or taken from a member. */
+    public const string ROLE_ASSIGNMENT_CHANGED = 'role.assignment_changed';
+
     /** An operator pressed "Send test delivery" on the subscription. */
     public const string WEBHOOK_PING = 'webhook.ping';
+
+    /** An endpoint's signing-secret rotation is about to complete on its own. */
+    public const string WEBHOOK_ROTATION_ENDING = 'webhook.rotation_ending';
 
     private function __construct() {}
 }

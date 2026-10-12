@@ -17,4 +17,7 @@ enum Audience
 
     /** A signed-in member's access token, from Client::forMember()->api(). */
     case Member;
+
+    /** The token the site backend's machine client is granted, from Client::backend(). */
+    case Backend;
 }

@@ -26,6 +26,9 @@ final readonly class AccountState
     /** Terminal: no address, no grants, and nothing more is sent about the subject. */
     public const string STATUS_ERASED = 'erased';
 
+    /** A subject the site never handed out: answered with empty lists rather than refused. */
+    public const string STATUS_UNKNOWN = 'unknown';
+
     /**
      * @param string $subject the account's public name, the `sub` its ID token carries
      * @param int $sequence increases with every change, so an older state is recognised as one
@@ -33,6 +36,7 @@ final readonly class AccountState
      * @param string|null $email the address the account holds now; null once erased
      * @param list<Entitlement> $entitlements every live grant, then what another authority says the account holds
      * @param array<array-key, int> $totals one number per entitlement key, as the site checks it; empty when there are none
+     * @param list<Subscription> $subscriptions every subscription of the account that is not canceled and counts in the caller's mode, oldest first
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
@@ -43,6 +47,7 @@ final readonly class AccountState
         public bool $emailVerified,
         public array $entitlements,
         public array $totals,
+        public array $subscriptions,
         public array $extra = [],
     ) {}
 
@@ -57,6 +62,7 @@ final readonly class AccountState
             emailVerified: $json->bool('email_verified'),
             entitlements: array_map(Entitlement::from(...), $json->objects('entitlements')),
             totals: $json->intMap('totals'),
+            subscriptions: array_map(Subscription::from(...), $json->objects('subscriptions')),
             extra: $json->extra(),
         );
     }

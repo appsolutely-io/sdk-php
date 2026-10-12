@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Webhooks\Events;
 
 use Appsolutely\Sdk\Exception\UnexpectedPayloadException;
+use Appsolutely\Sdk\Model\EntitlementTerm;
 use Appsolutely\Sdk\Model\Order;
+use Appsolutely\Sdk\Model\Subscription;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
 use Appsolutely\Sdk\Tests\Support\SiteFixture;
 use Appsolutely\Sdk\Webhooks\Events\AccountEvent;
@@ -19,6 +21,8 @@ use Appsolutely\Sdk\Webhooks\Events\PingEvent;
 use Appsolutely\Sdk\Webhooks\Events\ProductEvent;
 use Appsolutely\Sdk\Webhooks\Events\ReferralRewardIssuedEvent;
 use Appsolutely\Sdk\Webhooks\Events\RefundEvent;
+use Appsolutely\Sdk\Webhooks\Events\RoleAssignmentChangedEvent;
+use Appsolutely\Sdk\Webhooks\Events\RotationEndingEvent;
 use Appsolutely\Sdk\Webhooks\Events\SubscriptionEvent;
 use Appsolutely\Sdk\Webhooks\Events\TypedEvent;
 use Appsolutely\Sdk\Webhooks\Events\UnknownEvent;
@@ -106,8 +110,44 @@ final class TypedEventTest extends TestCase
         self::assertSame(3, $state->entitlements[0]->quantity);
         self::assertSame('2026-10-22T00:00:00+00:00', $state->entitlements[0]->expiresAt?->format(DATE_RFC3339));
         self::assertNull($state->entitlements[1]->expiresAt);
+        self::assertSame('2026-10-08T00:00:00+00:00', $state->entitlements[0]->periodStart?->format(DATE_RFC3339));
+        self::assertSame('2026-11-08T00:00:00+00:00', $state->entitlements[0]->periodEnd?->format(DATE_RFC3339));
+        self::assertNotNull($state->entitlements[0]->breakdown);
+        self::assertSame([EntitlementTerm::SOURCE_PLAN, EntitlementTerm::SOURCE_PURCHASE], array_map(static fn(EntitlementTerm $term): string => $term->source, $state->entitlements[0]->breakdown));
+        self::assertSame([2, 1], array_map(static fn(EntitlementTerm $term): int => $term->value, $state->entitlements[0]->breakdown));
+        self::assertSame('SO-20261008-0042', $state->entitlements[0]->breakdown[1]->paymentReference);
+        self::assertSame('2026-10-22T00:00:00+00:00', $state->entitlements[0]->breakdown[1]->endsAt?->format(DATE_RFC3339));
+        self::assertNull($state->entitlements[1]->breakdown);
         self::assertSame(['seats' => 3, 'reports.export' => 1], $state->totals);
+        self::assertCount(1, $state->subscriptions);
+        self::assertSame('team-monthly', $state->subscriptions[0]->sku);
+        self::assertSame(3, $state->subscriptions[0]->quantity);
+        self::assertSame(Subscription::BILLED_BY_SITE, $state->subscriptions[0]->billedBy);
+        self::assertNull($state->subscriptions[0]->manageUrl);
         self::assertSame([], $state->extra);
+    }
+
+    public function testARoleChangeCarriesTheMembersWholeSetAndItsSequence(): void
+    {
+        $event = self::deliver(EventType::ROLE_ASSIGNMENT_CHANGED, '{"subject":"member-sub","role":"editor","change":"added","cause":"app","roles":["editor","viewer"],"sequence":7}');
+
+        self::assertInstanceOf(RoleAssignmentChangedEvent::class, $event);
+        self::assertSame('member-sub', $event->subject);
+        self::assertSame('editor', $event->role);
+        self::assertSame(RoleAssignmentChangedEvent::CHANGE_ADDED, $event->change);
+        self::assertSame(RoleAssignmentChangedEvent::CAUSE_APP, $event->cause);
+        self::assertSame(['editor', 'viewer'], $event->roles);
+        self::assertSame(7, $event->sequence);
+    }
+
+    public function testAnEndingRotationNamesTheEndpointAndWhenTheOldSecretStops(): void
+    {
+        $event = self::deliver(EventType::WEBHOOK_ROTATION_ENDING, '{"endpoint_id":"12","rotation_started_at":"2026-10-07T12:00:00Z","completes_at":"2026-10-08T12:00:00Z"}');
+
+        self::assertInstanceOf(RotationEndingEvent::class, $event);
+        self::assertSame('12', $event->endpointId);
+        self::assertSame('2026-10-07T12:00:00+00:00', $event->rotationStartedAt->format(DATE_RFC3339));
+        self::assertSame('2026-10-08T12:00:00+00:00', $event->completesAt->format(DATE_RFC3339));
     }
 
     public function testAnErasedAccountHasNoAddressNoGrantsAndEmptyTotals(): void
@@ -120,6 +160,7 @@ final class TypedEventTest extends TestCase
         self::assertFalse($event->state->emailVerified);
         self::assertSame([], $event->state->entitlements);
         self::assertSame([], $event->state->totals);
+        self::assertSame([], $event->state->subscriptions);
     }
 
     public function testAnAccountStateMissingItsSequenceIsRefused(): void
@@ -201,7 +242,7 @@ final class TypedEventTest extends TestCase
         self::assertSame('About us', $page->title);
         self::assertSame('about', $page->slug);
         self::assertSame('en', $page->language);
-        self::assertNull($page->parentId);
+        self::assertNull($page->parent);
         self::assertSame(1, $page->status);
         self::assertSame('2026-09-01T00:00:00+00:00', $page->publishedAt->format(DATE_RFC3339));
         self::assertSame('2026-08-30T10:00:00+00:00', $page->createdAt?->format(DATE_RFC3339));
@@ -241,12 +282,12 @@ final class TypedEventTest extends TestCase
 
     public function testAFormSubmissionCarriesTheEntryAndItsForm(): void
     {
-        $event = self::deliver(EventType::FORM_SUBMITTED, SiteFixture::json('form-entry', ['form' => ['name' => 'Contact', 'slug' => 'contact']]));
+        $event = self::deliver(EventType::FORM_SUBMITTED, SiteFixture::json('form-entry', ['form_name' => 'Contact']));
 
         self::assertInstanceOf(FormSubmittedEvent::class, $event);
         $entry = $event->entry;
         self::assertSame('0d2f4b6a-8c0e-4a2c-9e4a-6c8e0a2c4e6a', $entry->id);
-        self::assertSame('contact', $entry->formSlug);
+        self::assertSame('contact', $entry->form);
         self::assertSame('Ada Lovelace', $entry->name);
         self::assertSame('Ada', $entry->firstName);
         self::assertSame('Lovelace', $entry->lastName);
@@ -256,15 +297,13 @@ final class TypedEventTest extends TestCase
         self::assertFalse($entry->isSpam);
         self::assertSame('2026-10-08T11:59:57+00:00', $entry->submittedAt->format(DATE_RFC3339));
         self::assertSame([], $entry->extra);
-        self::assertSame('Contact', $event->form->name);
-        self::assertSame('contact', $event->form->slug);
+        self::assertSame('Contact', $event->formName);
     }
 
     private static function assertTheOrder(Order $order, string $status): void
     {
         self::assertSame('7b9d1f3a-5c7e-4a9b-b1d3-f5a7c9e1b3d5', $order->id);
         self::assertNull($order->subjectReference);
-        self::assertNull($order->couponCode);
         self::assertSame($status, $order->status);
         self::assertSame('production', $order->mode);
         self::assertNull($order->subscriptionStartState);
@@ -282,7 +321,7 @@ final class TypedEventTest extends TestCase
         self::assertCount(1, $order->items);
         $line = $order->items[0];
         self::assertSame('1c3e5a7b-9d1f-4b3c-8e5a-7c9e1b3d5f7a', $line->id);
-        self::assertSame('3a5c7e9b-1d3f-4b5d-8f1a-3c5e7a9b1d3f', $line->productId);
+        self::assertSame('team-plan', $line->product);
         self::assertSame(1, $line->quantity);
         self::assertSame(1900, $line->price);
         self::assertSame('USD', $line->currency);
@@ -493,7 +532,8 @@ final class TypedEventTest extends TestCase
             'referral.reward_issued',
             'product.created', 'product.updated', 'product.deleted',
             'account.suspended', 'account.reinstated', 'account.erased', 'account.entitlements_changed', 'account.email_changed',
-            'webhook.ping',
+            'role.assignment_changed',
+            'webhook.ping', 'webhook.rotation_ending',
         ];
 
         $named = array_values((new ReflectionClass(EventType::class))->getConstants());
@@ -514,7 +554,9 @@ final class TypedEventTest extends TestCase
             SubscriptionEvent::TYPES,
             ProductEvent::TYPES,
             AccountEvent::TYPES,
+            RoleAssignmentChangedEvent::TYPES,
             [EventType::WEBHOOK_PING],
+            RotationEndingEvent::TYPES,
         );
         sort($families);
         self::assertSame($expected, $families);

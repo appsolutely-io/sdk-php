@@ -11,8 +11,11 @@ use DateTimeImmutable;
  */
 final readonly class MagicLinkToken
 {
-    /** @internal */
-    public const string SCHEMA = 'MagicLinkToken';
+    /**
+     * @internal how messages name what the site answered, which the document
+     * leaves an open object rather than a schema of its own
+     */
+    public const string NAME = 'MagicLinkToken';
 
     /**
      * @param string $token the member's bearer token; pass it to Client::forMember()

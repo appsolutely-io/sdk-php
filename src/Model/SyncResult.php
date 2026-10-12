@@ -18,7 +18,7 @@ final readonly class SyncResult
      *
      * @internal
      */
-    public const array SCHEMAS = ['ArticleSyncResult', 'UserAddressSyncResult'];
+    public const array SCHEMAS = ['SyncPushResult'];
 
     /**
      * @param string $mutationId the id the mutation was sent with

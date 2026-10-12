@@ -6,6 +6,7 @@ namespace Appsolutely\Sdk\Tests\Contract;
 
 use Appsolutely\Sdk\Api\AdministratorApi;
 use Appsolutely\Sdk\Api\Audience;
+use Appsolutely\Sdk\Api\BackendApi;
 use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\MemberApi;
 use Appsolutely\Sdk\Api\Operation;
@@ -16,10 +17,16 @@ use Appsolutely\Sdk\Config;
 use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\MediaType;
 use Appsolutely\Sdk\Model\Fields;
+use Appsolutely\Sdk\Model\MagicLinkToken;
+use Appsolutely\Sdk\Model\PushDevice;
+use Appsolutely\Sdk\Model\Redelivery;
+use Appsolutely\Sdk\Model\Referral;
 use Appsolutely\Sdk\Model\SyncPull;
 use Appsolutely\Sdk\Model\SyncPush;
 use Appsolutely\Sdk\Model\SyncResult;
+use Appsolutely\Sdk\Model\WebhookDelivery;
 use Appsolutely\Sdk\Tests\Support\SourceTokens;
+use Appsolutely\Sdk\Tests\Support\UntypedRecord;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Http\Discovery\Psr17FactoryDiscovery;
@@ -89,6 +96,7 @@ final class ResourceContractTest extends TestCase
             $expected = match ($endpoint['operation']->audience()) {
                 Audience::Anyone, Audience::Administrator => [AdministratorApi::class],
                 Audience::Member => [MemberApi::class],
+                Audience::Backend => [BackendApi::class],
             };
 
             self::assertSame($expected, $endpoint['roots'], sprintf('%s calls %s, an operation for %s, from %s.', $endpoint['method'], $endpoint['operation']->value, $endpoint['operation']->audience()->name, $endpoint['roots'] === [] ? 'no client' : implode(' and ', $endpoint['roots'])));
@@ -116,7 +124,46 @@ final class ResourceContractTest extends TestCase
         'store' => 'app_store',
         'storefront' => 'US',
         'status' => 'failed',
+        'value' => true,
+        'platform' => 'ios',
+        'osVersion' => '17.4',
     ];
+
+    /**
+     * Operations whose success the document leaves an open object, with the
+     * model that reads what the site sends: none of them is held to a schema
+     * here. Each entry fails once the document names a schema for the answer,
+     * and the model is then held to it.
+     */
+    private const array UNTYPED_ANSWERS = [
+        'getMeReferral' => Referral::class,
+        'tokenMagicLink' => MagicLinkToken::class,
+        'createMePushDevice' => PushDevice::class,
+        'redeliverDelivery' => Redelivery::class,
+        'redeliverWebhookDelivery' => WebhookDelivery::class,
+    ];
+
+    /**
+     * Array query parameters the document names without the brackets PHP
+     * needs to read a repeated key as a list: the site reads `subjects[]`,
+     * and a client sending `subjects` once per value is answered for the last
+     * one only. Each entry fails once the document names the brackets.
+     */
+    private const array NAMED_WITHOUT_BRACKETS = ['listAccountStates' => ['subjects']];
+
+    /**
+     * Methods that send one argument whole as the body, so the member names
+     * are the caller's: each method's array shape names the members, and the
+     * document's request body is what that shape is written from.
+     */
+    private const array BODY_PASSED_THROUGH = ['createArticle', 'updateArticle', 'createMeAddress', 'updateMeAddress'];
+
+    /**
+     * The decoded body of each request the last drive() sent, null for none.
+     *
+     * @var list<mixed>
+     */
+    private static array $bodies = [];
 
     /**
      * The query name a cursor list carries from its second page on.
@@ -139,7 +186,8 @@ final class ResourceContractTest extends TestCase
         $documented = [];
         foreach (Document::operations()[$id]['parameters'] as $parameter) {
             if (($parameter['in'] ?? null) === 'query' && is_string($parameter['name'] ?? null)) {
-                $documented[$parameter['name']] = $parameter;
+                $name = in_array($parameter['name'], self::NAMED_WITHOUT_BRACKETS[$id] ?? [], true) ? $parameter['name'] . '[]' : $parameter['name'];
+                $documented[$name] = $parameter;
             }
         }
 
@@ -189,11 +237,16 @@ final class ResourceContractTest extends TestCase
      * until the entry is dropped or rewritten.
      *
      * The document leaves an account's `totals` an open object; the site
-     * sends a quantity per key.
+     * sends a quantity per key. It leaves a subscription's `pending_period` an
+     * open object or null; the site sends the period's start and where its
+     * payment stands.
      */
     private const array AS_THE_SITE_SENDS = [
         'AccountState' => [
             'totals' => ['document' => ['type' => 'object', 'additionalProperties' => true], 'site' => ['seats' => 3]],
+        ],
+        'AccountSubscription' => [
+            'pending_period' => ['document' => ['type' => ['object', 'null'], 'additionalProperties' => true], 'site' => ['start' => '2026-05-01T00:00:00Z', 'status' => 'pending']],
         ],
     ];
 
@@ -277,6 +330,82 @@ final class ResourceContractTest extends TestCase
         self::assertReadsMatch($schema, $fields->reads(), $class);
     }
 
+    /**
+     * Each body is held to the operation's documented request body: given
+     * every argument, the method sends every member the document names and
+     * no other; given only its required ones, it still sends every member
+     * the document requires. A member sent as null is one the document lets
+     * be null.
+     */
+    #[DataProvider('documentedOperations')]
+    public function testEveryMethodSendsTheBodyItsOperationDocuments(string $id): void
+    {
+        $endpoint = self::endpointOf($id);
+        $documented = Document::map(Document::map(Document::map(Document::operations()[$id]['operation']['requestBody'] ?? null)['content'] ?? null)['application/json'] ?? null)['schema'] ?? null;
+
+        if (in_array($id, self::BODY_PASSED_THROUGH, true)) {
+            self::assertNotNull($documented, sprintf('%s is listed in BODY_PASSED_THROUGH but documents no request body.', $id));
+
+            return;
+        }
+
+        self::drive($endpoint, optional: true);
+        $full = self::$bodies[0] ?? null;
+
+        if ($documented === null) {
+            self::assertContains($full, [null, []], sprintf('%s sends a body; the document gives %s none.', $endpoint['method'], $id));
+
+            return;
+        }
+
+        $schema = Document::resolve(Document::map($documented));
+        $properties = Document::map($schema['properties'] ?? null);
+        $required = Document::list($schema['required'] ?? []);
+
+        self::assertIsArray($full, sprintf('%s sends no JSON object; the document gives %s a request body.', $endpoint['method'], $id));
+        $sent = array_keys($full);
+        sort($sent);
+        $named = array_keys($properties);
+        sort($named);
+        self::assertSame($named, $sent, sprintf('%s sends the members %s when every argument is given; the document gives %s %s.', $endpoint['method'], self::shown($sent), $id, self::shown($named)));
+
+        self::drive($endpoint, optional: false);
+        $minimal = self::$bodies[0] ?? null;
+        self::assertIsArray($minimal, sprintf('%s sends no JSON object when only its required arguments are given.', $endpoint['method']));
+        foreach ($required as $member) {
+            self::assertIsString($member);
+            self::assertArrayHasKey($member, $minimal, sprintf('%s leaves out "%s", which %s requires, when only its required arguments are given.', $endpoint['method'], $member, $id));
+        }
+        foreach ([$full, $minimal] as $body) {
+            foreach ($body as $member => $value) {
+                self::assertArrayHasKey($member, $properties, sprintf('%s sends "%s", which the request body of %s does not name.', $endpoint['method'], $member, $id));
+                if ($value === null) {
+                    self::assertContains('null', (array) (Document::map($properties[$member])['type'] ?? []), sprintf('%s sends "%s" as null, which %s does not let be null.', $endpoint['method'], $member, $id));
+                }
+            }
+        }
+    }
+
+    public function testEachAnswerReadWithoutASchemaIsStillUntyped(): void
+    {
+        foreach (array_keys(self::UNTYPED_ANSWERS) as $id) {
+            $operation = Operation::from($id);
+            $response = Document::map(Document::map(Document::operations()[$id]['operation']['responses'] ?? null)[$operation->successStatus()] ?? null);
+            $schema = Document::map(Document::map(Document::map($response['content'] ?? null)['application/json'] ?? null)['schema'] ?? null);
+            self::assertNull(Document::refName($schema), sprintf('The pinned document now names a schema for the answer of %s: drop it from UNTYPED_ANSWERS and give its model that SCHEMA.', $id));
+        }
+    }
+
+    public function testEachArrayQueryNamedWithoutItsBracketsIsStillSo(): void
+    {
+        foreach (self::NAMED_WITHOUT_BRACKETS as $id => $names) {
+            $documented = array_column(array_filter(Document::operations()[$id]['parameters'], static fn(array $parameter): bool => ($parameter['in'] ?? null) === 'query'), 'name');
+            foreach ($names as $name) {
+                self::assertContains($name, $documented, sprintf('The pinned document no longer names %s "%s" without brackets: drop it from NAMED_WITHOUT_BRACKETS.', $id, $name));
+            }
+        }
+    }
+
     public function testEverySchemaASuccessAnswersIsReadByAModel(): void
     {
         $read = [];
@@ -306,14 +435,14 @@ final class ResourceContractTest extends TestCase
 
     /**
      * Each method marked with the operation it calls, and the clients
-     * (AdministratorApi, MemberApi) it is reached from.
+     * (AdministratorApi, MemberApi, BackendApi) it is reached from.
      *
      * @return list<array{operation: Operation, method: string, roots: list<class-string>}>
      */
     private static function endpoints(): array
     {
         $roots = [];
-        foreach ([AdministratorApi::class, MemberApi::class] as $root) {
+        foreach ([AdministratorApi::class, MemberApi::class, BackendApi::class] as $root) {
             foreach (self::reachable($root) as $class) {
                 $roots[$class][] = $root;
             }
@@ -369,10 +498,30 @@ final class ResourceContractTest extends TestCase
             /** @var list<list<string>> */
             public array $queries = [];
 
+            /** @var list<mixed> */
+            public array $bodies = [];
+
             public function __construct(private readonly int $status) {}
 
             public function sendRequest(RequestInterface $request): ResponseInterface
             {
+                // The backend's sign-in, which only a backend method makes
+                // and which is not one of the calls held to the document.
+                $path = $request->getUri()->getPath();
+                if ($path === '/.well-known/openid-configuration' || $path === '/oauth/token') {
+                    return Psr17FactoryDiscovery::findResponseFactory()->createResponse(200)
+                        ->withHeader(Header::CONTENT_TYPE, MediaType::JSON)
+                        ->withBody(Psr17FactoryDiscovery::findStreamFactory()->createStream(json_encode($path === '/oauth/token' ? ['access_token' => 'contract-backend-token', 'token_type' => 'Bearer', 'expires_in' => 3600] : [
+                            'issuer' => 'https://site.test',
+                            'authorization_endpoint' => 'https://site.test/oauth/authorize',
+                            'token_endpoint' => 'https://site.test/oauth/token',
+                            'jwks_uri' => 'https://site.test/oauth/jwks.json',
+                            'response_types_supported' => ['code'],
+                            'subject_types_supported' => ['public'],
+                            'id_token_signing_alg_values_supported' => ['RS256'],
+                        ], JSON_THROW_ON_ERROR)));
+                }
+
                 $names = [];
                 $query = $request->getUri()->getQuery();
                 foreach ($query === '' ? [] : explode('&', $query) as $pair) {
@@ -380,6 +529,8 @@ final class ResourceContractTest extends TestCase
                 }
                 $page = $this->queries === [] ? ['data' => [], 'next_cursor' => 'next-page'] : ['data' => []];
                 $this->queries[] = $names;
+                $body = (string) $request->getBody();
+                $this->bodies[] = $body === '' ? null : json_decode($body, true, 512, JSON_THROW_ON_ERROR);
 
                 return Psr17FactoryDiscovery::findResponseFactory()->createResponse($this->status)
                     ->withHeader(Header::CONTENT_TYPE, MediaType::JSON)
@@ -396,11 +547,17 @@ final class ResourceContractTest extends TestCase
             requestFactory: Psr17FactoryDiscovery::findRequestFactory(),
             streamFactory: Psr17FactoryDiscovery::findStreamFactory(),
             retryPolicy: RetryPolicy::none(),
+            backendClientId: 'contract-backend',
+            backendClientSecret: 'contract-backend-secret',
         ));
 
         [$class, $name] = explode('::', $endpoint['method'], 2);
         self::assertTrue(class_exists($class));
-        $root = ($endpoint['roots'][0] ?? null) === MemberApi::class ? $client->forMember('contract-member-token')->api() : $client->api();
+        $root = match ($endpoint['roots'][0] ?? null) {
+            MemberApi::class => $client->forMember('contract-member-token')->api(),
+            BackendApi::class => $client->backend(),
+            default => $client->api(),
+        };
         $method = new ReflectionMethod($class, $name);
         $arguments = [];
         foreach ($method->getParameters() as $parameter) {
@@ -435,6 +592,8 @@ final class ResourceContractTest extends TestCase
             self::assertInstanceOf(Paginator::class, $result, sprintf('%s calls %s, a cursor list, without returning a Paginator.', $endpoint['method'], $endpoint['operation']->value));
         }
         self::assertCount($paged ? 2 : 1, $queries, sprintf('%s sent %d request(s); a list walked to its second page sends 2, any other method 1.', $endpoint['method'], count($queries)));
+
+        self::$bodies = $site->bodies;
 
         return $queries;
     }
@@ -566,6 +725,9 @@ final class ResourceContractTest extends TestCase
             }
         }
         $name = Document::refName($items);
+        if ($name === null && in_array('object', (array) ($items['type'] ?? []), true) && ($items['additionalProperties'] ?? false) === true) {
+            return UntypedRecord::class;
+        }
         self::assertNotNull($name, sprintf('%s.%s names no schema.', $schema, $field));
         if (in_array($name, SyncResult::SCHEMAS, true)) {
             return self::recordModel($name, 'server_record');
@@ -613,6 +775,27 @@ final class ResourceContractTest extends TestCase
     }
 
     /**
+     * Whether a node is the declaration of a field AS_THE_SITE_SENDS samples
+     * otherwise than the document, which checks that it still declares it so.
+     *
+     * @param array<array-key, mixed> $node
+     */
+    private static function sampledAsTheSiteSends(array $node): bool
+    {
+        unset($node['description']);
+
+        foreach (self::AS_THE_SITE_SENDS as $fields) {
+            foreach ($fields as $override) {
+                if (Document::map($override['document']) === $node) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * The schema at a read path (`items[].price`), or null when the
      * document defines nothing there.
      *
@@ -627,7 +810,9 @@ final class ResourceContractTest extends TestCase
             $name = $list ? substr($segment, 0, -2) : $segment;
             $properties = Document::map(self::nonNull(Document::resolve($node))['properties'] ?? null);
             if (!isset($properties[$name])) {
-                return null;
+                // Beneath a field sampled as the site sends it, the document
+                // declares nothing to hold a read to.
+                return self::sampledAsTheSiteSends($node) ? $node : null;
             }
             $node = Document::map($properties[$name]);
             if ($list) {

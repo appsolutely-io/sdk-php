@@ -55,8 +55,21 @@ final readonly class SiteApi
         private ClockInterface $clock,
         private RetryPolicy $retryPolicy,
         private LoggerInterface $logger,
+        private ?BackendToken $backendToken = null,
     ) {
         $this->origin = rtrim($baseUrl, '/');
+    }
+
+    /**
+     * The same calls carrying the token the site backend's machine client is
+     * granted, asked for when needed and once more when the site no longer
+     * accepts it.
+     *
+     * @internal used by Client::backend()
+     */
+    public function withBackendToken(BackendToken $backendToken): self
+    {
+        return new self($this->http, $this->origin, null, $this->clock, $this->retryPolicy, $this->logger, $backendToken);
     }
 
     /**
@@ -181,7 +194,7 @@ final readonly class SiteApi
      */
     public function __debugInfo(): array
     {
-        return ['origin' => $this->origin, 'token' => $this->token === null ? null : '[redacted]'];
+        return ['origin' => $this->origin, 'token' => $this->token === null ? null : '[redacted]', 'backendToken' => $this->backendToken];
     }
 
     /**
@@ -245,9 +258,11 @@ final readonly class SiteApi
         self::assertHeaderValue('request id', $requestId);
 
         $headers = [Header::ACCEPT => self::ACCEPT, Header::REQUEST_ID => $requestId];
-        if ($this->token !== null) {
-            $headers[Header::AUTHORIZATION] = 'Bearer ' . $this->token;
+        $token = $this->backendToken?->token() ?? $this->token;
+        if ($token !== null) {
+            $headers[Header::AUTHORIZATION] = 'Bearer ' . $token;
         }
+        $renewed = false;
         if ($idempotencyKey !== null) {
             $headers[Header::IDEMPOTENCY_KEY] = $idempotencyKey;
         }
@@ -267,6 +282,21 @@ final readonly class SiteApi
             }
 
             $exception = ApiException::fromResponse($response, $requestId, $this->clock->now());
+
+            // A machine token the site no longer accepts (revoked, or the
+            // client's secret rotated) is asked for again, once; the call is
+            // sent again with it whether or not it may be retried, since the
+            // refusal came before the site acted on it.
+            if ($this->backendToken !== null && $token !== null && !$renewed && $exception->status === 401 && $exception->hasType('invalid-token')) {
+                $token = $this->backendToken->renew($token);
+                $headers[Header::AUTHORIZATION] = 'Bearer ' . $token;
+                $renewed = true;
+                // Not one of the retries the policy counts.
+                $retry--;
+
+                continue;
+            }
+
             $this->waitBeforeRetrying($exception, $retryable, $retry, $method, $path, (string) $exception->status, $this->delay($exception, $idempotencyKey !== null, $retry + 1));
         }
     }

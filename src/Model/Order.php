@@ -19,6 +19,7 @@ final readonly class Order
     /**
      * @param string|null $subjectReference what the order is for beyond the account that placed it
      * @param string|null $status such as `pending`, `paid`, `shipped`, `completed`, `cancelled` or `expired`; a status the site adds later is read as it is sent
+     * @param string $reference the order's reference, as the member sees it on receipts and the site's own pages
      * @param string $mode `production` or `test`: the kind of money behind the order
      * @param string|null $subscriptionStartState how far the subscription this order buys has got; null when it buys none
      * @param string|null $subscriptionStartRefusal why that subscription will not start, when it will not
@@ -31,8 +32,8 @@ final readonly class Order
      */
     public function __construct(
         public string $id,
+        public string $reference,
         public ?string $subjectReference,
-        public ?string $couponCode,
         public ?string $status,
         public string $mode,
         public ?string $subscriptionStartState,
@@ -58,8 +59,8 @@ final readonly class Order
     {
         return new self(
             id: $json->string('id'),
+            reference: $json->string('reference'),
             subjectReference: $json->nullableString('subject_reference'),
-            couponCode: $json->nullableString('coupon_code'),
             status: $json->nullableString('status'),
             mode: $json->string('mode'),
             subscriptionStartState: $json->nullableString('subscription_start_state'),

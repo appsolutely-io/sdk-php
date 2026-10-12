@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk;
 
 use Appsolutely\Sdk\Api\AdministratorApi;
+use Appsolutely\Sdk\Api\BackendApi;
+use Appsolutely\Sdk\Api\BackendToken;
 use Appsolutely\Sdk\Api\SiteApi;
 use Appsolutely\Sdk\Cache\InMemoryCache;
 use Appsolutely\Sdk\Clock\SystemClock;
@@ -30,6 +32,8 @@ final readonly class Client
 
     private AdministratorApi $api;
 
+    private ?BackendApi $backend;
+
     public function __construct(Config $config)
     {
         try {
@@ -48,16 +52,29 @@ final readonly class Client
 
         $clock = $config->clock ?? new SystemClock();
         $logger = $config->logger ?? new NullLogger();
+        $cache = $config->cache ?? new InMemoryCache($clock);
 
         $this->oidc = new OpenIdClient(
             $config,
             $http,
-            $config->cache ?? new InMemoryCache($clock),
+            $cache,
             $clock,
             $logger,
         );
         $this->site = new SiteApi($http, $config->baseUrl, $config->apiToken(), $clock, $config->retryPolicy, $logger);
         $this->api = new AdministratorApi($this->site);
+
+        $backendSecret = $config->backendClientSecret();
+        $this->backend = $config->backendClientId === null || $backendSecret === null ? null : new BackendApi($this->site->withBackendToken(new BackendToken(
+            $this->oidc,
+            $cache,
+            $clock,
+            $config->issuer,
+            $config->backendClientId,
+            $backendSecret,
+            $config->backendScopes,
+            $config->backendClientAuthentication,
+        )));
     }
 
     /**
@@ -91,6 +108,15 @@ final readonly class Client
     public function api(): AdministratorApi
     {
         return $this->api;
+    }
+
+    /**
+     * The Site API as the site's own backend, with a token its machine client
+     * is granted; the Config must hold that client's id and secret.
+     */
+    public function backend(): BackendApi
+    {
+        return $this->backend ?? throw new InvalidConfigException('The Config holds no backend client id and secret, so there is no backend to call as.');
     }
 
     /**

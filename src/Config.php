@@ -51,6 +51,12 @@ final readonly class Config
      * @param string $issuer the site's OpenID issuer, exactly as its discovery document names it
      * @param string|null $apiToken the long-lived administrator token issued on the site, sent on server-side
      *                              calls; without one, those calls go out without a credential
+     * @param string|null $backendClientId the site backend's machine client, registered apart from the one that
+     *                                     signs members in; with its secret, Client::backend() calls as it
+     * @param list<string> $backendScopes the scopes to ask the backend's token for; none asks for every scope the
+     *                                    machine client is registered with
+     * @param ClientAuthentication|null $backendClientAuthentication how the backend's client authenticates to the
+     *                                                               token endpoint; null for $clientAuthentication
      */
     public function __construct(
         public string $baseUrl,
@@ -69,6 +75,11 @@ final readonly class Config
         public ClientAuthentication $clientAuthentication = ClientAuthentication::ClientSecretBasic,
         public int $clockLeeway = self::DEFAULT_CLOCK_LEEWAY,
         public RetryPolicy $retryPolicy = new RetryPolicy(),
+        public ?string $backendClientId = null,
+        #[\SensitiveParameter]
+        private ?string $backendClientSecret = null,
+        public array $backendScopes = [],
+        public ?ClientAuthentication $backendClientAuthentication = null,
     ) {
         self::assertBaseUrl($baseUrl);
         self::assertIssuer($issuer);
@@ -83,6 +94,22 @@ final readonly class Config
 
         if ($apiToken !== null && !BearerToken::isSendable($apiToken)) {
             throw new InvalidConfigException('The administrator API token must be a non-empty run of printable ASCII characters without spaces.');
+        }
+
+        if (($backendClientId === null) !== ($backendClientSecret === null)) {
+            throw new InvalidConfigException('The backend client id and secret go together: give both, or neither.');
+        }
+
+        if ($backendClientId === '' || $backendClientSecret === '') {
+            throw new InvalidConfigException('The backend client id and secret must not be empty.');
+        }
+
+        foreach ($backendScopes as $scope) {
+            // RFC 6749 section 3.3: a scope token is printable ASCII without
+            // a space, a double quote or a backslash.
+            if (preg_match('/^[\x21\x23-\x5B\x5D-\x7E]+$/', $scope) !== 1) {
+                throw new InvalidConfigException('A backend scope must be a non-empty run of printable ASCII characters without spaces, double quotes or backslashes.');
+            }
         }
 
         if ($clockLeeway < 0 || $clockLeeway > self::MAX_CLOCK_LEEWAY) {
@@ -104,6 +131,14 @@ final readonly class Config
     public function apiToken(): ?string
     {
         return $this->apiToken;
+    }
+
+    /**
+     * @internal read by the client to authenticate its backend; not a way to get the secret back out
+     */
+    public function backendClientSecret(): ?string
+    {
+        return $this->backendClientSecret;
     }
 
     /**
@@ -131,6 +166,10 @@ final readonly class Config
             'clientAuthentication' => $this->clientAuthentication,
             'clockLeeway' => $this->clockLeeway,
             'retryPolicy' => $this->retryPolicy,
+            'backendClientId' => $this->backendClientId,
+            'backendClientSecret' => $this->backendClientSecret === null ? null : '[redacted]',
+            'backendScopes' => $this->backendScopes,
+            'backendClientAuthentication' => $this->backendClientAuthentication,
         ];
     }
 

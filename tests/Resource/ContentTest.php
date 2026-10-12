@@ -144,7 +144,7 @@ final class ContentTest extends TestCase
         self::assertSame('About', $page->name);
         self::assertSame('About us', $page->title);
         self::assertSame('en', $page->language);
-        self::assertNull($page->parentId);
+        self::assertNull($page->parent);
         self::assertSame(1, $page->status);
         self::assertSame('2026-08-30T10:00:00+00:00', $page->createdAt?->format(DATE_ATOM));
         self::assertSame('2026-10-08T11:59:58+00:00', $page->updatedAt->format(DATE_ATOM));

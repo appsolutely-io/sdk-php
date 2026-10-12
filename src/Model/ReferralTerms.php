@@ -9,9 +9,6 @@ namespace Appsolutely\Sdk\Model;
  */
 final readonly class ReferralTerms
 {
-    /** @internal */
-    public const string SCHEMA = 'ReferralTerms';
-
     /**
      * @param int $value in the minor units of $currency
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
