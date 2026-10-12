@@ -39,7 +39,8 @@ use Throwable;
  * Holds the typed client to the pinned Site API document: every operation
  * has exactly one method, every method names an operation and path the
  * document has and sits on the client of the operation's audience, every
- * request a method sends, on every page, carries the query parameters its
+ * request a method sends goes to the method and path of the operation it is
+ * marked with and, on every page, carries the query parameters its
  * operation documents and no others and cannot leave out a required one,
  * and every model reads only fields its schema defines and every field the
  * schema requires.
@@ -453,6 +454,9 @@ final class ResourceContractTest extends TestCase
             /** @var list<mixed> */
             public array $bodies = [];
 
+            /** @var list<string> each request's method and path, `GET /api/v1/pages` */
+            public array $lines = [];
+
             public function __construct(private readonly int $status) {}
 
             public function sendRequest(RequestInterface $request): ResponseInterface
@@ -481,6 +485,7 @@ final class ResourceContractTest extends TestCase
                 }
                 $page = $this->queries === [] ? ['data' => [], 'next_cursor' => 'next-page'] : ['data' => []];
                 $this->queries[] = $names;
+                $this->lines[] = $request->getMethod() . ' ' . $path;
                 $body = (string) $request->getBody();
                 $this->bodies[] = $body === '' ? null : json_decode($body, true, 512, JSON_THROW_ON_ERROR);
 
@@ -544,10 +549,27 @@ final class ResourceContractTest extends TestCase
             self::assertInstanceOf(Paginator::class, $result, sprintf('%s calls %s, a cursor list, without returning a Paginator.', $endpoint['method'], $endpoint['operation']->value));
         }
         self::assertCount($paged ? 2 : 1, $queries, sprintf('%s sent %d request(s); a list walked to its second page sends 2, any other method 1.', $endpoint['method'], count($queries)));
+        $declared = Document::operations()[$endpoint['operation']->value] ?? null;
+        self::assertNotNull($declared, sprintf('%s is marked with %s, which the document does not have.', $endpoint['method'], $endpoint['operation']->value));
+        foreach ($site->lines as $index => $line) {
+            self::assertMatchesRegularExpression(self::requestLine($declared['method'], $declared['path']), $line, sprintf('%s is marked with %s (%s %s) but sent %s in request %d.', $endpoint['method'], $endpoint['operation']->value, $declared['method'], $declared['path'], $line, $index + 1));
+        }
 
         self::$bodies = $site->bodies;
 
         return $queries;
+    }
+
+    /**
+     * The pattern of a request line the document's method and path template
+     * allow: each `{placeholder}` filled with one non-empty path segment.
+     */
+    private static function requestLine(string $method, string $template): string
+    {
+        $parts = preg_split('/\{[^}\/]+\}/', $template);
+        self::assertIsArray($parts);
+
+        return '#^' . preg_quote($method, '#') . ' ' . implode('[^/]+', array_map(static fn(string $part): string => preg_quote($part, '#'), $parts)) . '$#D';
     }
 
     /**
