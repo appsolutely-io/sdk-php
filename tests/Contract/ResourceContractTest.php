@@ -17,14 +17,9 @@ use Appsolutely\Sdk\Config;
 use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\MediaType;
 use Appsolutely\Sdk\Model\Fields;
-use Appsolutely\Sdk\Model\MagicLinkToken;
-use Appsolutely\Sdk\Model\PushDevice;
-use Appsolutely\Sdk\Model\Redelivery;
-use Appsolutely\Sdk\Model\Referral;
 use Appsolutely\Sdk\Model\SyncPull;
 use Appsolutely\Sdk\Model\SyncPush;
 use Appsolutely\Sdk\Model\SyncResult;
-use Appsolutely\Sdk\Model\WebhookDelivery;
 use Appsolutely\Sdk\Tests\Support\SourceTokens;
 use Appsolutely\Sdk\Tests\Support\UntypedRecord;
 use DateTimeImmutable;
@@ -130,28 +125,6 @@ final class ResourceContractTest extends TestCase
     ];
 
     /**
-     * Operations whose success the document leaves an open object, with the
-     * model that reads what the site sends: none of them is held to a schema
-     * here. Each entry fails once the document names a schema for the answer,
-     * and the model is then held to it.
-     */
-    private const array UNTYPED_ANSWERS = [
-        'getMeReferral' => Referral::class,
-        'tokenMagicLink' => MagicLinkToken::class,
-        'createMePushDevice' => PushDevice::class,
-        'redeliverDelivery' => Redelivery::class,
-        'redeliverWebhookDelivery' => WebhookDelivery::class,
-    ];
-
-    /**
-     * Array query parameters the document names without the brackets PHP
-     * needs to read a repeated key as a list: the site reads `subjects[]`,
-     * and a client sending `subjects` once per value is answered for the last
-     * one only. Each entry fails once the document names the brackets.
-     */
-    private const array NAMED_WITHOUT_BRACKETS = ['listAccountStates' => ['subjects']];
-
-    /**
      * Methods that send one argument whole as the body, so the member names
      * are the caller's: each method's array shape names the members, and the
      * document's request body is what that shape is written from.
@@ -186,8 +159,7 @@ final class ResourceContractTest extends TestCase
         $documented = [];
         foreach (Document::operations()[$id]['parameters'] as $parameter) {
             if (($parameter['in'] ?? null) === 'query' && is_string($parameter['name'] ?? null)) {
-                $name = in_array($parameter['name'], self::NAMED_WITHOUT_BRACKETS[$id] ?? [], true) ? $parameter['name'] . '[]' : $parameter['name'];
-                $documented[$name] = $parameter;
+                $documented[$parameter['name']] = $parameter;
             }
         }
 
@@ -382,26 +354,6 @@ final class ResourceContractTest extends TestCase
                 if ($value === null) {
                     self::assertContains('null', (array) (Document::map($properties[$member])['type'] ?? []), sprintf('%s sends "%s" as null, which %s does not let be null.', $endpoint['method'], $member, $id));
                 }
-            }
-        }
-    }
-
-    public function testEachAnswerReadWithoutASchemaIsStillUntyped(): void
-    {
-        foreach (array_keys(self::UNTYPED_ANSWERS) as $id) {
-            $operation = Operation::from($id);
-            $response = Document::map(Document::map(Document::operations()[$id]['operation']['responses'] ?? null)[$operation->successStatus()] ?? null);
-            $schema = Document::map(Document::map(Document::map($response['content'] ?? null)['application/json'] ?? null)['schema'] ?? null);
-            self::assertNull(Document::refName($schema), sprintf('The pinned document now names a schema for the answer of %s: drop it from UNTYPED_ANSWERS and give its model that SCHEMA.', $id));
-        }
-    }
-
-    public function testEachArrayQueryNamedWithoutItsBracketsIsStillSo(): void
-    {
-        foreach (self::NAMED_WITHOUT_BRACKETS as $id => $names) {
-            $documented = array_column(array_filter(Document::operations()[$id]['parameters'], static fn(array $parameter): bool => ($parameter['in'] ?? null) === 'query'), 'name');
-            foreach ($names as $name) {
-                self::assertContains($name, $documented, sprintf('The pinned document no longer names %s "%s" without brackets: drop it from NAMED_WITHOUT_BRACKETS.', $id, $name));
             }
         }
     }

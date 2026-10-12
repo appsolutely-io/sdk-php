@@ -109,7 +109,9 @@ paths:
         - account-states
       summary: 'List account states'
       parameters:
-        - name: subjects
+        - name: 'subjects[]'
+          style: form
+          explode: true
           in: query
           required: true
           schema:
@@ -743,7 +745,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/json:
-              schema: { type: object, additionalProperties: true }
+              schema: { $ref: '#/components/schemas/MagicLinkToken' }
         400:
           description: 'Refused: `invalid-link`, `link-expired`.'
           content:
@@ -1001,7 +1003,8 @@ paths:
             schema:
               $ref: '#/components/schemas/StartBackendCheckoutSessionPayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'checkout:write'
   '/api/v1/checkout-sessions/{session}':
     get:
       operationId: getCheckoutSession
@@ -1109,7 +1112,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'checkout:write'
   /api/v1/client:
     get:
       operationId: getClient
@@ -1130,6 +1134,21 @@ paths:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+        401:
+          description: 'Refused: `unauthenticated`, `invalid-token`.'
+          headers:
+            WWW-Authenticate:
+              description: "The Bearer challenge for this API's realm."
+              schema: { type: string }
+            RateLimit:
+              $ref: '#/components/headers/RateLimit'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimit-Policy'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`.'
           content:
@@ -1184,6 +1203,8 @@ paths:
           content:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
+      security:
+        - backendClient: []
   /api/v1/deliveries:
     get:
       operationId: listDeliveries
@@ -1306,7 +1327,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'deliveries:read'
   '/api/v1/deliveries/{event}/redeliveries':
     post:
       operationId: redeliverDelivery
@@ -1342,7 +1364,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/json:
-              schema: { type: object, additionalProperties: true }
+              schema: { $ref: '#/components/schemas/Redelivery' }
         400:
           description: 'Refused: `idempotency-key-required`, `idempotency-key-invalid`.'
           content:
@@ -1467,7 +1489,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable', 'https://appsolutely.io/problems/temporarily-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'deliveries:redeliver'
   /api/v1/entitlements:
     get:
       operationId: listBackendEntitlements
@@ -1575,7 +1598,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'entitlements:read'
   '/api/v1/entitlements/{sub}':
     get:
       operationId: getBackendEntitlement
@@ -1683,7 +1707,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'entitlements:read'
   /api/v1/feature-keys:
     get:
       operationId: listFeatureKeys
@@ -1773,7 +1798,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'catalogue:read'
     post:
       operationId: createFeatureKey
       tags:
@@ -1907,7 +1933,8 @@ paths:
             schema:
               $ref: '#/components/schemas/StoreFeatureKeyPayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'catalogue:write'
   '/api/v1/feature-keys/{key}/retirement':
     post:
       operationId: retireFeatureKey
@@ -2030,7 +2057,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'catalogue:write'
   /api/v1/form-entries:
     get:
       operationId: listFormEntries
@@ -3870,7 +3898,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, additionalProperties: true }
+              schema: { $ref: '#/components/schemas/PushDevice' }
           headers:
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -4089,7 +4117,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, additionalProperties: true }
+              schema: { $ref: '#/components/schemas/Referral' }
           headers:
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -5750,7 +5778,8 @@ paths:
             schema:
               $ref: '#/components/schemas/OpenBackendPortalSessionPayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'checkout:write'
   /api/v1/products:
     get:
       operationId: listProducts
@@ -6063,7 +6092,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'catalogue:read'
   '/api/v1/products/{product}/feature-values/{key}':
     delete:
       operationId: deleteProductFeatureValue
@@ -6173,7 +6203,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'catalogue:write'
     put:
       operationId: updateProductFeatureValue
       tags:
@@ -6318,7 +6349,8 @@ paths:
             schema:
               $ref: '#/components/schemas/UpdateProductFeatureValuePayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'catalogue:write'
   /api/v1/return-targets:
     get:
       operationId: listReturnTargets
@@ -6408,7 +6440,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'return-targets:write'
     post:
       operationId: createReturnTarget
       tags:
@@ -6530,7 +6563,8 @@ paths:
             schema:
               $ref: '#/components/schemas/StoreReturnTargetPayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'return-targets:write'
   '/api/v1/return-targets/{target}':
     delete:
       operationId: deleteReturnTarget
@@ -6635,7 +6669,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'return-targets:write'
   /api/v1/role-assignments:
     get:
       operationId: listRoleAssignments
@@ -6751,7 +6786,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'roles:read'
   '/api/v1/role-assignments/{sub}':
     get:
       operationId: getRoleAssignment
@@ -6859,7 +6895,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'roles:read'
   '/api/v1/role-assignments/{sub}/{key}':
     put:
       operationId: assignRoleAssignment
@@ -6999,7 +7036,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'roles:write'
     delete:
       operationId: revokeRoleAssignment
       tags:
@@ -7108,7 +7146,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'roles:write'
   /api/v1/roles:
     get:
       operationId: listRoles
@@ -7198,7 +7237,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'roles:read'
     post:
       operationId: createRole
       tags:
@@ -7332,7 +7372,8 @@ paths:
             schema:
               $ref: '#/components/schemas/StoreRolePayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'roles:write'
   '/api/v1/roles/{key}/retirement':
     post:
       operationId: retireRole
@@ -7455,7 +7496,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'roles:write'
   '/api/v1/seat-pools/{payer}':
     get:
       operationId: listSeatPools
@@ -7563,7 +7605,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'seats:read'
   /api/v1/seats:
     post:
       operationId: createSeat
@@ -7698,7 +7741,8 @@ paths:
             schema:
               $ref: '#/components/schemas/StoreSeatPayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'seats:write'
   '/api/v1/seats/{sub}':
     delete:
       operationId: deleteSeat
@@ -7803,7 +7847,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'seats:write'
   /api/v1/store-purchases/intents:
     post:
       operationId: intentsStorePurchase
@@ -7926,7 +7971,8 @@ paths:
             schema:
               $ref: '#/components/schemas/AskBackendStorePurchaseIntentPayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'store-purchases:write'
   /api/v1/store-purchases/transactions:
     post:
       operationId: transactionsStorePurchase
@@ -8049,7 +8095,8 @@ paths:
             schema:
               $ref: '#/components/schemas/SubmitBackendStorePurchaseTransactionPayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'store-purchases:write'
   '/api/v1/subscriptions/{subscription}/test-clock':
     post:
       operationId: attachTestClock
@@ -8219,7 +8266,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable', 'https://appsolutely.io/problems/temporarily-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'test-clock:write'
   '/api/v1/subscriptions/{subscription}/test-clock/advance':
     post:
       operationId: advanceTestClock
@@ -8398,7 +8446,8 @@ paths:
             schema:
               $ref: '#/components/schemas/AdvanceTestClockPayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'test-clock:write'
   /api/v1/sync/articles:
     get:
       operationId: pullSync.article
@@ -9455,7 +9504,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'endpoints:read'
     post:
       operationId: createWebhookEndpoint
       tags:
@@ -9607,7 +9657,8 @@ paths:
             schema:
               $ref: '#/components/schemas/StoreBackendWebhookEndpointPayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'endpoints:write'
   '/api/v1/webhook-endpoints/{endpoint}/disable':
     post:
       operationId: disableWebhookEndpoint
@@ -9730,7 +9781,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'endpoints:write'
   '/api/v1/webhook-endpoints/{endpoint}/enable':
     post:
       operationId: enableWebhookEndpoint
@@ -9853,7 +9905,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'endpoints:write'
   '/api/v1/webhook-endpoints/{endpoint}/secret-rotations':
     post:
       operationId: startWebhookEndpoints.secretRotation
@@ -10020,7 +10073,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable', 'https://appsolutely.io/problems/temporarily-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'endpoints:write'
   '/api/v1/webhook-endpoints/{endpoint}/secret-rotations/cancel':
     post:
       operationId: cancelWebhookEndpoints.secretRotation
@@ -10161,7 +10215,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ConfirmWebhookRotationPayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'endpoints:write'
   '/api/v1/webhook-endpoints/{endpoint}/secret-rotations/complete':
     post:
       operationId: completeWebhookEndpoints.secretRotation
@@ -10302,7 +10357,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ConfirmWebhookRotationPayload'
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'endpoints:write'
   '/api/v1/webhook-endpoints/{endpoint}/test-deliveries':
     post:
       operationId: test-deliveriesWebhookEndpoint
@@ -10434,7 +10490,8 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable'] } } }] }
       security:
-        - bearerAuth: []
+        - backendClient:
+            - 'endpoints:write'
   '/api/v1/webhook-subscriptions/{subscription}/deliveries':
     get:
       operationId: listWebhookDeliveries
@@ -10600,7 +10657,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/json:
-              schema: { type: object, additionalProperties: true }
+              schema: { $ref: '#/components/schemas/WebhookDelivery' }
         400:
           description: 'Refused: `idempotency-key-required`, `idempotency-key-invalid`.'
           content:
@@ -10734,6 +10791,28 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
+    backendClient:
+      type: oauth2
+      description: "A token the site backend's machine client is granted by client credentials."
+      flows:
+        clientCredentials:
+          tokenUrl: /oauth/token
+          scopes:
+            'entitlements:read': 'Read what each member is entitled to.'
+            'checkout:write': 'Start purchases and billing sessions for members.'
+            'store-purchases:write': 'Submit app store purchases for members.'
+            'roles:read': 'Read app roles and who holds them.'
+            'roles:write': 'Manage app roles and their assignments.'
+            'seats:read': 'Read seats and seat pools.'
+            'seats:write': 'Grant and revoke seats.'
+            'catalogue:read': 'Read feature keys and product feature values.'
+            'catalogue:write': 'Manage feature keys and product feature values.'
+            'endpoints:read': 'Read webhook endpoints.'
+            'endpoints:write': 'Manage webhook endpoints.'
+            'deliveries:read': 'Read webhook deliveries.'
+            'deliveries:redeliver': 'Redeliver webhook events.'
+            'return-targets:write': 'Manage purchase return addresses.'
+            'test-clock:write': 'Move the clock of a test subscription.'
   headers:
     RateLimit:
       description: 'What is left of each budget that counted this request, one list member per policy: `"<policy>";r=<remaining>;t=<seconds until the window turns over>` (draft-ietf-httpapi-ratelimit-headers).'
@@ -11531,6 +11610,24 @@ components:
         - abilities
         - device_name
         - code_challenge
+    MagicLinkToken:
+      type: object
+      properties:
+        token:
+          type: string
+        abilities:
+          type: array
+          items:
+            type: string
+        expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+      required:
+        - token
+        - abilities
+        - expires_at
     MagicLinkTokenPayload:
       type: object
       properties:
@@ -12110,6 +12207,99 @@ components:
       required:
         - currency
         - price
+    PushDevice:
+      type: object
+      properties:
+        token:
+          type: string
+        platform:
+          type: string
+        provider:
+          type: string
+        app_identifier:
+          type:
+            - string
+            - 'null'
+        installation_id:
+          type:
+            - string
+            - 'null'
+        last_used_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+      required:
+        - token
+        - platform
+        - provider
+        - app_identifier
+        - installation_id
+        - last_used_at
+    Redelivery:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EndpointWebhookDelivery'
+        refused:
+          description: 'Each endpoint of the mode that was owed the event and refuses it now, with why.'
+          type: array
+          items:
+            $ref: '#/components/schemas/RedeliveryRefusal'
+      required:
+        - data
+        - refused
+    RedeliveryRefusal:
+      type: object
+      properties:
+        endpoint_id:
+          type: string
+        reason:
+          type: string
+      required:
+        - endpoint_id
+        - reason
+    Referral:
+      type: object
+      properties:
+        code:
+          type: string
+        programme:
+          type: string
+        discount:
+          $ref: '#/components/schemas/ReferralDiscount'
+        min_order_amount:
+          type: integer
+        reward:
+          $ref: '#/components/schemas/ReferralTerms'
+      required:
+        - code
+        - programme
+        - discount
+        - min_order_amount
+        - reward
+    ReferralDiscount:
+      type: object
+      properties:
+        type:
+          type: string
+        value:
+          type: integer
+        max_discount:
+          type:
+            - integer
+            - 'null'
+        currency:
+          type:
+            - string
+            - 'null'
+      required:
+        - type
+        - value
+        - max_discount
+        - currency
     ReferralReward:
       type: object
       properties:
@@ -12163,6 +12353,19 @@ components:
             - 'null'
       required:
         - data
+    ReferralTerms:
+      type: object
+      properties:
+        type:
+          type: string
+        value:
+          type: integer
+        currency:
+          type: string
+      required:
+        - type
+        - value
+        - currency
     ReturnTarget:
       type: object
       properties:

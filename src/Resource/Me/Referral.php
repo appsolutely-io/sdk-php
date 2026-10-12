@@ -24,7 +24,7 @@ final readonly class Referral
     #[Endpoint(Operation::GetMeReferral)]
     public function get(): ReferralModel
     {
-        return $this->caller->read(Operation::GetMeReferral, ReferralModel::NAME, ReferralModel::from(...));
+        return $this->caller->read(Operation::GetMeReferral, ReferralModel::SCHEMA, ReferralModel::from(...));
     }
 
     /**
