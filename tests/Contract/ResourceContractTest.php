@@ -45,7 +45,7 @@ use Throwable;
  * operation documents and no others and cannot leave out a required one,
  * every method reads its answer as the schema the document gives it, and
  * every model reads only fields its schema defines and every field the
- * schema requires.
+ * schema requires, each as the type and nullability it declares.
  */
 final class ResourceContractTest extends TestCase
 {
@@ -253,6 +253,44 @@ final class ResourceContractTest extends TestCase
     }
 
     /**
+     * Fields the pinned document declares required and never null that the
+     * site may still send as null, where the model reads them as nullable,
+     * so an answer carrying one is read rather than refused. Each applies
+     * only while the document still declares the field so; one it comes to
+     * declare nullable fails until the entry is dropped.
+     *
+     * The site writes an order's `updated_at` and a referral reward's
+     * `earned_at` from record timestamps it may hold empty.
+     */
+    private const array NULL_AS_THE_SITE_SENDS = [
+        'Order' => ['updated_at'],
+        'ReferralReward' => ['earned_at'],
+    ];
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function siteNulls(): iterable
+    {
+        foreach (self::NULL_AS_THE_SITE_SENDS as $schema => $fields) {
+            foreach ($fields as $field) {
+                yield $schema . '.' . $field => [$schema, $field];
+            }
+        }
+    }
+
+    #[DataProvider('siteNulls')]
+    public function testEachFieldReadAsNullableAsTheSiteSendsItIsStillDeclaredRequired(string $schema, string $field): void
+    {
+        $declared = self::declaredType(Document::map(Document::map(Document::schema($schema)['properties'] ?? null)[$field] ?? null), $schema . '.' . $field);
+        self::assertTrue(!$declared['nullable'] && in_array($field, Document::list(Document::schema($schema)['required'] ?? []), true), sprintf(
+            'The pinned document now lets %s.%s be null or missing: drop it from NULL_AS_THE_SITE_SENDS.',
+            $schema,
+            $field,
+        ));
+    }
+
+    /**
      * @return iterable<string, array{class-string, string}>
      */
     public static function models(): iterable
@@ -279,6 +317,7 @@ final class ResourceContractTest extends TestCase
         $from($fields);
 
         self::assertReadsMatch($schema, $fields->reads(), $class);
+        self::assertReadTypesMatch($schema, $fields->accessors(), $class);
     }
 
     /**
@@ -308,6 +347,7 @@ final class ResourceContractTest extends TestCase
         $from($fields, \Closure::fromCallable($read));
 
         self::assertReadsMatch($schema, $fields->reads(), $class);
+        self::assertReadTypesMatch($schema, $fields->accessors(), $class);
     }
 
     /**
@@ -810,6 +850,147 @@ final class ResourceContractTest extends TestCase
         foreach (self::requiredPaths(Document::schema($schema), '', $reads) as $required) {
             self::assertContains($required, $reads, sprintf('%s does not read "%s", which the %s schema requires.', $class, $required, $schema));
         }
+    }
+
+    /**
+     * What each accessor of Fields reads: the JSON types it takes (a `[]`
+     * suffix for a list of them), the format a string must have, and
+     * whether it reads a missing or null field as null.
+     */
+    private const array ACCESSORS = [
+        'string' => ['type' => 'string', 'nullable' => false],
+        'nullableString' => ['type' => 'string', 'nullable' => true],
+        'int' => ['type' => 'integer', 'nullable' => false],
+        'nullableInt' => ['type' => 'integer', 'nullable' => true],
+        'bool' => ['type' => 'boolean', 'nullable' => false],
+        'nullableBool' => ['type' => 'boolean', 'nullable' => true],
+        'time' => ['type' => 'string', 'format' => 'date-time', 'nullable' => false],
+        'nullableTime' => ['type' => 'string', 'format' => 'date-time', 'nullable' => true],
+        'strings' => ['type' => 'string[]', 'nullable' => false],
+        'map' => ['type' => 'object', 'nullable' => false],
+        'nullableMap' => ['type' => 'object', 'nullable' => true],
+        'intMap' => ['type' => 'object', 'nullable' => false],
+        'object' => ['type' => 'object', 'nullable' => false],
+        'nullableObject' => ['type' => 'object', 'nullable' => true],
+        'objects' => ['type' => 'object[]', 'nullable' => false],
+        'nullableObjects' => ['type' => 'object[]', 'nullable' => true],
+    ];
+
+    /**
+     * Each field is read with the accessor its declaration calls for: of its
+     * type (a date-time as a time), and as nullable exactly when the schema
+     * lets it be null or leaves it out of `required`. A nullable read of a
+     * field always sent would type the model looser than the site; a plain
+     * read of one that may be null or missing would refuse a valid answer.
+     * `any` reads a field whatever it is, and beneath a field sampled as
+     * the site sends it the document declares nothing to compare with.
+     *
+     * @param array<string, list<string>> $accessors
+     */
+    private static function assertReadTypesMatch(string $schema, array $accessors, string $class): void
+    {
+        $mismatches = [];
+        foreach ($accessors as $path => $used) {
+            $parent = str_contains($path, '.') ? self::schemaAt(Document::schema($schema), substr($path, 0, (int) strrpos($path, '.'))) : Document::schema($schema);
+            $node = self::schemaAt(Document::schema($schema), $path);
+            if ($parent === null || $node === null || self::sampledAsTheSiteSends($parent) || self::sampledAsTheSiteSends($node)) {
+                continue;
+            }
+            $field = substr($path, (int) strrpos('.' . $path, '.'));
+            $name = str_ends_with($field, '[]') ? substr($field, 0, -2) : $field;
+            $required = in_array($name, Document::list(self::nonNull(Document::resolve($parent))['required'] ?? []), true);
+            if (array_diff($used, ['any']) === []) {
+                continue;
+            }
+            $declaration = Document::map(Document::map(self::nonNull(Document::resolve($parent))['properties'] ?? null)[$name] ?? null);
+            $declared = self::declaredType($declaration, $schema . '.' . $path);
+            $owner = str_contains($path, '.') ? self::refOf($parent) : $schema;
+            if ($owner !== null && in_array($name, self::NULL_AS_THE_SITE_SENDS[$owner] ?? [], true)) {
+                $declared['nullable'] = true;
+            }
+
+            foreach (array_unique($used) as $accessor) {
+                if ($accessor === 'any') {
+                    continue;
+                }
+                $reads = self::ACCESSORS[$accessor] ?? self::fail(sprintf('No entry in ACCESSORS for Fields::%s().', $accessor));
+                $expected = ['type' => $reads['type'], 'format' => $reads['format'] ?? null, 'nullable' => $reads['nullable']];
+                $actual = ['type' => $declared['type'], 'format' => $declared['format'] === 'date-time' ? 'date-time' : null, 'nullable' => $declared['nullable'] || !$required];
+                if ($actual === $expected) {
+                    continue;
+                }
+                $mismatches[] = sprintf(
+                    '%s reads "%s" of %s with %s(), which reads %s%s%s; the schema declares %s%s%s.',
+                    $class,
+                    $path,
+                    $schema,
+                    $accessor,
+                    $expected['nullable'] ? 'a nullable ' : 'a ',
+                    $expected['type'],
+                    $expected['format'] === null ? '' : ' (' . $expected['format'] . ')',
+                    $actual['nullable'] ? ($declared['nullable'] ? 'a nullable ' : 'an optional ') : 'a required ',
+                    $actual['type'],
+                    $actual['format'] === null ? '' : ' (' . $actual['format'] . ')',
+                );
+            }
+        }
+
+        self::assertSame([], $mismatches, implode("\n", $mismatches));
+    }
+
+    /**
+     * The name of the component a node is, or is `oneOf` with null.
+     *
+     * @param array<array-key, mixed> $node
+     */
+    private static function refOf(array $node): ?string
+    {
+        foreach ([$node, ...Document::list($node['oneOf'] ?? $node['anyOf'] ?? [])] as $alternative) {
+            $name = Document::refName(Document::map($alternative));
+            if ($name !== null) {
+                return $name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The JSON type of a field's declaration (`object[]` for a list of
+     * objects), its string format, and whether it may be null.
+     *
+     * @param array<array-key, mixed> $declaration
+     * @param string $where the field, for a failure: `Order.lines[].price`
+     * @return array{type: string, format: string|null, nullable: bool}
+     */
+    private static function declaredType(array $declaration, string $where): array
+    {
+        $nullable = false;
+        $alternatives = Document::list($declaration['oneOf'] ?? $declaration['anyOf'] ?? []);
+        if ($alternatives !== []) {
+            foreach ($alternatives as $alternative) {
+                if ((Document::map($alternative)['type'] ?? null) === 'null') {
+                    $nullable = true;
+                }
+            }
+        }
+        $node = self::nonNull(Document::resolve($declaration));
+        $types = (array) ($node['type'] ?? (isset($node['properties']) || isset($node['additionalProperties']) ? 'object' : []));
+        if (in_array('null', $types, true)) {
+            $nullable = true;
+        }
+        $types = array_values(array_filter($types, static fn(mixed $type): bool => $type !== 'null'));
+        self::assertCount(1, $types, sprintf('%s declares %s types to compare an accessor with.', $where, $types === [] ? 'no' : 'several'));
+        $type = $types[0];
+        self::assertIsString($type);
+        if ($type === 'array') {
+            $items = self::declaredType(Document::map($node['items'] ?? null), $where . '[]');
+
+            return ['type' => $items['type'] . '[]', 'format' => null, 'nullable' => $nullable];
+        }
+        $format = $node['format'] ?? null;
+
+        return ['type' => $type, 'format' => is_string($format) ? $format : null, 'nullable' => $nullable];
     }
 
     /**

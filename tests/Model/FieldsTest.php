@@ -179,4 +179,34 @@ final class FieldsTest extends TestCase
 
         self::assertSame(['id', 'child', 'child.id', 'children', 'missing', 'none'], $fields->reads());
     }
+
+    public function testEachReadIsRecordedWithTheAccessorThatMadeIt(): void
+    {
+        $fields = Fields::of(['id' => 'a', 'n' => 1, 'at' => '2026-10-08T12:34:56Z', 'tags' => ['x'], 'totals' => ['seats' => 3], 'child' => ['id' => 'c'], 'children' => [['on' => true]]], 'Thing');
+        $fields->string('id');
+        $fields->nullableString('label');
+        $fields->int('n');
+        $fields->nullableTime('at');
+        $fields->strings('tags');
+        $fields->intMap('totals');
+        $fields->any('free');
+        $fields->object('child')->string('id');
+        $fields->objects('children')[0]->bool('on');
+        $fields->nullableObjects('none');
+
+        self::assertSame([
+            'id' => ['string'],
+            'label' => ['nullableString'],
+            'n' => ['int'],
+            'at' => ['nullableTime'],
+            'tags' => ['strings'],
+            'totals' => ['intMap'],
+            'free' => ['any'],
+            'child' => ['object'],
+            'child.id' => ['string'],
+            'children' => ['objects'],
+            'children[].on' => ['bool'],
+            'none' => ['nullableObjects'],
+        ], $fields->accessors());
+    }
 }
