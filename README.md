@@ -329,8 +329,8 @@ Each client's `raw()` gives the calls underneath the typed methods, with the sam
 ```php
 $data = $client->api()->raw()->get('/api/v1/articles/' . rawurlencode($id), requestId: $traceId)->data;
 
-foreach ($client->api()->raw()->paginate('/api/v1/orders', ['status' => 'paid'], limit: 100) as $order) {
-    // every paid order as decoded JSON, 100 per request
+foreach ($client->api()->raw()->paginate('/api/v1/orders', ['sort' => 'updated_at', 'order' => 'desc'], limit: 100) as $order) {
+    // every order as decoded JSON, most recently changed first, 100 per request
 }
 ```
 
@@ -474,8 +474,11 @@ The classes in `Appsolutely\Sdk\Testing` are test helpers: use them in your test
 
 ```php
 use Appsolutely\Sdk\Testing\WebhookFactory;
+use Appsolutely\Sdk\Webhooks\EventType;
 
-$delivery = (new WebhookFactory(['whsec_...']))->make('entitlement.granted', ['member' => 'm_1']);
+$delivery = (new WebhookFactory(['whsec_...']))->make(EventType::ROLE_ASSIGNMENT_CHANGED, [
+    'subject' => 'member-sub', 'role' => 'editor', 'change' => 'added', 'cause' => 'app', 'roles' => ['editor'], 'sequence' => 7,
+]);
 // $delivery->body and $delivery->headers are what your endpoint receives.
 ```
 
