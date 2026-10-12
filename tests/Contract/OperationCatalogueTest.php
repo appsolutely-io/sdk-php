@@ -19,18 +19,18 @@ use PHPUnit\Framework\TestCase;
 final class OperationCatalogueTest extends TestCase
 {
     /**
-     * The paths a site answers only for its backend's machine token. The
-     * document gives every operation that needs a token the same bearer
-     * scheme, so whose token an operation takes is not in it: these are the
-     * site's own routes, as it serves them.
-     */
-    /**
      * Operations the site answers only for a token that the document lists
      * no security for. Each entry fails once the document lists one, so it is
      * dropped then.
      */
     private const array DOCUMENTED_WITHOUT_ITS_TOKEN = ['getClient'];
 
+    /**
+     * The paths a site answers only for its backend's machine token. The
+     * document gives every operation that needs a token the same bearer
+     * scheme, so whose token an operation takes is not in it: these are the
+     * site's own routes, as it serves them.
+     */
     private const string BACKEND_PATHS = '#^/api/v1/(client|entitlements|webhook-endpoints|deliveries|checkout-sessions|portal-sessions|store-purchases|return-targets|feature-keys|roles|role-assignments|seats|seat-pools)(/|$)|^/api/v1/subscriptions/\{subscription\}/test-clock|^/api/v1/products/\{product\}/feature-values#';
 
     /**
