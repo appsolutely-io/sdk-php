@@ -6,10 +6,12 @@ namespace Appsolutely\Sdk\Tests\Api;
 
 use Appsolutely\Sdk\Exception\ApiException;
 use Appsolutely\Sdk\Exception\AppsolutelyException;
+use Appsolutely\Sdk\Exception\BadRequestException;
 use Appsolutely\Sdk\Exception\ConflictException;
 use Appsolutely\Sdk\Exception\ForbiddenException;
 use Appsolutely\Sdk\Exception\NotFoundException;
 use Appsolutely\Sdk\Exception\RateLimitedException;
+use Appsolutely\Sdk\Exception\ServerErrorException;
 use Appsolutely\Sdk\Exception\ServiceUnavailableException;
 use Appsolutely\Sdk\Exception\UnauthenticatedException;
 use Appsolutely\Sdk\Exception\ValidationFailedException;
@@ -99,9 +101,11 @@ final class ProblemDetailsTest extends TestCase
         yield 'request in flight' => [409, 'idempotency-key-in-use', ConflictException::class];
         yield 'rate limited' => [429, 'too-many-requests', RateLimitedException::class];
         yield 'service unavailable' => [503, 'standing-unavailable', ServiceUnavailableException::class];
-        yield 'bad request' => [400, 'idempotency-key-invalid', ApiException::class];
+        yield 'bad request' => [400, 'idempotency-key-invalid', BadRequestException::class];
         yield 'gone' => [410, 'cursor-expired', ApiException::class];
-        yield 'outcome unknown' => [500, 'idempotency-outcome-unknown', ApiException::class];
+        yield 'server error' => [500, 'internal', ServerErrorException::class];
+        yield 'bad gateway' => [502, 'bad-gateway', ServerErrorException::class];
+        yield 'gateway timeout' => [504, 'gateway-timeout', ServerErrorException::class];
     }
 
     /**
@@ -114,6 +118,16 @@ final class ProblemDetailsTest extends TestCase
 
         self::assertSame($class, $exception::class);
         self::assertTrue($exception->hasType($slug));
+    }
+
+    /**
+     * A 503 is a server error too, so one catch covers every 5xx.
+     */
+    public function testAnUnavailableSiteIsAServerError(): void
+    {
+        $unavailable = self::exception(self::problem(503, ['type' => 'https://appsolutely.io/problems/temporarily-unavailable', 'title' => 'T', 'status' => 503]));
+
+        self::assertInstanceOf(ServerErrorException::class, $unavailable);
     }
 
     public function testAnAuthenticationRefusalKeepsTheChallenge(): void
@@ -173,7 +187,7 @@ final class ProblemDetailsTest extends TestCase
 
         $exception = self::exception($response, 'req-1');
 
-        self::assertSame(ApiException::class, $exception::class);
+        self::assertSame(ServerErrorException::class, $exception::class);
         self::assertFalse($exception->isProblem);
         self::assertSame(502, $exception->status);
         self::assertSame('about:blank', $exception->type);

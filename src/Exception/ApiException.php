@@ -19,8 +19,9 @@ use RuntimeException;
  * problem (`application/problem+json`): branch on `$type`, which names one
  * documented refusal and never changes meaning; `$title` and `$detail` are
  * prose for a person. A subclass covers each case a caller usually handles
- * on its own (validation, not found, unauthenticated, forbidden, conflict,
- * rate limited, unavailable); anything else, including a type this version
+ * on its own (bad request, validation, not found, unauthenticated,
+ * forbidden, conflict, rate limited, a server error and, within it,
+ * unavailable); anything else, including a type this version
  * does not know, is this class itself.
  *
  * An error that is not a problem (a proxy's HTML page, say) still arrives
@@ -91,12 +92,14 @@ class ApiException extends RuntimeException implements AppsolutelyException
 
         $class = match (true) {
             $status === 422 && $type === self::TYPE_BASE . 'validation-failed' => ValidationFailedException::class,
+            $status === 400 => BadRequestException::class,
             $status === 401 => UnauthenticatedException::class,
             $status === 403 => ForbiddenException::class,
             $status === 404 => NotFoundException::class,
             $status === 409 => ConflictException::class,
             $status === 429 => RateLimitedException::class,
             $status === 503 => ServiceUnavailableException::class,
+            $status >= 500 && $status <= 599 => ServerErrorException::class,
             default => self::class,
         };
 

@@ -273,7 +273,7 @@ final readonly class SiteApi
             try {
                 $response = $this->http->json($method, $url, $headers, $encoded);
             } catch (TransportException $exception) {
-                $this->waitBeforeRetrying($exception, $retryable, $retry, $method, $path, 'a network failure', $this->retryPolicy->backoff($retry + 1));
+                $this->waitBeforeRetrying($exception, $retryable, $retry, $method, $path, 'a network failure', $exception->isNetworkFailure() ? $this->retryPolicy->backoff($retry + 1) : null);
 
                 continue;
             }

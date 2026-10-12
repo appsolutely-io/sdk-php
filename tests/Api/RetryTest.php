@@ -16,6 +16,8 @@ use Appsolutely\Sdk\Tests\Support\RecordingLogger;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Client\ClientExceptionInterface;
+use Psr\Http\Client\NetworkExceptionInterface;
+use Psr\Http\Client\RequestExceptionInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
@@ -116,7 +118,7 @@ final class RetryTest extends TestCase
     public function testANetworkFailureIsRetriedWithTheSameKeyAndRequestId(): void
     {
         $provider = self::answeringInTurn(
-            static fn(): never => throw new class ('connection reset') extends RuntimeException implements ClientExceptionInterface {},
+            static fn(FakeProvider $provider, RequestInterface $request): never => throw self::networkFailure($request, 'connection reset'),
             static fn(FakeProvider $provider): ResponseInterface => $provider->json(['id' => 'a-1'], 201),
         );
 
@@ -323,7 +325,7 @@ final class RetryTest extends TestCase
 
     public function testANetworkFailureOnTheLastAttemptIsThrown(): void
     {
-        $provider = self::answering(static fn(): never => throw new class ('timed out') extends RuntimeException implements ClientExceptionInterface {});
+        $provider = self::answering(static fn(FakeProvider $provider, RequestInterface $request): never => throw self::networkFailure($request, 'timed out'));
 
         $this->expectException(TransportException::class);
 
@@ -374,7 +376,7 @@ final class RetryTest extends TestCase
     #[DataProvider('unkeyedWrites')]
     public function testAWriteWithoutAKeyIsNeverRetried(string $method): void
     {
-        $provider = self::answering(static fn(): never => throw new class ('connection reset') extends RuntimeException implements ClientExceptionInterface {});
+        $provider = self::answering(static fn(FakeProvider $provider, RequestInterface $request): never => throw self::networkFailure($request, 'connection reset'));
         $api = $provider->client()->api()->raw();
 
         try {
@@ -459,6 +461,63 @@ final class RetryTest extends TestCase
     }
 
     /**
+     * A request the HTTP client refused to send (a malformed one, say) fails
+     * the same way on every attempt: only a network failure is retried.
+     */
+    public function testARequestTheHttpClientRefusesIsNotRetried(): void
+    {
+        $provider = self::answering(static fn(FakeProvider $provider, RequestInterface $request): never => throw new class ('malformed request', $request) extends RuntimeException implements RequestExceptionInterface {
+            public function __construct(string $message, private readonly RequestInterface $request)
+            {
+                parent::__construct($message);
+            }
+
+            public function getRequest(): RequestInterface
+            {
+                return $this->request;
+            }
+        });
+
+        try {
+            $provider->client()->api()->raw()->get('/api/v1/articles/a-1');
+            self::fail('No exception was thrown.');
+        } catch (TransportException $exception) {
+            self::assertFalse($exception->isNetworkFailure());
+        }
+
+        self::assertCount(1, $provider->siteRequests());
+        self::assertSame([], $provider->sleeper->sleeps);
+    }
+
+    public function testAClientFailureThatIsNeitherIsNotRetried(): void
+    {
+        $provider = self::answering(static fn(): never => throw new class ('something else') extends RuntimeException implements ClientExceptionInterface {});
+
+        try {
+            $provider->client()->api()->raw()->get('/api/v1/articles/a-1');
+            self::fail('No exception was thrown.');
+        } catch (TransportException) {
+        }
+
+        self::assertCount(1, $provider->siteRequests());
+    }
+
+    public static function networkFailure(RequestInterface $request, string $message): NetworkExceptionInterface
+    {
+        return new class ($message, $request) extends RuntimeException implements NetworkExceptionInterface {
+            public function __construct(string $message, private readonly RequestInterface $request)
+            {
+                parent::__construct($message);
+            }
+
+            public function getRequest(): RequestInterface
+            {
+                return $this->request;
+            }
+        };
+    }
+
+    /**
      * @param \Closure(FakeProvider, RequestInterface): ResponseInterface $answer
      */
     private static function answering(\Closure $answer): FakeProvider
@@ -472,15 +531,15 @@ final class RetryTest extends TestCase
     /**
      * Answers with each closure in turn, the last one from then on.
      *
-     * @param \Closure(FakeProvider): ResponseInterface ...$answers
+     * @param \Closure(FakeProvider, RequestInterface): ResponseInterface ...$answers
      */
     private static function answeringInTurn(\Closure ...$answers): FakeProvider
     {
         $provider = new FakeProvider();
-        $provider->site = static function () use ($provider, &$answers): ResponseInterface {
+        $provider->site = static function (RequestInterface $request) use ($provider, &$answers): ResponseInterface {
             $answer = count($answers) > 1 ? array_shift($answers) : $answers[0];
 
-            return $answer($provider);
+            return $answer($provider, $request);
         };
 
         return $provider;
