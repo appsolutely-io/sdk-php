@@ -65,10 +65,14 @@ $client = new Client(new Config(
     clientSecret: $clientSecret,
     apiToken: $apiToken,                           // optional: the administrator token issued on the site
     cache: $psr16Cache,                            // your application's shared cache; see below
+    backendClientId: $backendClientId,             // optional: the site backend's machine client
+    backendClientSecret: $backendClientSecret,     // given with its id, or not at all
 ));
 ```
 
 The administrator token is a long-lived credential issued on the site's API-token screen; it is sent on the calls your server makes on its own behalf. Leave it out when your server only acts for signed-in members. Keep it, like the client secret, out of version control.
+
+The backend client is the machine client registered for your app's backend, apart from the client that signs members in; `Client::backend()` calls as it (see [The site's backend](#the-sites-backend)). `backendScopes` narrows what its token may do; without it, the token carries every scope the client is registered with.
 
 `Config` also takes a PSR-18 client and PSR-17 factories, a PSR-20 clock, a PSR-3 logger, the token-endpoint authentication (`client_secret_basic` by default, or `ClientAuthentication::ClientSecretPost`), the clock leeway for ID tokens (60 seconds by default) and the retry policy for Site API calls (see [Writes that must happen once](#writes-that-must-happen-once)).
 
@@ -132,7 +136,7 @@ The same client reads the member's UserInfo claims (`userInfo($accessToken, $mem
 
 ## Calling the Site API
 
-`$client->api()` calls the site's API as its administrator, with the token from `Config`; `$client->forMember($accessToken)->api()` calls it as a signed-in member, with the access token their sign-in returned. Every operation of the Site API document has one typed method, on the client of the audience that may call it: the member's own data only on the member's, everything else only on the administrator's.
+`$client->api()` calls the site's API as its administrator, with the token from `Config`; `$client->backend()` calls it as the site's own backend, with a token its machine client is granted; `$client->forMember($accessToken)->api()` calls it as a signed-in member, with the access token their sign-in returned. Every operation of the Site API document has one typed method, on the client of the audience that may call it: the member's own data only on the member's, the backend's calls only on the backend's, everything else only on the administrator's.
 
 Answers are small readonly models in `Appsolutely\Sdk\Model`. Ids are strings, times are `DateTimeImmutable` in UTC, money is an integer count of the currency's minor units beside its ISO 4217 `currency` (`1999` with `USD` is 19.99), and `$model->extra` keeps the members the site sent that the model has no property for, as decoded, so a field added by a newer site stays readable. A webhook delivery carries a record in the same shape as the API serves it, so typed events hold these same models. The document the client is written against is pinned at `Contract::REVISION`, a commit of the site software.
 
@@ -205,6 +209,47 @@ $push->results[0]->applied;   // and ->reason, ->errors, ->serverRecord
 
 Feeds exist for articles, form entries, orders, pages and products. A `410` `cursor-expired` refusal means records went without a tombstone since the cursor: pull again from the start.
 
+### The site's backend
+
+The backend's token is asked for when first needed and kept in the cache from `Config` until a minute before it expires, so under PHP-FPM it is asked for once per token, not once per request. When the site answers `invalid-token`, a new one is asked for and the call sent again, once.
+
+```php
+$backend = $client->backend();
+
+$backend->client();                                           // the machine client: its mode, site and scopes
+
+$state = $backend->accountStates()->get($subject);           // AccountState::STATUS_UNKNOWN for a subject never handed out
+foreach ($backend->accountStates()->list() as $state) { /* every account the app was given a name for */ }
+
+$checkout = $backend->checkoutSessions()->create($subject, [['product' => 'team', 'quantity' => 5]], $successUrl, $cancelUrl);
+$checkout->value->url;                                       // send the member here
+$backend->portalSessions()->create($subject, $returnUrl)->value->url;
+$backend->returnTargets()->create('https://app.example.com/thanks');   // the addresses those may send the member back to
+
+$intent = $backend->storePurchases()->intent($subject, 'app_store', 'team');
+$backend->storePurchases()->transaction($subject, 'app_store', 'member', signedTransaction: $jws);
+
+$backend->featureKeys()->create('reports.export', 'boolean');
+$backend->featureValues()->set('team', 'reports.export', true);
+
+$backend->roles()->create('editor');
+$backend->roleAssignments()->assign($subject, 'editor');     // ->list(), ->get(), ->revoke()
+
+$backend->seats()->grant($poolId, $payerSubject, $memberSubject);
+$backend->seats()->pools($payerSubject);                     // the payer's pools and who holds each seat
+
+$endpoint = $backend->webhookEndpoints()->create('https://app.example.com/hooks', ['order.paid', 'account.entitlements_changed']);
+$endpoint->value->secret;                                    // sent this once: keep it for the verifier
+$rotation = $backend->webhookEndpoints()->startRotation($endpoint->value->endpoint->id)->value;
+$backend->webhookEndpoints()->completeRotation($rotation->endpoint->id, $rotation->rotationId);
+
+$backend->deliveries()->list(status: 'failed');
+$backend->deliveries()->redeliver($webhookId)->value->refused;   // the endpoints that refuse it now, and why
+
+$backend->testClocks()->attach($subscriptionId);             // a subscription bought in test money only
+$backend->testClocks()->advance($subscriptionId, 31 * 86400);
+```
+
 ### The member's own data
 
 ```php
@@ -225,6 +270,13 @@ $member->me()->pushDevices()->register($deviceToken, 'ios');
 $member->me()->pushDevices()->unregister($deviceToken);
 $member->me()->referral()->get();
 $member->me()->referral()->rewards();
+
+$member->me()->checkoutSessions()->create([['product' => 'team', 'quantity' => 1]], $successUrl, $cancelUrl);
+$member->me()->portalSessions()->create($returnUrl);
+$member->me()->storePurchases()->intent('google_play', 'team');
+$member->me()->subscriptions()->list();                     // one page, no cursor
+$member->me()->subscriptions()->change($subscriptionId, quantity: 3)->value->applied;   // or ->confirmation, the visit that confirms it
+$member->me()->subscriptions()->cancel($subscriptionId);
 
 $member->sync()->addresses()->pull($cursor);                 // and ->push(), and ->orders()->pull()
 ```
@@ -385,7 +437,7 @@ match (true) {
 | Class | Types | Properties |
 | --- | --- | --- |
 | `ArticleEvent`, `PageEvent`, `ProductEvent` | `article.*`, `page.*`, `product.*` (`created`, `updated`, `deleted`) | `$article`, `$page`, `$product` |
-| `FormSubmittedEvent` | `form.submitted` | `$entry`, `$form` |
+| `FormSubmittedEvent` | `form.submitted` | `$entry`, `$formName` |
 | `OrderEvent` | `order.completed`, `order.shipped`, `order.cancelled`, `order.status_updated`, `order.expired`, `order.revived`, `order.payment_arrived_late` | `$order` |
 | `OrderPaidEvent` | `order.paid` | `$order`, `$payment`, `$subject` |
 | `PaymentReturnedEvent` | `order.refunded`, `payment.refunded`, `payment.reversed` | `$order`, `$payment` |
@@ -393,7 +445,9 @@ match (true) {
 | `ReferralRewardIssuedEvent` | `referral.reward_issued` | `$subject`, `$referralCode`, `$paymentReference`, `$reward` |
 | `SubscriptionEvent` | `subscription.*` | `$subscription`, and `$period` on `started` and `renewed` |
 | `AccountEvent` | `account.suspended`, `account.reinstated`, `account.erased`, `account.entitlements_changed`, `account.email_changed` | `$state` |
+| `RoleAssignmentChangedEvent` | `role.assignment_changed` | `$subject`, `$role`, `$change`, `$cause`, `$roles`, `$sequence` |
 | `PingEvent` | `webhook.ping` | `$subscriptionId` |
+| `RotationEndingEvent` | `webhook.rotation_ending` | `$endpointId`, `$rotationStartedAt`, `$completesAt` |
 | `UnknownEvent` | any other type | none |
 
 `EventType` names every type as a constant. Times are `DateTimeImmutable` in UTC, ids are strings, and amounts are integers in the minor unit of the `currency` beside them. The records they carry are the `Model` classes the API returns (an `ArticleEvent`'s `$article` is a `Model\Article`), and every model keeps the members the site sent that it has no property for in `$extra`, and every event keeps its envelope in `$envelope`, `data` included, so nothing that arrived is out of reach.
