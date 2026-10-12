@@ -321,6 +321,36 @@ final class ResourceContractTest extends TestCase
     }
 
     /**
+     * Every value the document enumerates for a field a model reads is a
+     * constant of that model, named for the field and the value
+     * (`STATUS_PAST_DUE = 'past_due'`), so a caller compares with a name
+     * and a value the document adds fails here until it has one. The field
+     * itself stays a plain string, so a value a newer site sends still reads.
+     *
+     * @param class-string $class
+     */
+    #[DataProvider('models')]
+    public function testEveryValueAModelsSchemaEnumeratesIsAConstantOfTheModel(string $class, string $schema): void
+    {
+        $constants = (new ReflectionClass($class))->getConstants();
+        $missing = [];
+        foreach (Document::map(Document::schema($schema)['properties'] ?? null) as $field => $declaration) {
+            foreach (Document::list(self::nonNull(Document::resolve(Document::map($declaration)))['enum'] ?? []) as $value) {
+                if ($value === null) {
+                    continue;
+                }
+                self::assertIsString($value, sprintf('%s.%s enumerates a value that is not a string.', $schema, $field));
+                $name = strtoupper((string) preg_replace('/[^A-Za-z0-9]+/', '_', $field . '_' . $value));
+                if (($constants[$name] ?? null) !== $value) {
+                    $missing[] = sprintf('%s = \'%s\'', $name, $value);
+                }
+            }
+        }
+
+        self::assertSame([], $missing, sprintf('%s reads %s, whose document enumerates values it has no constant for: %s.', $class, $schema, implode(', ', $missing)));
+    }
+
+    /**
      * @return iterable<string, array{class-string, string, class-string}>
      */
     public static function syncSchemas(): iterable

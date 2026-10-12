@@ -12,8 +12,14 @@ final readonly class ProductFeatureValue
     /** @internal */
     public const string SCHEMA = 'ProductFeatureValue';
 
+    public const string KIND_BOOLEAN = 'boolean';
+
+    public const string KIND_QUANTITY = 'quantity';
+
+    public const string KIND_CONFIG = 'config';
+
     /**
-     * @param string $kind `boolean`, `quantity` or `config`: the type of $value
+     * @param string $kind one of the KIND_ constants: the type of $value
      * @param mixed $value a boolean, an integer or a configuration value, as the key's kind says
      * @param bool $retired whether the key is retired
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
