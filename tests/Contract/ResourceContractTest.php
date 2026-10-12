@@ -152,6 +152,20 @@ final class ResourceContractTest extends TestCase
     private const array NAMED_WITHOUT_BRACKETS = ['listAccountStates' => ['subjects']];
 
     /**
+     * Methods that send one argument whole as the body, so the member names
+     * are the caller's: each method's array shape names the members, and the
+     * document's request body is what that shape is written from.
+     */
+    private const array BODY_PASSED_THROUGH = ['createArticle', 'updateArticle', 'createMeAddress', 'updateMeAddress'];
+
+    /**
+     * The decoded body of each request the last drive() sent, null for none.
+     *
+     * @var list<mixed>
+     */
+    private static array $bodies = [];
+
+    /**
      * The query name a cursor list carries from its second page on.
      */
     private const string CURSOR = 'cursor';
@@ -316,6 +330,62 @@ final class ResourceContractTest extends TestCase
         self::assertReadsMatch($schema, $fields->reads(), $class);
     }
 
+    /**
+     * Each body is held to the operation's documented request body: given
+     * every argument, the method sends every member the document names and
+     * no other; given only its required ones, it still sends every member
+     * the document requires. A member sent as null is one the document lets
+     * be null.
+     */
+    #[DataProvider('documentedOperations')]
+    public function testEveryMethodSendsTheBodyItsOperationDocuments(string $id): void
+    {
+        $endpoint = self::endpointOf($id);
+        $documented = Document::map(Document::map(Document::map(Document::operations()[$id]['operation']['requestBody'] ?? null)['content'] ?? null)['application/json'] ?? null)['schema'] ?? null;
+
+        if (in_array($id, self::BODY_PASSED_THROUGH, true)) {
+            self::assertNotNull($documented, sprintf('%s is listed in BODY_PASSED_THROUGH but documents no request body.', $id));
+
+            return;
+        }
+
+        self::drive($endpoint, optional: true);
+        $full = self::$bodies[0] ?? null;
+
+        if ($documented === null) {
+            self::assertContains($full, [null, []], sprintf('%s sends a body; the document gives %s none.', $endpoint['method'], $id));
+
+            return;
+        }
+
+        $schema = Document::resolve(Document::map($documented));
+        $properties = Document::map($schema['properties'] ?? null);
+        $required = Document::list($schema['required'] ?? []);
+
+        self::assertIsArray($full, sprintf('%s sends no JSON object; the document gives %s a request body.', $endpoint['method'], $id));
+        $sent = array_keys($full);
+        sort($sent);
+        $named = array_keys($properties);
+        sort($named);
+        self::assertSame($named, $sent, sprintf('%s sends the members %s when every argument is given; the document gives %s %s.', $endpoint['method'], self::shown($sent), $id, self::shown($named)));
+
+        self::drive($endpoint, optional: false);
+        $minimal = self::$bodies[0] ?? null;
+        self::assertIsArray($minimal, sprintf('%s sends no JSON object when only its required arguments are given.', $endpoint['method']));
+        foreach ($required as $member) {
+            self::assertIsString($member);
+            self::assertArrayHasKey($member, $minimal, sprintf('%s leaves out "%s", which %s requires, when only its required arguments are given.', $endpoint['method'], $member, $id));
+        }
+        foreach ([$full, $minimal] as $body) {
+            foreach ($body as $member => $value) {
+                self::assertArrayHasKey($member, $properties, sprintf('%s sends "%s", which the request body of %s does not name.', $endpoint['method'], $member, $id));
+                if ($value === null) {
+                    self::assertContains('null', (array) (Document::map($properties[$member])['type'] ?? []), sprintf('%s sends "%s" as null, which %s does not let be null.', $endpoint['method'], $member, $id));
+                }
+            }
+        }
+    }
+
     public function testEachAnswerReadWithoutASchemaIsStillUntyped(): void
     {
         foreach (array_keys(self::UNTYPED_ANSWERS) as $id) {
@@ -428,6 +498,9 @@ final class ResourceContractTest extends TestCase
             /** @var list<list<string>> */
             public array $queries = [];
 
+            /** @var list<mixed> */
+            public array $bodies = [];
+
             public function __construct(private readonly int $status) {}
 
             public function sendRequest(RequestInterface $request): ResponseInterface
@@ -456,6 +529,8 @@ final class ResourceContractTest extends TestCase
                 }
                 $page = $this->queries === [] ? ['data' => [], 'next_cursor' => 'next-page'] : ['data' => []];
                 $this->queries[] = $names;
+                $body = (string) $request->getBody();
+                $this->bodies[] = $body === '' ? null : json_decode($body, true, 512, JSON_THROW_ON_ERROR);
 
                 return Psr17FactoryDiscovery::findResponseFactory()->createResponse($this->status)
                     ->withHeader(Header::CONTENT_TYPE, MediaType::JSON)
@@ -517,6 +592,8 @@ final class ResourceContractTest extends TestCase
             self::assertInstanceOf(Paginator::class, $result, sprintf('%s calls %s, a cursor list, without returning a Paginator.', $endpoint['method'], $endpoint['operation']->value));
         }
         self::assertCount($paged ? 2 : 1, $queries, sprintf('%s sent %d request(s); a list walked to its second page sends 2, any other method 1.', $endpoint['method'], count($queries)));
+
+        self::$bodies = $site->bodies;
 
         return $queries;
     }
