@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Api;
 
+use Appsolutely\Sdk\Api\BackendToken;
 use Appsolutely\Sdk\Client;
 use Appsolutely\Sdk\Config;
 use Appsolutely\Sdk\Exception\InvalidConfigException;
@@ -71,6 +72,46 @@ final class BackendClientTest extends TestCase
             FakeProvider::form($request),
         );
         self::assertSame('', $request->getHeaderLine('Authorization'));
+    }
+
+    public function testTheBackendAuthenticatesItsOwnWayWhenTold(): void
+    {
+        $client = new Client(new Config(
+            baseUrl: FakeProvider::BASE_URL,
+            issuer: FakeProvider::ISSUER,
+            clientId: FakeProvider::CLIENT_ID,
+            clientSecret: FakeProvider::CLIENT_SECRET,
+            httpClient: $this->provider->http,
+            requestFactory: $this->provider->factory,
+            streamFactory: $this->provider->factory,
+            cache: $this->provider->cache,
+            clock: $this->provider->clock,
+            clientAuthentication: ClientAuthentication::ClientSecretBasic,
+            backendClientId: FakeProvider::BACKEND_CLIENT_ID,
+            backendClientSecret: FakeProvider::BACKEND_CLIENT_SECRET,
+            backendClientAuthentication: ClientAuthentication::ClientSecretPost,
+        ));
+
+        $client->backend()->raw()->get('/api/v1/client');
+
+        $request = $this->provider->requestsTo('POST', self::TOKEN_URL)[0];
+        self::assertSame(FakeProvider::BACKEND_CLIENT_SECRET, FakeProvider::form($request)['client_secret'] ?? null);
+        self::assertSame('', $request->getHeaderLine('Authorization'));
+    }
+
+    public function testATokenAnsweredWithoutALifetimeIsKeptForTheDefaultOne(): void
+    {
+        $this->provider->token = fn(): ResponseInterface => $this->provider->json(['access_token' => 'machine-' . ++$this->issued, 'token_type' => 'Bearer']);
+        $backend = $this->provider->backendClient()->backend()->raw();
+
+        $backend->get('/api/v1/client');
+        $this->provider->clock->advance(BackendToken::DEFAULT_LIFETIME - BackendToken::EXPIRY_MARGIN - 1);
+        $backend->get('/api/v1/client');
+        self::assertCount(1, $this->provider->requestsTo('POST', self::TOKEN_URL));
+
+        $this->provider->clock->advance(2);
+        $backend->get('/api/v1/client');
+        self::assertCount(2, $this->provider->requestsTo('POST', self::TOKEN_URL));
     }
 
     public function testATokenIsKeptUntilShortlyBeforeItExpires(): void
