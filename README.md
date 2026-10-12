@@ -232,7 +232,25 @@ Feeds exist for articles, form entries, orders, pages and products. A `410` `cur
 
 ### The site's backend
 
-The backend's token is asked for when first needed and kept in the cache from `Config` until a minute before it expires, so under PHP-FPM it is asked for once per token, not once per request. A token answered without `expires_in` is taken to live five minutes. When the site answers `invalid-token`, a new one is asked for and the call sent again, once.
+The backend's token is asked for when first needed and kept in the cache from `Config` until a minute before it expires, so under PHP-FPM it is asked for once per token, not once per request. A token answered without `expires_in` is taken to live five minutes. When the site answers `invalid-token`, a new one is asked for and the call sent again, once. Asking for a token is retried like a read (after a network failure, a `429`, a `502`, a `503` or a `504`).
+
+So that the processes sharing the cache do not all find the token due at the same moment, each read in the minute before it is due replaces it at a random point, keeping the current one if that fails. To have only one of them ask, pass `Config::$tokenLock`, an `Appsolutely\Sdk\Cache\TokenLock` built on your framework's lock; the others wait for it and take the new token from the cache:
+
+```php
+use Appsolutely\Sdk\Cache\TokenLock;
+
+final class LaravelTokenLock implements TokenLock
+{
+    public function run(string $name, int $seconds, callable $fetch): mixed
+    {
+        try {
+            return Cache::lock($name, $seconds)->block($seconds, $fetch);
+        } catch (LockTimeoutException) {
+            return $fetch();
+        }
+    }
+}
+```
 
 ```php
 $backend = $client->backend();

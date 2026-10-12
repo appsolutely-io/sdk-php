@@ -11,11 +11,14 @@ use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Exception\OAuthException;
+use Appsolutely\Sdk\Exception\TransportException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Http\Json;
+use Appsolutely\Sdk\Http\RetryAfter;
 use Appsolutely\Sdk\Support\Untrusted;
+use Closure;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -42,6 +45,9 @@ final readonly class OpenIdClient
         'response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'nonce', 'code_challenge', 'code_challenge_method', 'max_age',
         'request', 'request_uri', 'response_mode', 'claims',
     ];
+
+    /** Answers a repeated machine-token request can change. */
+    private const array RETRIED_STATUSES = [429, 502, 503, 504];
 
     private Discovery $discovery;
 
@@ -238,6 +244,10 @@ final readonly class OpenIdClient
 
     /**
      * A token for a machine client of the issuer (RFC 6749 section 4.4).
+     * Asking again cannot do anything twice, so the request is retried
+     * under the Config's RetryPolicy after a network failure, a 429, a 502,
+     * a 503 or a 504; no other token request is (a code or a rotated
+     * refresh token is spent by its first use).
      *
      * @internal used by Client::backend(), which caches what it returns
      *
@@ -251,7 +261,7 @@ final readonly class OpenIdClient
             $request['scope'] = implode(' ', $scopes);
         }
 
-        return $this->tokenSet($this->tokenRequest($request, $clientId, $clientSecret, $authentication), null, idTokenRequired: false);
+        return $this->tokenSet($this->tokenRequest($request, $clientId, $clientSecret, $authentication, retryable: true), null, idTokenRequired: false);
     }
 
     /**
@@ -328,12 +338,62 @@ final readonly class OpenIdClient
      * @param array<string, string> $fields
      * @return array<array-key, mixed>
      */
-    private function tokenRequest(#[\SensitiveParameter] array $fields, ?string $clientId = null, #[\SensitiveParameter] ?string $clientSecret = null, ?ClientAuthentication $authentication = null): array
+    private function tokenRequest(#[\SensitiveParameter] array $fields, ?string $clientId = null, #[\SensitiveParameter] ?string $clientSecret = null, ?ClientAuthentication $authentication = null, bool $retryable = false): array
     {
         $endpoint = $this->metadata()->tokenEndpoint;
         [$fields, $headers] = $this->authenticate($fields, $clientId ?? $this->config->clientId, $clientSecret ?? $this->config->clientSecret(), $authentication ?? $this->config->clientAuthentication);
+        $send = fn(): ResponseInterface => $this->http->postForm($endpoint, $fields, $headers);
 
-        return $this->successfulJson($this->http->postForm($endpoint, $fields, $headers), $endpoint);
+        return $this->successfulJson($retryable ? $this->sendRetrying($send, $endpoint) : $send(), $endpoint);
+    }
+
+    /**
+     * Sends again after a network failure or a passing refusal, waiting
+     * what Retry-After asks or the policy's backoff; the last answer is
+     * returned for the caller to read, the last network failure thrown.
+     *
+     * @param Closure(): ResponseInterface $send
+     */
+    private function sendRetrying(Closure $send, string $endpoint): ResponseInterface
+    {
+        $policy = $this->config->retryPolicy;
+        for ($retry = 0; ; $retry++) {
+            try {
+                $response = $send();
+            } catch (TransportException $exception) {
+                $delay = $exception->isNetworkFailure() ? $policy->backoff($retry + 1) : null;
+                if ($delay === null || $retry >= $policy->maxRetries) {
+                    throw $exception;
+                }
+                $this->wait($endpoint, 'a network failure', $delay, $retry);
+
+                continue;
+            }
+
+            $status = $response->getStatusCode();
+            if (!in_array($status, self::RETRIED_STATUSES, true)) {
+                return $response;
+            }
+            $asked = $response->hasHeader(Header::RETRY_AFTER) ? RetryAfter::seconds($response->getHeaderLine(Header::RETRY_AFTER), $this->clock->now()) : null;
+            $delay = $asked === null ? $policy->backoff($retry + 1) : (float) $asked;
+            if ($retry >= $policy->maxRetries || $delay > $policy->maxDelay) {
+                return $response;
+            }
+            $this->wait($endpoint, (string) $status, $delay, $retry);
+        }
+    }
+
+    private function wait(string $endpoint, string $reason, float $delay, int $retry): void
+    {
+        $this->logger->info(sprintf(
+            'Retrying POST %s after %s, in %.1f seconds (retry %d of %d).',
+            Untrusted::text($endpoint, Untrusted::MAX_LONG_LENGTH),
+            $reason,
+            $delay,
+            $retry + 1,
+            $this->config->retryPolicy->maxRetries,
+        ));
+        $this->config->retryPolicy->sleeper->sleep($delay);
     }
 
     /**

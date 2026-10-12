@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk;
 
 use Appsolutely\Sdk\Api\RetryPolicy;
+use Appsolutely\Sdk\Cache\TokenLock;
 use Appsolutely\Sdk\Exception\InvalidConfigException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Http\BearerToken;
@@ -74,6 +75,8 @@ final readonly class Config
      *                       (Guzzle or Symfony HttpClient); a client passed in keeps its own
      * @param float $connectTimeout seconds to connect, applied the same way (Guzzle only; Symfony's idle
      *                              timeout is the request timeout)
+     * @param TokenLock|null $tokenLock a lock shared by the processes that share the cache, so one of them asks
+     *                                  for the backend's token when it is due; without one, each asks for its own
      */
     public function __construct(
         public string $baseUrl,
@@ -99,6 +102,7 @@ final readonly class Config
         public ?ClientAuthentication $backendClientAuthentication = null,
         public float $timeout = self::DEFAULT_TIMEOUT,
         public float $connectTimeout = self::DEFAULT_CONNECT_TIMEOUT,
+        public ?TokenLock $tokenLock = null,
     ) {
         self::assertBaseUrl($baseUrl);
         self::assertIssuer($issuer);
@@ -199,6 +203,7 @@ final readonly class Config
             'backendClientAuthentication' => $this->backendClientAuthentication,
             'timeout' => $this->timeout,
             'connectTimeout' => $this->connectTimeout,
+            'tokenLock' => $this->tokenLock,
         ];
     }
 

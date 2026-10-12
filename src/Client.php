@@ -76,6 +76,8 @@ final readonly class Client
             $backendSecret,
             $config->backendScopes,
             $config->backendClientAuthentication,
+            $config->tokenLock,
+            $logger,
         )));
     }
 
