@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-While this repository is private, open an issue in it: only its collaborators can see the issues of a private repository. Once the repository is public, do not report vulnerabilities in public issues or pull requests; report them privately through GitHub instead, from the repository's **Security** tab with **Report a vulnerability**.
+Do not report vulnerabilities in public issues or pull requests. Report them privately through GitHub, from the repository's **Security** tab with **Report a vulnerability**.
 
 Include what you can of:
 

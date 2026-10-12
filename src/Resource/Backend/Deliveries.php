@@ -43,6 +43,6 @@ final readonly class Deliveries
     #[Endpoint(Operation::RedeliverDelivery)]
     public function redeliver(string $webhookId, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::RedeliverDelivery, Operation::RedeliverDelivery->value, Redelivery::from(...), ['event' => $webhookId], [], $idempotencyKey);
+        return $this->caller->keyed(Operation::RedeliverDelivery, Redelivery::SCHEMA, Redelivery::from(...), ['event' => $webhookId], [], $idempotencyKey);
     }
 }

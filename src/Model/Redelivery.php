@@ -11,6 +11,9 @@ namespace Appsolutely\Sdk\Model;
  */
 final readonly class Redelivery
 {
+    /** @internal */
+    public const string SCHEMA = 'Redelivery';
+
     /**
      * @param list<EndpointWebhookDelivery> $redelivered the deliveries queued again, as they stand now
      * @param array<string, string> $refused the reason each endpoint refused it, by endpoint id

@@ -19,19 +19,10 @@ use PHPUnit\Framework\TestCase;
 final class OperationCatalogueTest extends TestCase
 {
     /**
-     * Operations the site answers only for a token that the document lists
-     * no security for. Each entry fails once the document lists one, so it is
-     * dropped then.
+     * The security scheme the document gives the operations a site answers
+     * only for its backend's machine token.
      */
-    private const array DOCUMENTED_WITHOUT_ITS_TOKEN = ['getClient'];
-
-    /**
-     * The paths a site answers only for its backend's machine token. The
-     * document gives every operation that needs a token the same bearer
-     * scheme, so whose token an operation takes is not in it: these are the
-     * site's own routes, as it serves them.
-     */
-    private const string BACKEND_PATHS = '#^/api/v1/(client|entitlements|webhook-endpoints|deliveries|checkout-sessions|portal-sessions|store-purchases|return-targets|feature-keys|roles|role-assignments|seats|seat-pools)(/|$)|^/api/v1/subscriptions/\{subscription\}/test-clock|^/api/v1/products/\{product\}/feature-values#';
+    private const string BACKEND_SCHEME = 'backendClient';
 
     /**
      * @return iterable<string, array{string}>
@@ -58,13 +49,6 @@ final class OperationCatalogueTest extends TestCase
         self::assertSame(self::takesIdempotencyKey($documented['parameters']), $operation->takesIdempotencyKey(), $id);
         self::assertSame(self::isCursorList($documented), $operation->isCursorList(), $id);
         self::assertSame(self::audience($documented), $operation->audience(), $id);
-    }
-
-    public function testEachOperationDocumentedWithoutItsTokenIsStillSo(): void
-    {
-        foreach (self::DOCUMENTED_WITHOUT_ITS_TOKEN as $id) {
-            self::assertSame([], Document::operations()[$id]['operation']['security'] ?? Document::get()['security'] ?? [], sprintf('The pinned document now lists the security of %s: drop it from DOCUMENTED_WITHOUT_ITS_TOKEN.', $id));
-        }
     }
 
     public function testEveryCaseIsADocumentedOperation(): void
@@ -159,24 +143,27 @@ final class OperationCatalogueTest extends TestCase
     }
 
     /**
-     * Anyone when the operation names no security requirement; otherwise
-     * the member for the member's own routes (`/api/v1/me`, and the sync
-     * resources named `me-*`) and the administrator for the rest, as the
-     * site mounts them in two audience groups.
+     * Anyone when the operation names no security requirement; the backend
+     * when a requirement names the backend's scheme; otherwise the member for
+     * the member's own routes (`/api/v1/me`, and the sync resources named
+     * `me-*`) and the administrator for the rest, as the site mounts them in
+     * two audience groups under the same bearer scheme.
      *
      * @param array{method: string, path: string, operation: array<array-key, mixed>, parameters: list<array<array-key, mixed>>} $documented
      */
     private static function audience(array $documented): Audience
     {
-        $security = $documented['operation']['security'] ?? Document::get()['security'] ?? [];
-        if ($security === [] && !in_array($documented['operation']['operationId'] ?? null, self::DOCUMENTED_WITHOUT_ITS_TOKEN, true)) {
+        $security = Document::map($documented['operation']['security'] ?? Document::get()['security'] ?? []);
+        if ($security === []) {
             return Audience::Anyone;
         }
 
-        return match (true) {
-            preg_match('#^/api/v1/(me(/|$)|sync/me-)#', $documented['path']) === 1 => Audience::Member,
-            preg_match(self::BACKEND_PATHS, $documented['path']) === 1 => Audience::Backend,
-            default => Audience::Administrator,
-        };
+        foreach ($security as $requirement) {
+            if (array_key_exists(self::BACKEND_SCHEME, Document::map($requirement))) {
+                return Audience::Backend;
+            }
+        }
+
+        return preg_match('#^/api/v1/(me(/|$)|sync/me-)#', $documented['path']) === 1 ? Audience::Member : Audience::Administrator;
     }
 }

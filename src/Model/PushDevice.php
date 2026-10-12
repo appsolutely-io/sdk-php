@@ -11,11 +11,8 @@ use DateTimeImmutable;
  */
 final readonly class PushDevice
 {
-    /**
-     * @internal how messages name what the site answered, which the document
-     * leaves an open object rather than a schema of its own
-     */
-    public const string NAME = 'PushDevice';
+    /** @internal */
+    public const string SCHEMA = 'PushDevice';
 
     /**
      * @param string $token the push provider's device token
