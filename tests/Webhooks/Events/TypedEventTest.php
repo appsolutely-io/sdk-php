@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Webhooks\Events;
 
 use Appsolutely\Sdk\Exception\UnexpectedPayloadException;
+use Appsolutely\Sdk\Model\EntitlementTerm;
 use Appsolutely\Sdk\Model\Order;
+use Appsolutely\Sdk\Model\Subscription;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
 use Appsolutely\Sdk\Tests\Support\SiteFixture;
 use Appsolutely\Sdk\Webhooks\Events\AccountEvent;
@@ -106,7 +108,20 @@ final class TypedEventTest extends TestCase
         self::assertSame(3, $state->entitlements[0]->quantity);
         self::assertSame('2026-10-22T00:00:00+00:00', $state->entitlements[0]->expiresAt?->format(DATE_RFC3339));
         self::assertNull($state->entitlements[1]->expiresAt);
+        self::assertSame('2026-10-08T00:00:00+00:00', $state->entitlements[0]->periodStart?->format(DATE_RFC3339));
+        self::assertSame('2026-11-08T00:00:00+00:00', $state->entitlements[0]->periodEnd?->format(DATE_RFC3339));
+        self::assertNotNull($state->entitlements[0]->breakdown);
+        self::assertSame([EntitlementTerm::SOURCE_PLAN, EntitlementTerm::SOURCE_PURCHASE], array_map(static fn(EntitlementTerm $term): string => $term->source, $state->entitlements[0]->breakdown));
+        self::assertSame([2, 1], array_map(static fn(EntitlementTerm $term): int => $term->value, $state->entitlements[0]->breakdown));
+        self::assertSame('SO-20261008-0042', $state->entitlements[0]->breakdown[1]->paymentReference);
+        self::assertSame('2026-10-22T00:00:00+00:00', $state->entitlements[0]->breakdown[1]->endsAt?->format(DATE_RFC3339));
+        self::assertNull($state->entitlements[1]->breakdown);
         self::assertSame(['seats' => 3, 'reports.export' => 1], $state->totals);
+        self::assertCount(1, $state->subscriptions);
+        self::assertSame('team-monthly', $state->subscriptions[0]->sku);
+        self::assertSame(3, $state->subscriptions[0]->quantity);
+        self::assertSame(Subscription::BILLED_BY_SITE, $state->subscriptions[0]->billedBy);
+        self::assertNull($state->subscriptions[0]->manageUrl);
         self::assertSame([], $state->extra);
     }
 
@@ -120,6 +135,7 @@ final class TypedEventTest extends TestCase
         self::assertFalse($event->state->emailVerified);
         self::assertSame([], $event->state->entitlements);
         self::assertSame([], $event->state->totals);
+        self::assertSame([], $event->state->subscriptions);
     }
 
     public function testAnAccountStateMissingItsSequenceIsRefused(): void

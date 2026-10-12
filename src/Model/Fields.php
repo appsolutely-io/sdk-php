@@ -300,8 +300,26 @@ final class Fields
      */
     public function objects(string $name): array
     {
+        return $this->nullableObjects($name) ?? $this->missing($name);
+    }
+
+    /**
+     * A list of nested objects, or null.
+     *
+     * @return list<self>|null
+     */
+    public function nullableObjects(string $name): ?array
+    {
+        $list = $this->value($name);
+        if ($list === null) {
+            return null;
+        }
+        if (!is_array($list) || !array_is_list($list)) {
+            $this->refuse($name, 'a list of objects', $list);
+        }
+
         $objects = [];
-        foreach ($this->list($name, 'a list of objects') as $index => $value) {
+        foreach ($list as $index => $value) {
             if (!self::isObject($value)) {
                 $this->refuse($name . '[' . $index . ']', 'an object', $value);
             }

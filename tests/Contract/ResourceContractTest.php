@@ -190,11 +190,16 @@ final class ResourceContractTest extends TestCase
      * until the entry is dropped or rewritten.
      *
      * The document leaves an account's `totals` an open object; the site
-     * sends a quantity per key.
+     * sends a quantity per key. It leaves a subscription's `pending_period` an
+     * open object or null; the site sends the period's start and where its
+     * payment stands.
      */
     private const array AS_THE_SITE_SENDS = [
         'AccountState' => [
             'totals' => ['document' => ['type' => 'object', 'additionalProperties' => true], 'site' => ['seats' => 3]],
+        ],
+        'AccountSubscription' => [
+            'pending_period' => ['document' => ['type' => ['object', 'null'], 'additionalProperties' => true], 'site' => ['start' => '2026-05-01T00:00:00Z', 'status' => 'pending']],
         ],
     ];
 
@@ -617,6 +622,27 @@ final class ResourceContractTest extends TestCase
     }
 
     /**
+     * Whether a node is the declaration of a field AS_THE_SITE_SENDS samples
+     * otherwise than the document, which checks that it still declares it so.
+     *
+     * @param array<array-key, mixed> $node
+     */
+    private static function sampledAsTheSiteSends(array $node): bool
+    {
+        unset($node['description']);
+
+        foreach (self::AS_THE_SITE_SENDS as $fields) {
+            foreach ($fields as $override) {
+                if (Document::map($override['document']) === $node) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * The schema at a read path (`items[].price`), or null when the
      * document defines nothing there.
      *
@@ -631,7 +657,9 @@ final class ResourceContractTest extends TestCase
             $name = $list ? substr($segment, 0, -2) : $segment;
             $properties = Document::map(self::nonNull(Document::resolve($node))['properties'] ?? null);
             if (!isset($properties[$name])) {
-                return null;
+                // Beneath a field sampled as the site sends it, the document
+                // declares nothing to hold a read to.
+                return self::sampledAsTheSiteSends($node) ? $node : null;
             }
             $node = Document::map($properties[$name]);
             if ($list) {
