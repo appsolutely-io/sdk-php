@@ -7,6 +7,8 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-14
+
 ### Added
 
 - `Order::$paymentUrl`: where to send the signed-in member to finish paying an order the site still awaits payment for, or null.
