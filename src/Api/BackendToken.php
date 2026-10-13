@@ -25,6 +25,11 @@ use Psr\SimpleCache\CacheInterface;
  * it with a chance that grows to certain as the window runs out; with a
  * TokenLock, the processes that still meet ask for it once.
  *
+ * A call in the window holds a token still good, so replacing it early
+ * never holds that call up: it asks once, without retrying, only when the
+ * lock is free, and sends the kept token whatever happens. Only a call
+ * with no usable token waits for the lock and retries.
+ *
  * @internal built by Client for Client::backend()
  */
 final readonly class BackendToken
@@ -106,10 +111,11 @@ final readonly class BackendToken
         }
 
         try {
-            return $this->replace();
-        } catch (AppsolutelyException $exception) {
+            return $this->replaceEarly() ?? $kept['token'];
+        } catch (\Throwable $exception) {
             // The kept token is good until its margin: use it and try again
-            // on a later read rather than fail a call that need not fail.
+            // on a later read rather than fail a call that need not fail. The
+            // class alone: a lock's or provider's message is its own text.
             $this->logger->info(sprintf('Replacing the backend token early failed (%s); the current one is used until it is due.', $exception::class));
 
             return $kept['token'];
@@ -153,17 +159,28 @@ final readonly class BackendToken
     }
 
     /**
+     * A new token asked for once, or null when another process holds the
+     * lock and so is already asking.
+     */
+    private function replaceEarly(): ?string
+    {
+        return $this->lock === null
+            ? $this->fetchUnlessReplaced(retried: false)
+            : $this->lock->runIfFree($this->key . '.lock', self::LOCK_SECONDS, fn(): string => $this->fetchUnlessReplaced(retried: false));
+    }
+
+    /**
      * Another process may have replaced the token while this one waited for
      * the lock; that one is used rather than asked for again.
      */
-    private function fetchUnlessReplaced(): string
+    private function fetchUnlessReplaced(bool $retried = true): string
     {
         $kept = $this->kept();
         if ($kept !== null && $this->clock->now()->getTimestamp() < $kept['refresh_from']) {
             return $kept['token'];
         }
 
-        return $this->fetch();
+        return $this->fetch($retried);
     }
 
     /**
@@ -180,10 +197,10 @@ final readonly class BackendToken
         return ['token' => $kept['token'], 'usable_until' => $kept['usable_until'], 'refresh_from' => is_int($refreshFrom) ? $refreshFrom : $kept['usable_until']];
     }
 
-    private function fetch(): string
+    private function fetch(bool $retried): string
     {
         try {
-            $tokens = $this->oidc->clientCredentials($this->clientId, $this->clientSecret, $this->scopes, $this->authentication);
+            $tokens = $this->oidc->clientCredentials($this->clientId, $this->clientSecret, $this->scopes, $this->authentication, $retried);
         } catch (AppsolutelyException $exception) {
             // The class alone: a provider's message is its own text.
             $this->logger->warning(sprintf('Asking for the backend token failed (%s).', $exception::class), ['client_id' => $this->clientId]);

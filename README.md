@@ -245,10 +245,12 @@ Feeds exist for articles, form entries, orders, pages and products. A `410` `cur
 
 The backend's token is asked for when first needed and kept in the cache from `Config` until a minute before it expires, so under PHP-FPM it is asked for once per token, not once per request. A token answered without `expires_in` is taken to live five minutes. When the site answers `invalid-token`, a new one is asked for and the call sent again, once. Asking for a token is retried like a read (after a network failure, a `429`, a `502`, a `503` or a `504`).
 
-So that the processes sharing the cache do not all find the token due at the same moment, each read in the minute before it is due replaces it at a random point, keeping the current one if that fails. To have only one of them ask, pass `Config::$tokenLock`, an `Appsolutely\Sdk\Cache\TokenLock` built on your framework's lock; the others wait for it and take the new token from the cache:
+So that the processes sharing the cache do not all find the token due at the same moment, each read in the minute before it is due replaces it at a random point. That read still holds a good token, so it is never held up: it asks once, without retrying, and sends the current token if asking fails. To have only one of them ask, pass `Config::$tokenLock`, an `Appsolutely\Sdk\Cache\TokenLock` built on your framework's lock. Early, a process asks only when the lock is free (`runIfFree()`) and otherwise keeps its token; once the token has expired, the others wait for the holder (`run()`) and take the new token from the cache:
 
 ```php
 use Appsolutely\Sdk\Cache\TokenLock;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 
 final class LaravelTokenLock implements TokenLock
 {
@@ -259,6 +261,13 @@ final class LaravelTokenLock implements TokenLock
         } catch (LockTimeoutException) {
             return $fetch();
         }
+    }
+
+    public function runIfFree(string $name, int $seconds, callable $fetch): ?string
+    {
+        $fetched = Cache::lock($name, $seconds)->get($fetch);
+
+        return $fetched === false ? null : $fetched;
     }
 }
 ```

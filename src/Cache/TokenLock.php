@@ -10,6 +10,9 @@ namespace Appsolutely\Sdk\Cache;
  * it from the cache. Pass one to Config::$tokenLock built on your framework's
  * lock (a Redis or database lock, Laravel's Cache::lock(), Symfony Lock);
  * without one, each process that finds the token due asks for its own.
+ *
+ * A process whose token has expired waits for the lock (run()); one whose
+ * token is still good and only nearing expiry never waits (runIfFree()).
  */
 interface TokenLock
 {
@@ -26,4 +29,14 @@ interface TokenLock
      * @return T
      */
     public function run(string $name, int $seconds, callable $fetch): mixed;
+
+    /**
+     * Runs $fetch while holding the lock called $name, held for at most
+     * $seconds, only when the lock is free now; returns null at once,
+     * without running $fetch, when another process holds it.
+     *
+     * @param callable(): string $fetch
+     * @return string|null what $fetch returned, or null when the lock was held
+     */
+    public function runIfFree(string $name, int $seconds, callable $fetch): ?string;
 }

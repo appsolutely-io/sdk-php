@@ -248,24 +248,25 @@ final readonly class OpenIdClient
 
     /**
      * A token for a machine client of the issuer (RFC 6749 section 4.4).
-     * Asking again cannot do anything twice, so the request is retried
-     * under the Config's RetryPolicy after a network failure, a 429, a 502,
-     * a 503 or a 504; no other token request is (a code or a rotated
-     * refresh token is spent by its first use).
+     * Asking again cannot do anything twice, so unless $retried is false
+     * the request is retried under the Config's RetryPolicy after a network
+     * failure, a 429, a 502, a 503 or a 504; no other token request is (a
+     * code or a rotated refresh token is spent by its first use).
      *
      * @internal used by Client::backend(), which caches what it returns
      *
      * @param list<string> $scopes none asks for every scope the client is registered with
      * @param ClientAuthentication|null $authentication null to authenticate the way this client's Config says
+     * @param bool $retried false to ask once, for a caller that has a token to fall back on
      */
-    public function clientCredentials(string $clientId, #[\SensitiveParameter] string $clientSecret, array $scopes = [], ?ClientAuthentication $authentication = null): TokenSet
+    public function clientCredentials(string $clientId, #[\SensitiveParameter] string $clientSecret, array $scopes = [], ?ClientAuthentication $authentication = null, bool $retried = true): TokenSet
     {
         $request = ['grant_type' => 'client_credentials'];
         if ($scopes !== []) {
             $request['scope'] = implode(' ', $scopes);
         }
 
-        return $this->tokenSet($this->tokenRequest($request, $clientId, $clientSecret, $authentication, retryable: true), null, idTokenRequired: false);
+        return $this->tokenSet($this->tokenRequest($request, $clientId, $clientSecret, $authentication, retryable: $retried), null, idTokenRequired: false);
     }
 
     /**

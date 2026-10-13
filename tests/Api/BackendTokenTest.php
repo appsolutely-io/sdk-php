@@ -204,6 +204,104 @@ final class BackendTokenTest extends TestCase
         self::assertCount(1, $logger->at(LogLevel::WARNING));
     }
 
+    /**
+     * A call in the window holds a token still good, so it never waits:
+     * when another process holds the lock, the kept token is sent and the
+     * holder left to replace it.
+     */
+    public function testAnEarlyReplacementDoesNotWaitForTheLock(): void
+    {
+        $lock = new RecordingLock();
+        $token = $this->backendToken(random: 0.0, lock: $lock);
+        $token->token();
+        $lock->held = true;
+
+        $this->provider->clock->advance(3600 - BackendToken::EXPIRY_MARGIN - 1);
+
+        self::assertSame('machine-1', $token->token());
+        self::assertCount(1, $lock->runs);
+        self::assertCount(1, $lock->tries);
+        self::assertCount(1, $this->provider->requestsTo('POST', self::TOKEN_URL));
+    }
+
+    public function testAnEarlyReplacementTakesAFreeLockWithoutWaiting(): void
+    {
+        $lock = new RecordingLock();
+        $token = $this->backendToken(random: 0.0, lock: $lock);
+        $token->token();
+
+        $this->provider->clock->advance(3600 - BackendToken::EXPIRY_MARGIN - 1);
+
+        self::assertSame('machine-2', $token->token());
+        self::assertCount(1, $lock->runs);
+        self::assertCount(1, $lock->tries);
+        self::assertStringStartsWith('appsolutely.backend.token.', $lock->tries[0]['name']);
+    }
+
+    /**
+     * Retrying would hold up a call whose token is still good: an early
+     * replacement asks once and keeps the current token when that fails.
+     */
+    public function testAnEarlyReplacementIsNotRetried(): void
+    {
+        $token = $this->backendToken(random: 0.0);
+        $token->token();
+        $this->provider->token = fn(): ResponseInterface => $this->provider->json(['error' => 'temporarily_unavailable'], 503);
+
+        $this->provider->clock->advance(3600 - BackendToken::EXPIRY_MARGIN - 1);
+
+        self::assertSame('machine-1', $token->token());
+        self::assertCount(2, $this->provider->requestsTo('POST', self::TOKEN_URL));
+        self::assertSame([], $this->provider->sleeper->sleeps);
+    }
+
+    public function testAnEarlyReplacementWhoseLockFailsKeepsTheTokenAndLogsOnlyTheClass(): void
+    {
+        $logger = new RecordingLogger();
+        $lock = new class implements TokenLock {
+            public function run(string $name, int $seconds, callable $fetch): mixed
+            {
+                return $fetch();
+            }
+
+            public function runIfFree(string $name, int $seconds, callable $fetch): ?string
+            {
+                throw new \RuntimeException('redis://user:secret@cache.internal refused');
+            }
+        };
+        $token = $this->backendToken(random: 0.0, logger: $logger, lock: $lock);
+        $token->token();
+
+        $this->provider->clock->advance(3600 - BackendToken::EXPIRY_MARGIN - 1);
+
+        self::assertSame('machine-1', $token->token());
+        self::assertCount(1, $logger->at(LogLevel::INFO));
+        self::assertStringContainsString('RuntimeException', $logger->at(LogLevel::INFO)[0]['message']);
+        self::assertStringNotContainsString('secret', $logger->at(LogLevel::INFO)[0]['message']);
+    }
+
+    /**
+     * Past its margin there is no token to fall back on, so the caller
+     * waits for the lock and the request is retried.
+     */
+    public function testAReplacementPastTheMarginWaitsForTheLockAndIsRetried(): void
+    {
+        $lock = new RecordingLock();
+        $token = $this->backendToken(random: 0.0, lock: $lock);
+        $token->token();
+        $answers = [$this->provider->json(['error' => 'temporarily_unavailable'], 503)];
+        $this->provider->token = function () use (&$answers): ResponseInterface {
+            return array_shift($answers) ?? $this->granted();
+        };
+
+        $this->provider->clock->advance(3600 - BackendToken::EXPIRY_MARGIN);
+
+        self::assertSame('machine-2', $token->token());
+        self::assertCount(2, $lock->runs);
+        self::assertSame([], $lock->tries);
+        self::assertCount(1, $this->provider->sleeper->sleeps);
+    }
+
     public function testATokenPastItsMarginIsNeverUsed(): void
     {
         $token = $this->backendToken(random: 1.0);
@@ -221,7 +319,7 @@ final class BackendTokenTest extends TestCase
         return $this->provider->json(['access_token' => 'machine-' . ++$this->issued, 'token_type' => 'Bearer', 'expires_in' => 3600]);
     }
 
-    private function backendToken(float $random, ?RecordingLogger $logger = null): BackendToken
+    private function backendToken(float $random, ?RecordingLogger $logger = null, ?TokenLock $lock = null): BackendToken
     {
         return new BackendToken(
             $this->provider->oidc(),
@@ -231,6 +329,7 @@ final class BackendTokenTest extends TestCase
             FakeProvider::BACKEND_CLIENT_ID,
             FakeProvider::BACKEND_CLIENT_SECRET,
             [],
+            lock: $lock,
             logger: $logger,
             random: static fn(): float => $random,
         );
