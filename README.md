@@ -380,7 +380,7 @@ foreach ($client->api()->raw()->paginate('/api/v1/orders', ['sort' => 'updated_a
 
 ### Writes that must happen once
 
-Creating an article, filing a member's address and redelivering a webhook accept an `Idempotency-Key`, and their methods always send one: yours (1 to 255 printable ASCII characters, spaces included, one per operation) or a fresh UUID v4, sent as a quoted Structured Field String (RFC 9651) as the Idempotency-Key draft defines it. The same key goes with every retry, so a retry after a lost answer is answered with the first answer instead of creating a second record, and the result says which key was sent and whether the answer was replayed:
+Every write the site keys accepts an `Idempotency-Key`, and its method always sends one: creating an article, filing a member's address, redelivering a webhook, starting a checkout or a visit to the billing pages, cancelling, changing or resuming a member's subscription, attaching or advancing a test clock, and creating a webhook endpoint or starting its secret rotation. The key is yours (1 to 255 printable ASCII characters, spaces included, one per operation) or a fresh UUID v4, sent as a quoted Structured Field String (RFC 9651) as the Idempotency-Key draft defines it. The same key goes with every retry, so a retry after a lost answer is answered with the first answer, its status and body, instead of acting a second time (a replayed billing visit carries a fresh single-use `url` for the same visit), and the result says which key was sent and whether the answer was replayed:
 
 ```php
 $filed = $member->me()->addresses()->create($address, idempotencyKey: $formSubmissionId);
