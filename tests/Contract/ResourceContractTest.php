@@ -261,6 +261,12 @@ final class ResourceContractTest extends TestCase
      *
      * The site writes an order's `updated_at` and a referral reward's
      * `earned_at` from record timestamps it may hold empty.
+     *
+     * An entry is dropped when the server documents the field as nullable
+     * (this test then fails) or always sends it. Only the document is
+     * pinned, not the site's source, so the second cannot be detected here:
+     * the check runs one way, and a server that stops sending null leaves
+     * the entry in place until it is dropped by hand.
      */
     private const array NULL_AS_THE_SITE_SENDS = [
         'Order' => ['updated_at'],
@@ -284,7 +290,7 @@ final class ResourceContractTest extends TestCase
     {
         $declared = self::declaredType(Document::map(Document::map(Document::schema($schema)['properties'] ?? null)[$field] ?? null), $schema . '.' . $field);
         self::assertTrue(!$declared['nullable'] && in_array($field, Document::list(Document::schema($schema)['required'] ?? []), true), sprintf(
-            'The pinned document now lets %s.%s be null or missing: drop it from NULL_AS_THE_SITE_SENDS.',
+            'The pinned document now lets %s.%s be null or missing: the server documents what the model reads, so drop it from NULL_AS_THE_SITE_SENDS.',
             $schema,
             $field,
         ));
