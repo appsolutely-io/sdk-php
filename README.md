@@ -11,6 +11,15 @@ Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://git
 - PHP 8.3 or newer
 - A PSR-18 HTTP client (any installed one is discovered)
 
+## Compatibility
+
+The client is written and tested against the Site API document of the site software v0.24.0, the commit `Contract::REVISION` names. Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
+
+The document's `v1` is stable for the life of the version: the site adds paths and fields to it but never removes or retypes one, and a breaking change arrives as a new version while `v1` keeps serving. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
+
+- **A newer site** answers everything this client calls. Fields it adds stay readable in each model's `$extra`, an enumerated value it adds reads as the plain string it is (the model's constants name only the values this client knows), and an operation it adds is reachable through the untyped calls of `api()->raw()` until a release of the client types it.
+- **An older site** lacks what was added after it. Calling an operation it does not have is refused with an `Exception\ApiException` (a `NotFoundException` for a path it does not have), and an answer without a field this client requires throws an `Exception\UnexpectedResponseException` naming the schema and the field rather than reading a wrong value. Keep the site at least at the version above.
+
 ## Installation
 
 The package is not on Packagist yet, so Composer installs it from its GitHub repository:
@@ -358,8 +367,8 @@ Each client's `raw()` gives the calls underneath the typed methods, with the sam
 ```php
 $data = $client->api()->raw()->get('/api/v1/articles/' . rawurlencode($id), requestId: $traceId)->data;
 
-foreach ($client->api()->raw()->paginate('/api/v1/orders', ['status' => 'paid'], limit: 100) as $order) {
-    // every paid order as decoded JSON, 100 per request
+foreach ($client->api()->raw()->paginate('/api/v1/orders', ['sort' => 'updated_at', 'order' => 'desc'], limit: 100) as $order) {
+    // every order as decoded JSON, most recently changed first, 100 per request
 }
 ```
 
@@ -503,10 +512,27 @@ The classes in `Appsolutely\Sdk\Testing` are test helpers: use them in your test
 
 ```php
 use Appsolutely\Sdk\Testing\WebhookFactory;
+use Appsolutely\Sdk\Webhooks\EventType;
 
-$delivery = (new WebhookFactory(['whsec_...']))->make('entitlement.granted', ['member' => 'm_1']);
+$delivery = (new WebhookFactory(['whsec_...']))->make(EventType::ROLE_ASSIGNMENT_CHANGED, [
+    'subject' => 'member-sub', 'role' => 'editor', 'change' => 'added', 'cause' => 'app', 'roles' => ['editor'], 'sequence' => 7,
+]);
 // $delivery->body and $delivery->headers are what your endpoint receives.
 ```
+
+## Versioning
+
+The package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html), and every change is listed in the [CHANGELOG](CHANGELOG.md).
+
+- **Before 1.0**, the public API may still change: a breaking change raises the minor version (`0.1` to `0.2`) and is marked as breaking in the CHANGELOG, while a patch release (`0.1.1`) never breaks. A `^0.1` constraint therefore never takes a breaking release.
+- **From 1.0**, a breaking change waits for the next major version.
+- **Deprecations**: a method, class or option to be removed is first marked `@deprecated` with its replacement and listed under *Deprecated* in the CHANGELOG, and stays for at least one minor release before it is removed in a release that may break (the next minor before 1.0, the next major after it).
+
+Everything marked `@internal` is outside the public API and may change in any release.
+
+## Security
+
+Report a vulnerability privately, as [SECURITY.md](SECURITY.md) describes, never in a public issue.
 
 ## License
 

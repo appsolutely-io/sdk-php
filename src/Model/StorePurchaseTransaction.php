@@ -12,12 +12,22 @@ final readonly class StorePurchaseTransaction
     /** @internal */
     public const string SCHEMA = 'StorePurchaseTransaction';
 
+    public const string KIND_SUBSCRIPTION = 'subscription';
+
+    public const string KIND_ONE_TIME = 'one_time';
+
+    public const string KIND_CONSUMABLE = 'consumable';
+
+    public const string ENVIRONMENT_PRODUCTION = 'production';
+
+    public const string ENVIRONMENT_SANDBOX = 'sandbox';
+
     /**
      * @param string $outcome what the site did with the purchase
      * @param string|null $subscriptionId the subscription it started or renewed
      * @param string|null $status that subscription's status
-     * @param string|null $kind `subscription`, `one_time` or `consumable`
-     * @param string|null $environment `production` or `sandbox`
+     * @param string|null $kind one of the KIND_ constants
+     * @param string|null $environment one of the ENVIRONMENT_ constants
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(

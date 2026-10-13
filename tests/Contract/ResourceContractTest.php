@@ -14,6 +14,7 @@ use Appsolutely\Sdk\Api\Paginator;
 use Appsolutely\Sdk\Api\RetryPolicy;
 use Appsolutely\Sdk\Client;
 use Appsolutely\Sdk\Config;
+use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\MediaType;
 use Appsolutely\Sdk\Model\Fields;
@@ -39,10 +40,12 @@ use Throwable;
  * Holds the typed client to the pinned Site API document: every operation
  * has exactly one method, every method names an operation and path the
  * document has and sits on the client of the operation's audience, every
- * request a method sends, on every page, carries the query parameters its
+ * request a method sends goes to the method and path of the operation it is
+ * marked with and, on every page, carries the query parameters its
  * operation documents and no others and cannot leave out a required one,
- * and every model reads only fields its schema defines and every field the
- * schema requires.
+ * every method reads its answer as the schema the document gives it, and
+ * every model reads only fields its schema defines and every field the
+ * schema requires, each as the type and nullability it declares.
  */
 final class ResourceContractTest extends TestCase
 {
@@ -137,6 +140,11 @@ final class ResourceContractTest extends TestCase
      * @var list<mixed>
      */
     private static array $bodies = [];
+
+    /**
+     * What the last drive() threw, null when it returned.
+     */
+    private static ?Throwable $failure = null;
 
     /**
      * The query name a cursor list carries from its second page on.
@@ -245,6 +253,44 @@ final class ResourceContractTest extends TestCase
     }
 
     /**
+     * Fields the pinned document declares required and never null that the
+     * site may still send as null, where the model reads them as nullable,
+     * so an answer carrying one is read rather than refused. Each applies
+     * only while the document still declares the field so; one it comes to
+     * declare nullable fails until the entry is dropped.
+     *
+     * The site writes an order's `updated_at` and a referral reward's
+     * `earned_at` from record timestamps it may hold empty.
+     */
+    private const array NULL_AS_THE_SITE_SENDS = [
+        'Order' => ['updated_at'],
+        'ReferralReward' => ['earned_at'],
+    ];
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function siteNulls(): iterable
+    {
+        foreach (self::NULL_AS_THE_SITE_SENDS as $schema => $fields) {
+            foreach ($fields as $field) {
+                yield $schema . '.' . $field => [$schema, $field];
+            }
+        }
+    }
+
+    #[DataProvider('siteNulls')]
+    public function testEachFieldReadAsNullableAsTheSiteSendsItIsStillDeclaredRequired(string $schema, string $field): void
+    {
+        $declared = self::declaredType(Document::map(Document::map(Document::schema($schema)['properties'] ?? null)[$field] ?? null), $schema . '.' . $field);
+        self::assertTrue(!$declared['nullable'] && in_array($field, Document::list(Document::schema($schema)['required'] ?? []), true), sprintf(
+            'The pinned document now lets %s.%s be null or missing: drop it from NULL_AS_THE_SITE_SENDS.',
+            $schema,
+            $field,
+        ));
+    }
+
+    /**
      * @return iterable<string, array{class-string, string}>
      */
     public static function models(): iterable
@@ -271,6 +317,37 @@ final class ResourceContractTest extends TestCase
         $from($fields);
 
         self::assertReadsMatch($schema, $fields->reads(), $class);
+        self::assertReadTypesMatch($schema, $fields->accessors(), $class);
+    }
+
+    /**
+     * Every value the document enumerates for a field a model reads is a
+     * constant of that model, named for the field and the value
+     * (`STATUS_PAST_DUE = 'past_due'`), so a caller compares with a name
+     * and a value the document adds fails here until it has one. The field
+     * itself stays a plain string, so a value a newer site sends still reads.
+     *
+     * @param class-string $class
+     */
+    #[DataProvider('models')]
+    public function testEveryValueAModelsSchemaEnumeratesIsAConstantOfTheModel(string $class, string $schema): void
+    {
+        $constants = (new ReflectionClass($class))->getConstants();
+        $missing = [];
+        foreach (Document::map(Document::schema($schema)['properties'] ?? null) as $field => $declaration) {
+            foreach (Document::list(self::nonNull(Document::resolve(Document::map($declaration)))['enum'] ?? []) as $value) {
+                if ($value === null) {
+                    continue;
+                }
+                self::assertIsString($value, sprintf('%s.%s enumerates a value that is not a string.', $schema, $field));
+                $name = strtoupper((string) preg_replace('/[^A-Za-z0-9]+/', '_', $field . '_' . $value));
+                if (($constants[$name] ?? null) !== $value) {
+                    $missing[] = sprintf('%s = \'%s\'', $name, $value);
+                }
+            }
+        }
+
+        self::assertSame([], $missing, sprintf('%s reads %s, whose document enumerates values it has no constant for: %s.', $class, $schema, implode(', ', $missing)));
     }
 
     /**
@@ -300,6 +377,7 @@ final class ResourceContractTest extends TestCase
         $from($fields, \Closure::fromCallable($read));
 
         self::assertReadsMatch($schema, $fields->reads(), $class);
+        self::assertReadTypesMatch($schema, $fields->accessors(), $class);
     }
 
     /**
@@ -366,15 +444,8 @@ final class ResourceContractTest extends TestCase
         }
         $read = [...$read, ...SyncPull::SCHEMAS, ...SyncPush::SCHEMAS, ...SyncResult::SCHEMAS];
 
-        foreach (Document::operations() as $id => $documented) {
-            $success = [];
-            foreach (Document::map($documented['operation']['responses'] ?? null) as $code => $response) {
-                if ((int) $code === Operation::from($id)->successStatus()) {
-                    $success = Document::map(Document::map($response)['content'] ?? null);
-                }
-            }
-            $schema = Document::map(Document::map($success['application/json'] ?? null)['schema'] ?? null);
-            $name = Document::refName($schema);
+        foreach (array_keys(Document::operations()) as $id) {
+            $name = self::successSchema($id);
             if ($name === null) {
                 continue;
             }
@@ -383,6 +454,58 @@ final class ResourceContractTest extends TestCase
                 self::assertContains($answered, $read, sprintf('%s answers the schema %s, which no model reads.', $id, $answered));
             }
         }
+    }
+
+    /**
+     * The schema a method reads its answer as is learnt by answering it with
+     * an empty object, or a page of one empty item: the model refuses it at
+     * its first required field, naming the schema it was handed. That must
+     * be the schema the document gives the operation's success answer, or
+     * the items of its page, so a method that reads its answer as another
+     * schema fails, even where the two share their required fields.
+     */
+    #[DataProvider('documentedOperations')]
+    public function testEveryMethodReadsItsAnswerAsTheSchemaItsOperationDocuments(string $id): void
+    {
+        $endpoint = self::endpointOf($id);
+        $documented = self::successSchema($id);
+        if ($documented === null) {
+            self::addToAssertionCount(1);
+
+            return;
+        }
+        $answered = self::answeredSchemas($documented);
+        $page = $answered !== [$documented];
+        self::assertCount(1, $answered, sprintf('%s answers %s, a page whose items name no schema.', $id, $documented));
+
+        self::drive($endpoint, optional: false, answer: $page ? ['data' => [[]]] : []);
+        $failure = self::$failure;
+        self::assertInstanceOf(UnexpectedResponseException::class, $failure, sprintf('%s read an empty %s without refusing it, so the schema it reads it as is not learnt: %s', $endpoint['method'], $page ? 'page item' : 'object', $failure === null ? 'it returned.' : $failure::class . ': ' . $failure->getMessage()));
+        self::assertMatchesRegularExpression(self::READ_AS, $failure->getMessage());
+        preg_match(self::READ_AS, $failure->getMessage(), $match);
+
+        self::assertSame($answered[0], $match[1] ?? null, sprintf('%s reads the answer of %s as the schema %s; the document gives it %s.', $endpoint['method'], $id, $match[1] ?? 'none', $answered[0]));
+    }
+
+    /**
+     * How a model's refusal of an answer names the schema it read it as.
+     */
+    private const string READ_AS = '/^The site answered a "([^"]+)" object /';
+
+    /**
+     * The name of the schema an operation's success answers with as JSON, or
+     * null when it answers none.
+     */
+    private static function successSchema(string $id): ?string
+    {
+        $success = [];
+        foreach (Document::map(Document::operations()[$id]['operation']['responses'] ?? null) as $code => $response) {
+            if ((int) $code === Operation::from($id)->successStatus()) {
+                $success = Document::map(Document::map($response)['content'] ?? null);
+            }
+        }
+
+        return Document::refName(Document::map(Document::map($success['application/json'] ?? null)['schema'] ?? null));
     }
 
     /**
@@ -441,19 +564,30 @@ final class ResourceContractTest extends TestCase
      * throw on reading a page where it expects its own answer: that is the
      * expected end of its run, as only what it sent is asked.
      *
+     * Given an `$answer`, every request is answered with it instead and the
+     * run may end in a throw wherever it reads it; what it threw is kept in
+     * $failure.
+     *
      * @param array{operation: Operation, method: string, roots: list<class-string>} $endpoint
+     * @param array<array-key, mixed>|null $answer
      * @return non-empty-list<list<string>>
      */
-    private static function drive(array $endpoint, bool $optional): array
+    private static function drive(array $endpoint, bool $optional, ?array $answer = null): array
     {
-        $site = new class ($endpoint['operation']->successStatus()) implements ClientInterface {
+        $site = new class ($endpoint['operation']->successStatus(), $answer) implements ClientInterface {
             /** @var list<list<string>> */
             public array $queries = [];
 
             /** @var list<mixed> */
             public array $bodies = [];
 
-            public function __construct(private readonly int $status) {}
+            /** @var list<string> each request's method and path, `GET /api/v1/pages` */
+            public array $lines = [];
+
+            /**
+             * @param array<array-key, mixed>|null $answer
+             */
+            public function __construct(private readonly int $status, private readonly ?array $answer) {}
 
             public function sendRequest(RequestInterface $request): ResponseInterface
             {
@@ -479,8 +613,9 @@ final class ResourceContractTest extends TestCase
                 foreach ($query === '' ? [] : explode('&', $query) as $pair) {
                     $names[] = rawurldecode(explode('=', $pair, 2)[0]);
                 }
-                $page = $this->queries === [] ? ['data' => [], 'next_cursor' => 'next-page'] : ['data' => []];
+                $page = $this->answer ?? ($this->queries === [] ? ['data' => [], 'next_cursor' => 'next-page'] : ['data' => []]);
                 $this->queries[] = $names;
+                $this->lines[] = $request->getMethod() . ' ' . $path;
                 $body = (string) $request->getBody();
                 $this->bodies[] = $body === '' ? null : json_decode($body, true, 512, JSON_THROW_ON_ERROR);
 
@@ -539,15 +674,36 @@ final class ResourceContractTest extends TestCase
         if ($queries === []) {
             self::fail(sprintf('%s sent no request: %s', $endpoint['method'], $failure === null ? 'it returned without one.' : $failure::class . ': ' . $failure->getMessage()));
         }
+        self::$failure = $failure;
+        if ($answer !== null) {
+            return $queries;
+        }
         if ($paged) {
             self::assertNull($failure, sprintf('%s threw after %d request(s), before its list was walked to the end: %s', $endpoint['method'], count($queries), $failure === null ? '' : $failure::class . ': ' . $failure->getMessage()));
             self::assertInstanceOf(Paginator::class, $result, sprintf('%s calls %s, a cursor list, without returning a Paginator.', $endpoint['method'], $endpoint['operation']->value));
         }
         self::assertCount($paged ? 2 : 1, $queries, sprintf('%s sent %d request(s); a list walked to its second page sends 2, any other method 1.', $endpoint['method'], count($queries)));
+        $declared = Document::operations()[$endpoint['operation']->value] ?? null;
+        self::assertNotNull($declared, sprintf('%s is marked with %s, which the document does not have.', $endpoint['method'], $endpoint['operation']->value));
+        foreach ($site->lines as $index => $line) {
+            self::assertMatchesRegularExpression(self::requestLine($declared['method'], $declared['path']), $line, sprintf('%s is marked with %s (%s %s) but sent %s in request %d.', $endpoint['method'], $endpoint['operation']->value, $declared['method'], $declared['path'], $line, $index + 1));
+        }
 
         self::$bodies = $site->bodies;
 
         return $queries;
+    }
+
+    /**
+     * The pattern of a request line the document's method and path template
+     * allow: each `{placeholder}` filled with one non-empty path segment.
+     */
+    private static function requestLine(string $method, string $template): string
+    {
+        $parts = preg_split('/\{[^}\/]+\}/', $template);
+        self::assertIsArray($parts);
+
+        return '#^' . preg_quote($method, '#') . ' ' . implode('[^/]+', array_map(static fn(string $part): string => preg_quote($part, '#'), $parts)) . '$#D';
     }
 
     /**
@@ -724,6 +880,147 @@ final class ResourceContractTest extends TestCase
         foreach (self::requiredPaths(Document::schema($schema), '', $reads) as $required) {
             self::assertContains($required, $reads, sprintf('%s does not read "%s", which the %s schema requires.', $class, $required, $schema));
         }
+    }
+
+    /**
+     * What each accessor of Fields reads: the JSON types it takes (a `[]`
+     * suffix for a list of them), the format a string must have, and
+     * whether it reads a missing or null field as null.
+     */
+    private const array ACCESSORS = [
+        'string' => ['type' => 'string', 'nullable' => false],
+        'nullableString' => ['type' => 'string', 'nullable' => true],
+        'int' => ['type' => 'integer', 'nullable' => false],
+        'nullableInt' => ['type' => 'integer', 'nullable' => true],
+        'bool' => ['type' => 'boolean', 'nullable' => false],
+        'nullableBool' => ['type' => 'boolean', 'nullable' => true],
+        'time' => ['type' => 'string', 'format' => 'date-time', 'nullable' => false],
+        'nullableTime' => ['type' => 'string', 'format' => 'date-time', 'nullable' => true],
+        'strings' => ['type' => 'string[]', 'nullable' => false],
+        'map' => ['type' => 'object', 'nullable' => false],
+        'nullableMap' => ['type' => 'object', 'nullable' => true],
+        'intMap' => ['type' => 'object', 'nullable' => false],
+        'object' => ['type' => 'object', 'nullable' => false],
+        'nullableObject' => ['type' => 'object', 'nullable' => true],
+        'objects' => ['type' => 'object[]', 'nullable' => false],
+        'nullableObjects' => ['type' => 'object[]', 'nullable' => true],
+    ];
+
+    /**
+     * Each field is read with the accessor its declaration calls for: of its
+     * type (a date-time as a time), and as nullable exactly when the schema
+     * lets it be null or leaves it out of `required`. A nullable read of a
+     * field always sent would type the model looser than the site; a plain
+     * read of one that may be null or missing would refuse a valid answer.
+     * `any` reads a field whatever it is, and beneath a field sampled as
+     * the site sends it the document declares nothing to compare with.
+     *
+     * @param array<string, list<string>> $accessors
+     */
+    private static function assertReadTypesMatch(string $schema, array $accessors, string $class): void
+    {
+        $mismatches = [];
+        foreach ($accessors as $path => $used) {
+            $parent = str_contains($path, '.') ? self::schemaAt(Document::schema($schema), substr($path, 0, (int) strrpos($path, '.'))) : Document::schema($schema);
+            $node = self::schemaAt(Document::schema($schema), $path);
+            if ($parent === null || $node === null || self::sampledAsTheSiteSends($parent) || self::sampledAsTheSiteSends($node)) {
+                continue;
+            }
+            $field = substr($path, (int) strrpos('.' . $path, '.'));
+            $name = str_ends_with($field, '[]') ? substr($field, 0, -2) : $field;
+            $required = in_array($name, Document::list(self::nonNull(Document::resolve($parent))['required'] ?? []), true);
+            if (array_diff($used, ['any']) === []) {
+                continue;
+            }
+            $declaration = Document::map(Document::map(self::nonNull(Document::resolve($parent))['properties'] ?? null)[$name] ?? null);
+            $declared = self::declaredType($declaration, $schema . '.' . $path);
+            $owner = str_contains($path, '.') ? self::refOf($parent) : $schema;
+            if ($owner !== null && in_array($name, self::NULL_AS_THE_SITE_SENDS[$owner] ?? [], true)) {
+                $declared['nullable'] = true;
+            }
+
+            foreach (array_unique($used) as $accessor) {
+                if ($accessor === 'any') {
+                    continue;
+                }
+                $reads = self::ACCESSORS[$accessor] ?? self::fail(sprintf('No entry in ACCESSORS for Fields::%s().', $accessor));
+                $expected = ['type' => $reads['type'], 'format' => $reads['format'] ?? null, 'nullable' => $reads['nullable']];
+                $actual = ['type' => $declared['type'], 'format' => $declared['format'] === 'date-time' ? 'date-time' : null, 'nullable' => $declared['nullable'] || !$required];
+                if ($actual === $expected) {
+                    continue;
+                }
+                $mismatches[] = sprintf(
+                    '%s reads "%s" of %s with %s(), which reads %s%s%s; the schema declares %s%s%s.',
+                    $class,
+                    $path,
+                    $schema,
+                    $accessor,
+                    $expected['nullable'] ? 'a nullable ' : 'a ',
+                    $expected['type'],
+                    $expected['format'] === null ? '' : ' (' . $expected['format'] . ')',
+                    $actual['nullable'] ? ($declared['nullable'] ? 'a nullable ' : 'an optional ') : 'a required ',
+                    $actual['type'],
+                    $actual['format'] === null ? '' : ' (' . $actual['format'] . ')',
+                );
+            }
+        }
+
+        self::assertSame([], $mismatches, implode("\n", $mismatches));
+    }
+
+    /**
+     * The name of the component a node is, or is `oneOf` with null.
+     *
+     * @param array<array-key, mixed> $node
+     */
+    private static function refOf(array $node): ?string
+    {
+        foreach ([$node, ...Document::list($node['oneOf'] ?? $node['anyOf'] ?? [])] as $alternative) {
+            $name = Document::refName(Document::map($alternative));
+            if ($name !== null) {
+                return $name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The JSON type of a field's declaration (`object[]` for a list of
+     * objects), its string format, and whether it may be null.
+     *
+     * @param array<array-key, mixed> $declaration
+     * @param string $where the field, for a failure: `Order.lines[].price`
+     * @return array{type: string, format: string|null, nullable: bool}
+     */
+    private static function declaredType(array $declaration, string $where): array
+    {
+        $nullable = false;
+        $alternatives = Document::list($declaration['oneOf'] ?? $declaration['anyOf'] ?? []);
+        if ($alternatives !== []) {
+            foreach ($alternatives as $alternative) {
+                if ((Document::map($alternative)['type'] ?? null) === 'null') {
+                    $nullable = true;
+                }
+            }
+        }
+        $node = self::nonNull(Document::resolve($declaration));
+        $types = (array) ($node['type'] ?? (isset($node['properties']) || isset($node['additionalProperties']) ? 'object' : []));
+        if (in_array('null', $types, true)) {
+            $nullable = true;
+        }
+        $types = array_values(array_filter($types, static fn(mixed $type): bool => $type !== 'null'));
+        self::assertCount(1, $types, sprintf('%s declares %s types to compare an accessor with.', $where, $types === [] ? 'no' : 'several'));
+        $type = $types[0];
+        self::assertIsString($type);
+        if ($type === 'array') {
+            $items = self::declaredType(Document::map($node['items'] ?? null), $where . '[]');
+
+            return ['type' => $items['type'] . '[]', 'format' => null, 'nullable' => $nullable];
+        }
+        $format = $node['format'] ?? null;
+
+        return ['type' => $type, 'format' => is_string($format) ? $format : null, 'nullable' => $nullable];
     }
 
     /**

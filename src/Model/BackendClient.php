@@ -12,9 +12,13 @@ final readonly class BackendClient
     /** @internal */
     public const string SCHEMA = 'BackendClient';
 
+    public const string MODE_PRODUCTION = 'production';
+
+    public const string MODE_TEST = 'test';
+
     /**
      * @param string $clientId the machine client's id
-     * @param string $mode `production` or `test`: the money its calls act on
+     * @param string $mode one of the MODE_ constants: the money its calls act on
      * @param string $site the site the client belongs to
      * @param list<string> $scopes what the token may do
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
