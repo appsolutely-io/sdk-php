@@ -7,6 +7,7 @@ namespace Appsolutely\Sdk\Tests\Webhooks\Events;
 use Appsolutely\Sdk\Exception\UnexpectedPayloadException;
 use Appsolutely\Sdk\Model\EntitlementTerm;
 use Appsolutely\Sdk\Model\Order;
+use Appsolutely\Sdk\Model\Refund;
 use Appsolutely\Sdk\Model\Subscription;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
 use Appsolutely\Sdk\Tests\Support\SiteFixture;
@@ -398,13 +399,39 @@ final class TypedEventTest extends TestCase
     }
 
     #[DataProvider('refundTypes')]
-    public function testARefundEventNamesTheRefundByItsReference(string $type): void
+    public function testARefundEventCarriesTheRefundAndThePaymentItComesOff(string $type): void
     {
         $event = self::deliver($type, SiteFixture::json('refund'));
 
         self::assertInstanceOf(RefundEvent::class, $event);
-        self::assertSame('RF-9K2M4Q6T8W1Z', $event->refund->id);
-        self::assertSame('Refund', $event->refund->type);
+        $refund = $event->refund;
+        self::assertSame('4f1c2a9e-7b3d-4e8f-9a61-2d5c8b0e7f13', $refund->id);
+        self::assertSame('RF-9K2M4Q6T8W1Z', $refund->reference);
+        self::assertSame('SO-20261008-0042', $refund->order);
+        self::assertSame('PAY-8F3K2M9Q4T7W', $refund->payment);
+        self::assertSame(2500, $refund->amount);
+        self::assertSame('USD', $refund->currency);
+        self::assertSame(Refund::STATUS_REFUNDED, $refund->status);
+        self::assertSame('2026-10-09T11:58:02+00:00', $refund->createdAt->format(DATE_RFC3339));
+        self::assertSame('2026-10-09T12:00:00+00:00', $refund->updatedAt->format(DATE_RFC3339));
+        self::assertSame('2026-10-09T12:00:00+00:00', $refund->refundedAt?->format(DATE_RFC3339));
+        self::assertSame([], $refund->extra);
+    }
+
+    public function testARefundNotYetPaidHasNoRefundTime(): void
+    {
+        $event = self::deliver(EventType::REFUND_REQUESTED, SiteFixture::json('refund', ['status' => Refund::STATUS_PENDING, 'refunded_at' => null]));
+
+        self::assertInstanceOf(RefundEvent::class, $event);
+        self::assertSame(Refund::STATUS_PENDING, $event->refund->status);
+        self::assertNull($event->refund->refundedAt);
+    }
+
+    public function testARefundNamedByItsDatabaseKeyAloneIsRefused(): void
+    {
+        $this->expectException(UnexpectedPayloadException::class);
+
+        self::deliver(EventType::REFUND_PROCESSED, '{"id":"42","type":"Refund"}');
     }
 
     public function testAReferralRewardNamesTheReferrerTheCodeThePaymentAndTheReward(): void

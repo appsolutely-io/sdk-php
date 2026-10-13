@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Webhooks\Events;
 
 use Appsolutely\Sdk\Model\Fields;
-use Appsolutely\Sdk\Model\RecordReference;
+use Appsolutely\Sdk\Model\Refund;
 use Appsolutely\Sdk\Webhooks\Event;
 use Appsolutely\Sdk\Webhooks\EventType;
 
 /**
- * `refund.requested` and `refund.processed`: a refund as it moves, named by
- * its reference only. The order's money all being back is `order.refunded`.
+ * `refund.requested` when a refund is recorded, and `refund.processed` each
+ * time it moves after that: approved, rejected or paid. The order's money all
+ * being back is `order.refunded`.
  */
 final readonly class RefundEvent extends TypedEvent
 {
@@ -22,7 +23,7 @@ final readonly class RefundEvent extends TypedEvent
 
     public function __construct(
         Event $envelope,
-        public RecordReference $refund,
+        public Refund $refund,
     ) {
         parent::__construct($envelope);
     }
@@ -32,6 +33,6 @@ final readonly class RefundEvent extends TypedEvent
      */
     public static function read(Event $envelope, #[\SensitiveParameter] Fields $data): self
     {
-        return new self($envelope, RecordReference::from($data));
+        return new self($envelope, Refund::from($data));
     }
 }

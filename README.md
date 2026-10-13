@@ -497,7 +497,7 @@ match (true) {
 | `OrderEvent` | `order.completed`, `order.shipped`, `order.cancelled`, `order.status_updated`, `order.expired`, `order.revived`, `order.payment_arrived_late` | `$order` |
 | `OrderPaidEvent` | `order.paid` | `$order`, `$payment`, `$subject` |
 | `PaymentReturnedEvent` | `order.refunded`, `payment.refunded`, `payment.reversed` | `$order`, `$payment` |
-| `RefundEvent` | `refund.requested`, `refund.processed` | `$refund` (its reference) |
+| `RefundEvent` | `refund.requested`, `refund.processed` | `$refund`, a `Model\Refund`: its order number, the payment's reference, the amount and its `status` |
 | `ReferralRewardIssuedEvent` | `referral.reward_issued` | `$subject`, `$referralCode`, `$paymentReference`, `$reward` |
 | `SubscriptionEvent` | `subscription.*` | `$subscription`, and `$period` on `started` and `renewed` |
 | `AccountEvent` | `account.suspended`, `account.reinstated`, `account.erased`, `account.entitlements_changed`, `account.email_changed` | `$state` |
