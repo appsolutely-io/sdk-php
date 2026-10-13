@@ -9,7 +9,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `Client` and `Config`, built on PSR-18/17 HTTP, PSR-16 cache, PSR-20 clock and PSR-3 logger interfaces, with an HTTP client discovered when none is given. `Config` describes one site: its `baseUrl` (its origin, held to the issuer's HTTPS rules and refused with a path), its `issuer`, the OAuth client that signs its members in, and an optional `apiToken`, the administrator token for server-side calls, which is shown as `[redacted]` and refused when it holds a space or a control character.
+- `Client` and `Config`, built on PSR-18/17 HTTP, PSR-16 cache, PSR-20 clock and PSR-3 logger interfaces, with an HTTP client discovered when none is given. `Config` describes one site: its `baseUrl` (its origin, held to the issuer's HTTPS rules and refused with a path), its `issuer` and the OAuth client that signs its members in, which are optional (`Config::$issuer`, `Config::$clientId` and `Config::clientSecret()` are nullable): the sign-in client is needed only to sign members in and the issuer only for that or the backend client, `Client::oidc()` throws an `InvalidConfigException` when the Config holds none, the sign-in id and secret go together, and either client without an issuer is refused; and an optional `apiToken`, the administrator token for server-side calls, which is shown as `[redacted]` and refused when it holds a space or a control character.
 - OpenID Connect sign-in through `Client::oidc()`: discovery and the signing keys cached per `Cache-Control` for a day at most, an authorization URL with `state`, `nonce`, PKCE S256 and an optional `max_age` whose `auth_time` is then checked, callback validation including the RFC 9207 `iss` parameter, the code exchange, ID token verification against the provider's RS256/ES256 keys, userinfo and RFC 7009 revocation.
 - Token refresh that holds every refreshed ID token to the original authentication (OpenID Connect Core section 12.2): the original ID token is required, the result always carries the ID token to keep for the next refresh (the original when the provider sends none), and a refreshed token without `auth_time` keeps the original's in `IdToken::$authTime`.
 - `IdToken::toArray()` and `IdToken::fromTrustedStorage()` to keep the ID token in a session stored as JSON; the latter trusts the integrator's own storage and verifies nothing.
@@ -34,10 +34,6 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Request timeouts: `Config::$timeout` (30 seconds by default) and `Config::$connectTimeout` (10 seconds) are applied to the HTTP client the SDK finds for itself when it is Guzzle or Symfony HttpClient 6.2 or later (`composer.json` suggests both); any other client found, an older Symfony one included, is used as it is, with a warning logged. A client passed in keeps its own timeouts.
 - Logging through the PSR-3 logger: each Site API attempt at `debug` (method, path, status, request id, attempt), giving up on a network failure, a 5xx or a refusal a retry could have passed at `warning`, and a failed backend token request at `warning`; headers, bodies, query strings, tokens and keys are never logged.
 - A `Client` built without a PSR-16 cache logs one warning that its memory cache refetches discovery, the signing keys and the backend token in every process.
-
-### Changed
-
-- **Breaking for code that reads them:** `Config::$issuer`, `Config::$clientId` and `Config::clientSecret()` are nullable. The member sign-in client is needed only to sign members in and the issuer only for that or the backend client, so a backend-only or administrator-only integration no longer invents sign-in settings; `Client::oidc()` throws an `InvalidConfigException` when the Config holds none. The sign-in id and secret go together, and either client without an issuer is refused. Existing constructor calls, named or positional, keep working.
 
 ### Security
 
