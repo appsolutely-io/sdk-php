@@ -352,7 +352,7 @@ final class ResourceContractTest extends TestCase
         }
         foreach (self::VALUES_AS_THE_SITE_SENDS[$schema] ?? [] as $field => $values) {
             foreach ($values as $value) {
-                $enumerated[strtoupper($field . '_' . $value)] = $value;
+                $enumerated[self::constantName($field, $value)] = $value;
             }
         }
 
@@ -415,6 +415,16 @@ final class ResourceContractTest extends TestCase
     }
 
     /**
+     * The name of a model's constant for a value of a field:
+     * `STATUS_PAST_DUE` for `status` and `past_due`, `TYPE_STORE_CREDIT` for
+     * `type` and `store-credit`.
+     */
+    private static function constantName(string $field, string $value): string
+    {
+        return strtoupper((string) preg_replace('/[^A-Za-z0-9]+/', '_', $field . '_' . $value));
+    }
+
+    /**
      * The constant each value enumerated for a field should have, the
      * field's own and those of the objects and lists inside it, stopping
      * at an object schema of its own.
@@ -435,7 +445,7 @@ final class ResourceContractTest extends TestCase
                 continue;
             }
             self::assertIsString($value, sprintf('%s enumerates a value that is not a string.', $where));
-            $enumerated[strtoupper((string) preg_replace('/[^A-Za-z0-9]+/', '_', $field . '_' . $value))] = $value;
+            $enumerated[self::constantName($field, $value)] = $value;
         }
         if (isset($node['items'])) {
             self::collectEnumerated($field, Document::map($node['items']), $where . '[]', $enumerated);
