@@ -56,6 +56,57 @@ final class TimeoutsTest extends TestCase
         self::assertSame(12.5, $options['max_duration']);
     }
 
+    /**
+     * Psr18Client has had withOptions() only since Symfony 6.2. An older
+     * one is run in its own process, as a stand-in of that name without the
+     * method, since this process already loaded the installed one.
+     */
+    public function testASymfonyClientWithoutWithOptionsIsUsedAsFoundAndTheMissingTimeoutIsLogged(): void
+    {
+        $script = (string) tempnam(sys_get_temp_dir(), 'sdk-symfony-61-');
+        file_put_contents($script, <<<'PHP'
+            <?php
+            namespace {
+                require $argv[1];
+            }
+            namespace Symfony\Component\HttpClient {
+                final class Psr18Client implements \Psr\Http\Client\ClientInterface
+                {
+                    public function sendRequest(\Psr\Http\Message\RequestInterface $request): \Psr\Http\Message\ResponseInterface
+                    {
+                        throw new \LogicException('Not sent.');
+                    }
+                }
+            }
+            namespace {
+                $logger = new class extends \Psr\Log\AbstractLogger {
+                    public array $levels = [];
+                    public function log($level, \Stringable|string $message, array $context = []): void
+                    {
+                        $this->levels[] = $level;
+                    }
+                };
+                $found = new \Symfony\Component\HttpClient\Psr18Client();
+                $client = \Appsolutely\Sdk\Http\ClientTimeouts::apply($found, 30.0, 10.0, $logger);
+                echo json_encode(['same' => $client === $found, 'levels' => $logger->levels]);
+            }
+            PHP);
+
+        try {
+            $process = proc_open([PHP_BINARY, $script, dirname(__DIR__, 2) . '/vendor/autoload.php'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+            self::assertIsResource($process);
+            $output = (string) stream_get_contents($pipes[1]);
+            $errors = (string) stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            proc_close($process);
+        } finally {
+            unlink($script);
+        }
+
+        self::assertSame(['same' => true, 'levels' => [LogLevel::WARNING]], json_decode($output, true), $output . $errors);
+    }
+
     public function testAnotherClientIsUsedAsFoundAndTheMissingTimeoutIsLogged(): void
     {
         $logger = new RecordingLogger();

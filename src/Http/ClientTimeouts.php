@@ -13,7 +13,7 @@ use Symfony\Component\HttpClient\Psr18Client as SymfonyClient;
  * PSR-18 has no way to set a timeout, and the clients it finds wait as long
  * as their defaults say (Guzzle: forever). A client the SDK found for itself
  * is rebuilt with the Config's timeouts when it is one of the two common
- * ones; any other is used as found, with a warning, since a hung connection
+ * ones (Symfony's from 6.2); any other is used as found, with a warning, since a hung connection
  * would otherwise hold a worker without a word.
  *
  * @internal used by Client when the Config passes no HTTP client
@@ -27,8 +27,10 @@ final class ClientTimeouts
         }
 
         // Symfony's idle timeout also bounds connecting; it has no separate
-        // connect limit, so the request timeout serves as both.
-        if ($found instanceof SymfonyClient) {
+        // connect limit, so the request timeout serves as both. Psr18Client
+        // takes options only from Symfony 6.2; an older one is used as found.
+        // @phpstan-ignore function.alreadyNarrowedType (always true of the Symfony installed for analysis, 6.2 or later)
+        if ($found instanceof SymfonyClient && method_exists($found, 'withOptions')) {
             return $found->withOptions(['timeout' => $timeout, 'max_duration' => $timeout]);
         }
 
