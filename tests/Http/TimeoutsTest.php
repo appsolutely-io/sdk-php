@@ -93,7 +93,8 @@ final class TimeoutsTest extends TestCase
             PHP);
 
         try {
-            $process = proc_open([PHP_BINARY, $script, dirname(__DIR__, 2) . '/vendor/autoload.php'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+            // Notices go to stderr, so only the script's answer reaches stdout.
+            $process = proc_open([PHP_BINARY, '-d', 'display_errors=stderr', $script, dirname(__DIR__, 2) . '/vendor/autoload.php'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
             self::assertIsResource($process);
             $output = (string) stream_get_contents($pipes[1]);
             $errors = (string) stream_get_contents($pipes[2]);
