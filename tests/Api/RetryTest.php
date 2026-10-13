@@ -20,6 +20,7 @@ use Psr\Http\Client\NetworkExceptionInterface;
 use Psr\Http\Client\RequestExceptionInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Log\LogLevel;
 use RuntimeException;
 
 /**
@@ -418,9 +419,10 @@ final class RetryTest extends TestCase
 
         $provider->client(logger: $logger)->api()->raw()->postIdempotent('/api/v1/articles', [], idempotencyKey: 'secret-ish-key');
 
-        self::assertCount(1, $logger->records);
-        self::assertStringContainsString('409', $logger->records[0]['message']);
-        self::assertStringNotContainsString('secret-ish-key', $logger->records[0]['message'] . json_encode($logger->records[0]['context']));
+        $retries = $logger->at(LogLevel::INFO);
+        self::assertCount(1, $retries);
+        self::assertStringContainsString('409', $retries[0]['message']);
+        self::assertStringNotContainsString('secret-ish-key', $logger->text());
     }
 
     public function testAConflictOutsideAKeyedWriteIsThrown(): void

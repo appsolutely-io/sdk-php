@@ -383,7 +383,7 @@ new Config(/* ... */, retryPolicy: new RetryPolicy(maxRetries: 3, maxDelay: 60))
 new Config(/* ... */, retryPolicy: RetryPolicy::none());
 ```
 
-`maxRetries` runs from 0 to 10 (2 by default), and a wait the site asks for beyond `maxDelay` seconds (30 by default) is not made: the refusal is thrown instead. Each retry is logged at `info` through the PSR-3 logger.
+`maxRetries` runs from 0 to 10 (2 by default), and a wait the site asks for beyond `maxDelay` seconds (30 by default) is not made: the refusal is thrown instead. Through the PSR-3 logger, each attempt is logged at `debug` with its method, path, status, request id and attempt number, each retry at `info`, and giving up on a network failure, a `5xx` or a refusal a retry could have passed at `warning`, as is a failed request for the backend's token. Headers, bodies, query strings, tokens and keys are never logged.
 
 When the site refuses a token with `UnauthenticatedException`, renew it rather than retrying: refused credentials count against a budget of their own, and a client that keeps sending a dead token locks out every caller behind the same address.
 

@@ -110,7 +110,7 @@ final readonly class BackendToken
         } catch (AppsolutelyException $exception) {
             // The kept token is good until its margin: use it and try again
             // on a later read rather than fail a call that need not fail.
-            $this->logger->warning(sprintf('Replacing the backend token early failed (%s); the current one is used until it is due.', $exception::class));
+            $this->logger->info(sprintf('Replacing the backend token early failed (%s); the current one is used until it is due.', $exception::class));
 
             return $kept['token'];
         }
@@ -182,7 +182,14 @@ final readonly class BackendToken
 
     private function fetch(): string
     {
-        $tokens = $this->oidc->clientCredentials($this->clientId, $this->clientSecret, $this->scopes, $this->authentication);
+        try {
+            $tokens = $this->oidc->clientCredentials($this->clientId, $this->clientSecret, $this->scopes, $this->authentication);
+        } catch (AppsolutelyException $exception) {
+            // The class alone: a provider's message is its own text.
+            $this->logger->warning(sprintf('Asking for the backend token failed (%s).', $exception::class), ['client_id' => $this->clientId]);
+
+            throw $exception;
+        }
 
         $now = $this->clock->now()->getTimestamp();
         $usableUntil = ($tokens->expiresAt?->getTimestamp() ?? $now + self::DEFAULT_LIFETIME) - self::EXPIRY_MARGIN;

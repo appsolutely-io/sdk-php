@@ -269,14 +269,20 @@ final readonly class SiteApi
         }
         $encoded = $body === null ? null : self::encode($body);
 
+        $attempt = 0;
         for ($retry = 0; ; $retry++) {
+            $context = ['method' => $method, 'path' => Untrusted::text($path, Untrusted::MAX_LONG_LENGTH), 'status' => null, 'request_id' => $requestId, 'attempt' => ++$attempt];
             try {
                 $response = $this->http->json($method, $url, $headers, $encoded);
             } catch (TransportException $exception) {
-                $this->waitBeforeRetrying($exception, $retryable, $retry, $method, $path, 'a network failure', $exception->isNetworkFailure() ? $this->retryPolicy->backoff($retry + 1) : null);
+                $this->logger->debug(sprintf('%s %s failed before an answer.', $method, $context['path']), $context);
+                $this->waitBeforeRetrying($exception, $retryable, $retry, $context, 'a network failure', $exception->isNetworkFailure() ? $this->retryPolicy->backoff($retry + 1) : null);
 
                 continue;
             }
+
+            $context['status'] = $response->getStatusCode();
+            $this->logger->debug(sprintf('%s %s answered %d.', $method, $context['path'], $context['status']), $context);
 
             if (HttpTransport::isSuccessful($response)) {
                 return $this->answer($response, $method, $path, $requestId, $idempotencyKey);
@@ -298,7 +304,7 @@ final readonly class SiteApi
                 continue;
             }
 
-            $this->waitBeforeRetrying($exception, $retryable, $retry, $method, $path, (string) $exception->status, $this->delay($exception, $idempotencyKey !== null, $retry + 1));
+            $this->waitBeforeRetrying($exception, $retryable, $retry, $context, (string) $exception->status, $this->delay($exception, $idempotencyKey !== null, $retry + 1));
         }
     }
 
@@ -331,18 +337,27 @@ final readonly class SiteApi
     /**
      * Waits before the next attempt, or throws the failure when the call is
      * not retried, the retries are spent, or the wait asked for is beyond
-     * the policy's ceiling.
+     * the policy's ceiling. Giving up on a failure that was not the site's
+     * considered answer (a network failure, a 5xx, a refusal a later
+     * attempt could have passed) is a warning; any other refusal is the
+     * caller's to report.
+     *
+     * @param array{method: string, path: string, status: int|null, request_id: string, attempt: int} $context
      */
-    private function waitBeforeRetrying(TransportException|ApiException $failure, bool $retryable, int $retry, string $method, string $path, string $reason, ?float $delay): void
+    private function waitBeforeRetrying(TransportException|ApiException $failure, bool $retryable, int $retry, array $context, string $reason, ?float $delay): void
     {
         if (!$retryable || $delay === null || $retry >= $this->retryPolicy->maxRetries || $delay > $this->retryPolicy->maxDelay) {
+            if ($delay !== null || $failure instanceof TransportException || $failure->status >= 500) {
+                $this->logger->warning(sprintf('%s %s failed after %d attempt(s): %s.', $context['method'], $context['path'], $context['attempt'], $reason), $context);
+            }
+
             throw $failure;
         }
 
         $this->logger->info(sprintf(
             'Retrying %s %s after %s, in %.1f seconds (retry %d of %d).',
-            $method,
-            Untrusted::text($path, Untrusted::MAX_LONG_LENGTH),
+            $context['method'],
+            $context['path'],
             $reason,
             $delay,
             $retry + 1,

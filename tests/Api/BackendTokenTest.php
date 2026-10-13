@@ -201,7 +201,7 @@ final class BackendTokenTest extends TestCase
         $this->provider->clock->advance(3600 - BackendToken::EXPIRY_MARGIN - 1);
 
         self::assertSame('machine-1', $token->token());
-        self::assertSame(LogLevel::WARNING, $logger->records[0]['level'] ?? null);
+        self::assertCount(1, $logger->at(LogLevel::WARNING));
     }
 
     public function testATokenPastItsMarginIsNeverUsed(): void
