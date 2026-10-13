@@ -302,7 +302,7 @@ final class TypedEventTest extends TestCase
 
     private static function assertTheOrder(Order $order, string $status): void
     {
-        self::assertSame('7b9d1f3a-5c7e-4a9b-b1d3-f5a7c9e1b3d5', $order->id);
+        self::assertSame('SO-20261008-0042', $order->id);
         self::assertNull($order->subjectReference);
         self::assertSame($status, $order->status);
         self::assertSame('production', $order->mode);

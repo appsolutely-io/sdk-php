@@ -13,7 +13,7 @@ Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://git
 
 ## Compatibility
 
-The client is written and tested against the Site API document of the site software v0.24.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
+The client is written and tested against the Site API document of the site software v0.24.0-292-gef071b2ac07633eaf8ca1ec149b386ac1744e79a, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
 
 The document's `v1` is stable for the life of the version: the site adds paths and fields to it but never removes or retypes one, and a breaking change arrives as a new version while `v1` keeps serving. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
 
@@ -330,8 +330,9 @@ $member->me()->checkoutSessions()->create([['product' => 'team', 'quantity' => 1
 $member->me()->portalSessions()->create($returnUrl);
 $member->me()->storePurchases()->intent('google_play', 'team');
 $member->me()->subscriptions()->list();                     // one page, no cursor
-$member->me()->subscriptions()->change($subscriptionId, quantity: 3)->value->applied;   // or ->confirmation, the visit that confirms it
+$member->me()->subscriptions()->change($subscriptionId, quantity: 3, returnUrl: $returnUrl)->value->applied;   // or ->confirmation, the visit that confirms it
 $member->me()->subscriptions()->cancel($subscriptionId);
+$member->me()->subscriptions()->resume($subscriptionId, $returnUrl);   // takes a cancellation back
 
 $member->sync()->addresses()->pull($cursor);                 // and ->push(), and ->orders()->pull()
 ```

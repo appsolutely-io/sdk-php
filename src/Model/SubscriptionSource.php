@@ -5,15 +5,22 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Model;
 
 /**
- * A subscription of the member's that another party still bills, which buying here would not stop.
+ * A subscription of the member's and who bills it: one that buying here
+ * would not stop.
  */
-final readonly class SubscriptionStillBilling implements SchemaModel
+final readonly class SubscriptionSource implements SchemaModel
 {
     /** @internal */
-    public const string SCHEMA = 'SubscriptionStillBilling';
+    public const string SCHEMA = 'SubscriptionSource';
+
+    public const string BILLED_BY_SITE = 'site';
+
+    public const string BILLED_BY_APP_STORE = 'app_store';
+
+    public const string BILLED_BY_GOOGLE_PLAY = 'google_play';
 
     /**
-     * @param string $billedBy who bills it: `site`, `app_store` or `google_play`
+     * @param string $billedBy who bills it, one of the BILLED_BY_ constants
      * @param string|null $manageUrl where the member stops it, or null where the site does
      * @param string $subscriptionId the subscription's id
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded

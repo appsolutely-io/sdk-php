@@ -7,6 +7,7 @@ namespace Appsolutely\Sdk\Tests\Resource;
 use Appsolutely\Sdk\Api\BackendApi;
 use Appsolutely\Sdk\Api\MemberApi;
 use Appsolutely\Sdk\Model\EntitlementTerm;
+use Appsolutely\Sdk\Model\SubscriptionSource;
 use Appsolutely\Sdk\Tests\Support\SiteFixture;
 use PHPUnit\Framework\TestCase;
 
@@ -32,7 +33,7 @@ final class BackendTest extends TestCase
             'success_url' => 'https://app.example.com/thanks',
             'cancel_url' => 'https://app.example.com/cart',
             'order' => null,
-            'may_still_bill' => [['billed_by' => 'app_store', 'manage_url' => 'https://apps.apple.com/account/subscriptions', 'subscription_id' => '7']],
+            'may_still_bill' => [['billed_by' => 'app_store', 'manage_url' => 'https://apps.apple.com/account/subscriptions', 'subscription_id' => '4f6a8c0e-2b4d-4f6a-8c0e-2b4d6f8a0c2e']],
         ];
     }
 
@@ -85,7 +86,7 @@ final class BackendTest extends TestCase
         self::assertSame('https://site.example.com/checkout/cs_1', $result->value->url);
         self::assertSame('mug', $result->value->lines[0]->product);
         self::assertNull($result->value->orderReference);
-        self::assertSame('app_store', $result->value->mayStillBill[0]->billedBy);
+        self::assertSame(SubscriptionSource::BILLED_BY_APP_STORE, $result->value->mayStillBill[0]->billedBy);
     }
 
     public function testAMembersCheckoutNamesNoSubject(): void
@@ -204,12 +205,45 @@ final class BackendTest extends TestCase
     {
         $site = (new SiteRecorder())->json(['applied' => false, 'subscription' => null, 'confirmation' => ['id' => 'ps_1', 'url' => 'https://site.example.com/billing/ps_1', 'status' => 'open', 'expires_at' => '2026-10-08T13:00:00Z', 'mode' => 'production', 'return_url' => 'https://app.example.com/account']]);
 
-        $change = self::member($site)->me()->subscriptions()->change('9', quantity: 5)->value;
+        $change = self::member($site)->me()->subscriptions()->change('9', quantity: 5, returnUrl: 'https://app.example.com/account')->value;
 
         self::assertSame('POST /api/v1/me/subscriptions/9/changes', $site->line());
-        self::assertSame(['sku' => null, 'quantity' => 5], $site->body());
+        self::assertSame(['sku' => null, 'quantity' => 5, 'return_url' => 'https://app.example.com/account'], $site->body());
         self::assertFalse($change->applied);
         self::assertSame('https://site.example.com/billing/ps_1', $change->confirmation?->url);
+    }
+
+    public function testAChangeHandedToTheMemberToConfirmIsReadFromItsAccepted(): void
+    {
+        $site = (new SiteRecorder())->json(['applied' => false, 'subscription' => null, 'confirmation' => ['id' => 'ps_1', 'url' => 'https://site.example.com/billing/ps_1', 'status' => 'open', 'expires_at' => '2026-10-08T13:00:00Z', 'mode' => 'production', 'return_url' => 'https://app.example.com/account']], 202);
+
+        $change = self::member($site)->me()->subscriptions()->change('9', sku: 'team')->value;
+
+        self::assertSame(['sku' => 'team', 'quantity' => null, 'return_url' => null], $site->body());
+        self::assertSame('https://site.example.com/billing/ps_1', $change->confirmation?->url);
+    }
+
+    public function testAResumptionSendsWhereTheMemberComesBackTo(): void
+    {
+        $site = (new SiteRecorder())->json(['applied' => false, 'subscription' => null, 'confirmation' => ['id' => 'ps_2', 'url' => 'https://site.example.com/billing/ps_2', 'status' => 'open', 'expires_at' => '2026-10-08T13:00:00Z', 'mode' => 'production', 'return_url' => 'https://app.example.com/account']], 202);
+
+        $resumption = self::member($site)->me()->subscriptions()->resume('9', 'https://app.example.com/account')->value;
+
+        self::assertSame('POST /api/v1/me/subscriptions/9/resumption', $site->line());
+        self::assertSame(['return_url' => 'https://app.example.com/account'], $site->body());
+        self::assertNull($resumption->subscription);
+        self::assertSame('https://site.example.com/billing/ps_2', $resumption->confirmation?->url);
+    }
+
+    public function testAStoreIntentNamesEachSubscriptionStillBilledByItsSource(): void
+    {
+        $site = (new SiteRecorder())->json(['store' => 'app_store', 'store_product_id' => 'team.monthly', 'account_token' => '0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e', 'replaces_purchase_token' => null, 'may_still_bill' => [['billed_by' => 'site', 'manage_url' => null, 'subscription_id' => '4f6a8c0e-2b4d-4f6a-8c0e-2b4d6f8a0c2e']]]);
+
+        $intent = self::member($site)->me()->storePurchases()->intent('app_store', 'team');
+
+        self::assertSame(SubscriptionSource::BILLED_BY_SITE, $intent->mayStillBill[0]->billedBy);
+        self::assertNull($intent->mayStillBill[0]->manageUrl);
+        self::assertSame('4f6a8c0e-2b4d-4f6a-8c0e-2b4d6f8a0c2e', $intent->mayStillBill[0]->subscriptionId);
     }
 
     private static function backend(SiteRecorder $site): BackendApi

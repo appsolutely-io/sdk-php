@@ -7,6 +7,18 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `ReferralTerms::TYPE_CREDIT` and `ReferralTerms::TYPE_CASHBACK`, now that the document names a referral's reward types as a closed set.
+
+### Changed
+
+- **BREAKING:** the client is held to the Site API document of the site software release after v0.24.0 (`Contract::REVISION`), and needs a site at least that new. Every record's `id` the site sends is now an opaque string (a UUID, an order's order number, a member's account subject) rather than a database key; the models already read ids as strings, but an id stored from an older site no longer finds its record, and an offline client pulls its sync feeds again from the start.
+- **BREAKING:** `FormEntry::$isSpam` is read from the JSON boolean the site now sends; an older site's `0` or `1` is refused as an `UnexpectedResponseException`.
+- **BREAKING:** `Model\SubscriptionStillBilling` is renamed `Model\SubscriptionSource`, the document's name for it, and names who bills it with `BILLED_BY_SITE`, `BILLED_BY_APP_STORE` and `BILLED_BY_GOOGLE_PLAY`. `StorePurchaseIntent::$mayStillBill` is a list of `SubscriptionSource` rather than of strings: the site always sent objects there, so an intent naming a subscription still billed elsewhere was refused.
+- **BREAKING:** `me()->subscriptions()->resume($id, $returnUrl)` sends the address the site brings the member back to after confirming, which the site requires, and answers a `KeyedResult<MemberSubscriptionChange>`; `Model\MemberSubscriptionConfirmation` is removed.
+- **BREAKING:** `me()->subscriptions()->change()` takes an optional `$returnUrl` before `$idempotencyKey`, so a key passed by position is now passed by name, and reads a change handed to the member to confirm, which the site answers `202`.
+
 ## [0.1.0] - 2026-10-13
 
 ### Added

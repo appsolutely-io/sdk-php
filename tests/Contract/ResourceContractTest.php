@@ -350,11 +350,6 @@ final class ResourceContractTest extends TestCase
         foreach (Document::map(Document::schema($schema)['properties'] ?? null) as $field => $declaration) {
             self::collectEnumerated((string) $field, Document::map($declaration), $schema . '.' . $field, $enumerated);
         }
-        foreach (self::VALUES_AS_THE_SITE_SENDS[$schema] ?? [] as $field => $values) {
-            foreach ($values as $value) {
-                $enumerated[self::constantName($field, $value)] = $value;
-            }
-        }
 
         $constants = [];
         foreach ((new ReflectionClass($class))->getReflectionConstants(\ReflectionClassConstant::IS_PUBLIC) as $constant) {
@@ -378,40 +373,6 @@ final class ResourceContractTest extends TestCase
 
         self::assertSame([], $missing, sprintf('%s reads %s, whose document enumerates values it has no constant for: %s.', $class, $schema, implode(', ', $missing)));
         self::assertSame([], $stale, sprintf('%s has constants for values %s no longer enumerates: %s.', $class, $schema, implode(', ', $stale)));
-    }
-
-    /**
-     * Fields the pinned document leaves a plain string whose values the
-     * site enumerates, where the model has a constant per value. Each
-     * applies only while the document still enumerates nothing for the
-     * field; once it does, the constants are checked against it and the
-     * entry is dropped.
-     *
-     * A referral reward's `type` is the site's reward type enum.
-     */
-    private const array VALUES_AS_THE_SITE_SENDS = [
-        'ReferralReward' => ['type' => ['credit', 'cashback']],
-    ];
-
-    /**
-     * @return iterable<string, array{string, string}>
-     */
-    public static function siteValues(): iterable
-    {
-        foreach (self::VALUES_AS_THE_SITE_SENDS as $schema => $fields) {
-            foreach (array_keys($fields) as $field) {
-                yield $schema . '.' . $field => [$schema, $field];
-            }
-        }
-    }
-
-    #[DataProvider('siteValues')]
-    public function testEachFieldWhoseValuesTheSiteEnumeratesIsStillUnenumerated(string $schema, string $field): void
-    {
-        $declared = self::nonNull(Document::resolve(Document::map(Document::map(Document::schema($schema)['properties'] ?? null)[$field] ?? null)));
-
-        self::assertSame('string', $declared['type'] ?? null, sprintf('%s.%s is no longer a string.', $schema, $field));
-        self::assertArrayNotHasKey('enum', $declared, sprintf('The pinned document now enumerates %s.%s: drop it from VALUES_AS_THE_SITE_SENDS.', $schema, $field));
     }
 
     /**
