@@ -201,7 +201,9 @@ final class BackendTokenTest extends TestCase
         $this->provider->clock->advance(3600 - BackendToken::EXPIRY_MARGIN - 1);
 
         self::assertSame('machine-1', $token->token());
-        self::assertCount(1, $logger->at(LogLevel::WARNING));
+        self::assertSame([], $logger->at(LogLevel::WARNING));
+        self::assertCount(1, $logger->at(LogLevel::INFO));
+        self::assertStringContainsString('OAuthException', $logger->at(LogLevel::INFO)[0]['message']);
     }
 
     /**
@@ -255,7 +257,11 @@ final class BackendTokenTest extends TestCase
         self::assertSame([], $this->provider->sleeper->sleeps);
     }
 
-    public function testAnEarlyReplacementWhoseLockFailsKeepsTheTokenAndLogsOnlyTheClass(): void
+    /**
+     * A lock that breaks its contract is the integrator's bug, not a
+     * passing failure: it is logged as a warning, by class alone.
+     */
+    public function testAnEarlyReplacementWhoseLockFailsKeepsTheTokenAndWarnsWithOnlyTheClass(): void
     {
         $logger = new RecordingLogger();
         $lock = new class implements TokenLock {
@@ -275,9 +281,9 @@ final class BackendTokenTest extends TestCase
         $this->provider->clock->advance(3600 - BackendToken::EXPIRY_MARGIN - 1);
 
         self::assertSame('machine-1', $token->token());
-        self::assertCount(1, $logger->at(LogLevel::INFO));
-        self::assertStringContainsString('RuntimeException', $logger->at(LogLevel::INFO)[0]['message']);
-        self::assertStringNotContainsString('secret', $logger->at(LogLevel::INFO)[0]['message']);
+        self::assertCount(1, $logger->at(LogLevel::WARNING));
+        self::assertStringContainsString('RuntimeException', $logger->at(LogLevel::WARNING)[0]['message']);
+        self::assertStringNotContainsString('secret', $logger->text());
     }
 
     /**
