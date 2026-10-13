@@ -13,6 +13,7 @@ use Appsolutely\Sdk\Exception\ServiceUnavailableException;
 use Appsolutely\Sdk\Exception\TransportException;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
 use Appsolutely\Sdk\Tests\Support\RecordingLogger;
+use GuzzleHttp\Exception\RequestException as GuzzleRequestException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Client\ClientExceptionInterface;
@@ -489,6 +490,52 @@ final class RetryTest extends TestCase
 
         self::assertCount(1, $provider->siteRequests());
         self::assertSame([], $provider->sleeper->sleeps);
+    }
+
+    /**
+     * Guzzle reports a connection reset after the request went out (cURL
+     * errors 55 and 56) as a RequestException with no response rather than
+     * a ConnectException; cURL failed in transit, so it is retried.
+     *
+     * @return iterable<string, array{int}>
+     */
+    public static function curlTransferFailures(): iterable
+    {
+        yield 'failure sending' => [CURLE_SEND_ERROR];
+        yield 'failure receiving' => [CURLE_RECV_ERROR];
+    }
+
+    #[DataProvider('curlTransferFailures')]
+    public function testAGuzzleTransferFailureWithoutAnAnswerIsRetried(int $errno): void
+    {
+        $provider = self::answeringInTurn(
+            static fn(FakeProvider $provider, RequestInterface $request): never => throw new GuzzleRequestException('cURL error ' . $errno, $request, null, null, ['errno' => $errno]),
+            static fn(FakeProvider $provider): ResponseInterface => $provider->json(['id' => 'a-1']),
+        );
+
+        $provider->client()->api()->raw()->get('/api/v1/articles/a-1');
+
+        self::assertCount(2, $provider->siteRequests());
+        self::assertCount(1, $provider->sleeper->sleeps);
+    }
+
+    /**
+     * Guzzle refuses some requests itself before sending them (a URL
+     * without a scheme, a malformed proxy): those carry no cURL error and
+     * fail the same way every time.
+     */
+    public function testARequestGuzzleRefusesBeforeSendingIsNotRetried(): void
+    {
+        $provider = self::answering(static fn(FakeProvider $provider, RequestInterface $request): never => throw new GuzzleRequestException('The proxy URL is malformed.', $request));
+
+        try {
+            $provider->client()->api()->raw()->get('/api/v1/articles/a-1');
+            self::fail('No exception was thrown.');
+        } catch (TransportException $exception) {
+            self::assertFalse($exception->isNetworkFailure());
+        }
+
+        self::assertCount(1, $provider->siteRequests());
     }
 
     public function testAClientFailureThatIsNeitherIsNotRetried(): void
