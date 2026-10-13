@@ -141,7 +141,8 @@ final readonly class SiteApi
      *
      * @param array<string, mixed> $body
      * @param string|null $idempotencyKey a key for this one operation, 1 to 255 printable ASCII characters
-     *                                    (spaces included); a fresh UUID when none is given. Never reuse one
+     *                                    (spaces included); a fresh UUID when none is given. Pass the raw
+     *                                    key: the client quotes it as an RFC 9651 String. Never reuse one
      *                                    for a different request.
      */
     public function postIdempotent(string $path, #[\SensitiveParameter] array $body = [], ?string $idempotencyKey = null, ?string $requestId = null): ApiResponse
