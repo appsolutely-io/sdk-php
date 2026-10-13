@@ -7,6 +7,8 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-13
+
 ### Added
 
 - `Client` and `Config`, built on PSR-18/17 HTTP, PSR-16 cache, PSR-20 clock and PSR-3 logger interfaces, with an HTTP client discovered when none is given. `Config` describes one site: its `baseUrl` (its origin, held to the issuer's HTTPS rules and refused with a path), its `issuer` and the OAuth client that signs its members in, which are optional (`Config::$issuer`, `Config::$clientId` and `Config::clientSecret()` are nullable): the sign-in client is needed only to sign members in and the issuer only for that or the backend client, `Client::oidc()` throws an `InvalidConfigException` when the Config holds none, the sign-in id and secret go together, and either client without an issuer is refused; and an optional `apiToken`, the administrator token for server-side calls, which is shown as `[redacted]` and refused when it holds a space or a control character.
