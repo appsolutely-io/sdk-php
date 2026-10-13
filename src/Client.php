@@ -27,7 +27,9 @@ use Psr\Log\NullLogger;
  */
 final readonly class Client
 {
-    private OpenIdClient $oidc;
+    private ?OpenIdClient $oidc;
+
+    private bool $signsMembersIn;
 
     private SiteApi $site;
 
@@ -60,7 +62,10 @@ final readonly class Client
             $logger->warning('No PSR-16 cache was passed in Config, so a memory cache that lives as long as this process is used: the discovery document, the signing keys and the backend token are fetched again in every process (under PHP-FPM, every request). Pass your application\'s shared cache.');
         }
 
-        $this->oidc = new OpenIdClient(
+        // Built whenever there is an issuer: the backend asks its token
+        // endpoint too. Handed out by oidc() only with a member client.
+        $issuer = $config->issuer;
+        $this->oidc = $issuer === null ? null : new OpenIdClient(
             $config,
             $http,
             $cache,
@@ -69,13 +74,14 @@ final readonly class Client
         );
         $this->site = new SiteApi($http, $config->baseUrl, $config->apiToken(), $clock, $config->retryPolicy, $logger);
         $this->api = new AdministratorApi($this->site);
+        $this->signsMembersIn = $config->clientId !== null;
 
         $backendSecret = $config->backendClientSecret();
-        $this->backend = $config->backendClientId === null || $backendSecret === null ? null : new BackendApi($this->site->withBackendToken(new BackendToken(
+        $this->backend = $config->backendClientId === null || $backendSecret === null || $this->oidc === null || $issuer === null ? null : new BackendApi($this->site->withBackendToken(new BackendToken(
             $this->oidc,
             $cache,
             $clock,
-            $config->issuer,
+            $issuer,
             $config->backendClientId,
             $backendSecret,
             $config->backendScopes,
@@ -103,8 +109,16 @@ final readonly class Client
         throw new NotSerializableException('A Client holds the client secret and the administrator token and is not unserialized; build it again from its Config.');
     }
 
+    /**
+     * Signing members in; the Config must hold the issuer and the member
+     * sign-in client's id and secret.
+     */
     public function oidc(): OpenIdClient
     {
+        if (!$this->signsMembersIn || $this->oidc === null) {
+            throw new InvalidConfigException('The Config holds no member sign-in client (issuer, client id and client secret), so there is no member sign-in to use.');
+        }
+
         return $this->oidc;
     }
 

@@ -9,6 +9,7 @@ use Appsolutely\Sdk\Exception\AuthorizationResponseException;
 use Appsolutely\Sdk\Exception\DiscoveryException;
 use Appsolutely\Sdk\Exception\IdTokenException;
 use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
+use Appsolutely\Sdk\Exception\InvalidConfigException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Exception\TransportException;
@@ -51,6 +52,8 @@ final readonly class OpenIdClient
 
     private Discovery $discovery;
 
+    private string $issuer;
+
     /**
      * @internal obtain it from Client::oidc(), which supplies the transport, cache and clock
      */
@@ -61,7 +64,8 @@ final readonly class OpenIdClient
         private ClockInterface $clock,
         private LoggerInterface $logger,
     ) {
-        $this->discovery = new Discovery($http, $cache, $config->issuer);
+        $this->issuer = $config->issuer ?? throw new InvalidConfigException('The Config holds no issuer.');
+        $this->discovery = new Discovery($http, $cache, $this->issuer);
     }
 
     /**
@@ -123,7 +127,7 @@ final readonly class OpenIdClient
 
         $query = http_build_query([
             'response_type' => 'code',
-            'client_id' => $this->config->clientId,
+            'client_id' => $this->clientId(),
             'redirect_uri' => $redirectUri,
             'scope' => implode(' ', $scopes),
             'state' => $state,
@@ -274,8 +278,8 @@ final readonly class OpenIdClient
         return (new IdTokenVerifier(
             new KeySet($this->http, $this->cache, $this->clock, $this->logger, $metadata->jwksUri),
             $this->clock,
-            $this->config->issuer,
-            $this->config->clientId,
+            $this->issuer,
+            $this->clientId(),
             $metadata->idTokenSigningAlgValuesSupported,
             $this->config->clockLeeway,
         ))->verify($idToken, $nonce, $accessToken, $maxAge);
@@ -324,7 +328,7 @@ final readonly class OpenIdClient
             $fields['token_type_hint'] = $tokenTypeHint;
         }
 
-        [$fields, $headers] = $this->authenticate($fields, $this->config->clientId, $this->config->clientSecret(), $this->config->clientAuthentication);
+        [$fields, $headers] = $this->authenticate($fields, $this->clientId(), $this->clientSecret(), $this->config->clientAuthentication);
         $response = $this->http->postForm($endpoint, $fields, $headers);
         $status = $response->getStatusCode();
 
@@ -341,7 +345,7 @@ final readonly class OpenIdClient
     private function tokenRequest(#[\SensitiveParameter] array $fields, ?string $clientId = null, #[\SensitiveParameter] ?string $clientSecret = null, ?ClientAuthentication $authentication = null, bool $retryable = false): array
     {
         $endpoint = $this->metadata()->tokenEndpoint;
-        [$fields, $headers] = $this->authenticate($fields, $clientId ?? $this->config->clientId, $clientSecret ?? $this->config->clientSecret(), $authentication ?? $this->config->clientAuthentication);
+        [$fields, $headers] = $this->authenticate($fields, $clientId ?? $this->clientId(), $clientSecret ?? $this->clientSecret(), $authentication ?? $this->config->clientAuthentication);
         $send = fn(): ResponseInterface => $this->http->postForm($endpoint, $fields, $headers);
 
         return $this->successfulJson($retryable ? $this->sendRetrying($send, $endpoint) : $send(), $endpoint);
@@ -394,6 +398,20 @@ final readonly class OpenIdClient
             $this->config->retryPolicy->maxRetries,
         ));
         $this->config->retryPolicy->sleeper->sleep($delay);
+    }
+
+    /**
+     * The member sign-in client's id; Client::oidc() hands this out only
+     * when the Config holds one.
+     */
+    private function clientId(): string
+    {
+        return $this->config->clientId ?? throw new InvalidConfigException('The Config holds no member sign-in client id.');
+    }
+
+    private function clientSecret(): string
+    {
+        return $this->config->clientSecret() ?? throw new InvalidConfigException('The Config holds no member sign-in client secret.');
     }
 
     /**

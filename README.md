@@ -75,6 +75,8 @@ $client = new Client(new Config(
 
 The administrator token is a long-lived credential issued on the site's API-token screen; it is sent on the calls your server makes on its own behalf. Leave it out when your server only acts for signed-in members. Keep it, like the client secret, out of version control.
 
+Only `baseUrl` is always required. The member sign-in client (`clientId` with `clientSecret`) is needed only to sign members in, and the `issuer` only for that or for the backend client: a backend-only integration gives `issuer` and the backend client, an administrator-only one just `apiToken`. `Client::oidc()` throws an `InvalidConfigException` when the Config holds no sign-in client.
+
 The backend client is the machine client registered for your app's backend, apart from the client that signs members in; `Client::backend()` calls as it (see [The site's backend](#the-sites-backend)). `backendScopes` narrows what its token may do; without it, the token carries every scope the client is registered with. `backendClientAuthentication` says how that client authenticates to the token endpoint when it differs from the sign-in client's `clientAuthentication`.
 
 `Config` also takes a PSR-18 client and PSR-17 factories, a PSR-20 clock, a PSR-3 logger, the token-endpoint authentication (`client_secret_basic` by default, or `ClientAuthentication::ClientSecretPost`), the clock leeway for ID tokens (60 seconds by default) and the retry policy for Site API calls (see [Writes that must happen once](#writes-that-must-happen-once)).

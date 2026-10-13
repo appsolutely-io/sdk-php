@@ -35,6 +35,10 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging through the PSR-3 logger: each Site API attempt at `debug` (method, path, status, request id, attempt), giving up on a network failure, a 5xx or a refusal a retry could have passed at `warning`, and a failed backend token request at `warning`; headers, bodies, query strings, tokens and keys are never logged.
 - A `Client` built without a PSR-16 cache logs one warning that its memory cache refetches discovery, the signing keys and the backend token in every process.
 
+### Changed
+
+- **Breaking for code that reads them:** `Config::$issuer`, `Config::$clientId` and `Config::clientSecret()` are nullable. The member sign-in client is needed only to sign members in and the issuer only for that or the backend client, so a backend-only or administrator-only integration no longer invents sign-in settings; `Client::oidc()` throws an `InvalidConfigException` when the Config holds none. The sign-in id and secret go together, and either client without an issuer is refused. Existing constructor calls, named or positional, keep working.
+
 ### Security
 
 - The issuer and every discovered endpoint must use HTTPS (plain HTTP only on `localhost`, `127.0.0.1` or `[::1]`) and must not contain user info, a backslash, whitespace or a control character, which URL parsers read differently.
