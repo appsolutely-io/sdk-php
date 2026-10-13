@@ -10,6 +10,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `ReferralTerms::TYPE_CREDIT` and `ReferralTerms::TYPE_CASHBACK`, now that the document names a referral's reward types as a closed set.
+- `Testing\FakeClient` challenges an arranged `insufficient-scope` `403` as the site does, with `WWW-Authenticate: Bearer error="insufficient_scope", scope="…"` naming its `required` scope, so `ForbiddenException::$challenge` reads in a test what it reads against a site.
 
 ### Changed
 

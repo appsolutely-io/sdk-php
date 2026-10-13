@@ -133,7 +133,8 @@ final class FakeClient
     /**
      * Arranges the next answer to an operation as a refusal: the RFC 9457
      * problem the site would send. A 401 carries the bearer challenge the
-     * site sends unless `$headers` gives another.
+     * site sends, and an `insufficient-scope` 403 the one naming its
+     * `required` scope, unless `$headers` gives another.
      *
      * @param string $type the problem type, such as `validation-failed`, or a full type URI
      * @param string $title the problem's short summary, such as `The request did not pass validation.`
@@ -219,6 +220,13 @@ final class FakeClient
         // an invalid token when one was.
         if ($answer['status'] === 401) {
             $response = $response->withHeader(Header::WWW_AUTHENTICATE, $authorization === '' ? 'Bearer' : 'Bearer error="invalid_token"');
+        }
+        // A missing scope is challenged as well, naming the scope (RFC 6750
+        // section 3.1); no other 403 is.
+        $problem = $answer['problem'] ? ($answer['body'] ?? []) : [];
+        $required = $problem['required'] ?? null;
+        if ($answer['status'] === 403 && ($problem['type'] ?? null) === ApiException::TYPE_BASE . 'insufficient-scope' && is_string($required)) {
+            $response = $response->withHeader(Header::WWW_AUTHENTICATE, sprintf('Bearer error="insufficient_scope", scope="%s"', $required));
         }
         foreach ($answer['headers'] as $name => $value) {
             $response = $response->withHeader($name, $value);

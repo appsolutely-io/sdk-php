@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Testing;
 
 use Appsolutely\Sdk\Api\Operation;
+use Appsolutely\Sdk\Exception\ForbiddenException;
 use Appsolutely\Sdk\Exception\NotFoundException;
 use Appsolutely\Sdk\Exception\RateLimitedException;
 use Appsolutely\Sdk\Exception\UnarrangedCallException;
@@ -173,6 +174,27 @@ final class FakeClientTest extends TestCase
             self::fail('The refusal was not thrown.');
         } catch (UnauthenticatedException $exception) {
             self::assertSame('Bearer', $exception->challenge);
+        }
+    }
+
+    public function testAMissingScopeCarriesTheChallengeNamingItAndOtherForbiddensNone(): void
+    {
+        $fake = (new FakeClient())
+            ->refuse(Operation::GetOrder, 'insufficient-scope', 403, 'Forbidden.', members: ['required' => 'orders:read', 'granted' => ['articles:read']])
+            ->refuse(Operation::GetApiVersion, 'forbidden', 403, 'Forbidden.');
+
+        try {
+            $fake->api()->orders()->get('ord-1');
+            self::fail('The refusal was not thrown.');
+        } catch (ForbiddenException $exception) {
+            self::assertSame('Bearer error="insufficient_scope", scope="orders:read"', $exception->challenge);
+        }
+
+        try {
+            $fake->api()->version();
+            self::fail('The refusal was not thrown.');
+        } catch (ForbiddenException $exception) {
+            self::assertNull($exception->challenge);
         }
     }
 
