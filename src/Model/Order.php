@@ -26,7 +26,6 @@ final readonly class Order implements SchemaModel
      * @param string $currency ISO 4217
      * @param bool $taxIncluded whether `$taxAmount` is already part of the other amounts, rather than added to them to reach the total
      * @param string $totalShown what the buyer was told `$totalAmount` is: `final` for the whole charge, `before_provider_tax` for an amount a payment provider then added its own tax to, `priced_by_provider` for a price sent to a provider that ran its own checkout; only on `final` is it what the buyer paid
-     * @param DateTimeImmutable|null $updatedAt null when the site holds no update time for the order
      * @param list<OrderLine> $items
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
@@ -49,7 +48,7 @@ final readonly class Order implements SchemaModel
         public string $totalShown,
         public ?string $note,
         public ?DateTimeImmutable $createdAt,
-        public ?DateTimeImmutable $updatedAt,
+        public DateTimeImmutable $updatedAt,
         public array $items,
         public array $extra = [],
     ) {}
@@ -76,7 +75,7 @@ final readonly class Order implements SchemaModel
             totalShown: $json->string('total_shown'),
             note: $json->nullableString('note'),
             createdAt: $json->nullableTime('created_at'),
-            updatedAt: $json->nullableTime('updated_at'),
+            updatedAt: $json->time('updated_at'),
             items: array_map(OrderLine::from(...), $json->objects('items')),
             extra: $json->extra(),
         );

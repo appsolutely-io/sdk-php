@@ -254,50 +254,6 @@ final class ResourceContractTest extends TestCase
     }
 
     /**
-     * Fields the pinned document declares required and never null that the
-     * site may still send as null, where the model reads them as nullable,
-     * so an answer carrying one is read rather than refused. Each applies
-     * only while the document still declares the field so; one it comes to
-     * declare nullable fails until the entry is dropped.
-     *
-     * The site writes an order's `updated_at` and a referral reward's
-     * `earned_at` from record timestamps it may hold empty.
-     *
-     * An entry is dropped when the server documents the field as nullable
-     * (this test then fails) or always sends it. Only the document is
-     * pinned, not the site's source, so the second cannot be detected here:
-     * the check runs one way, and a server that stops sending null leaves
-     * the entry in place until it is dropped by hand.
-     */
-    private const array NULL_AS_THE_SITE_SENDS = [
-        'Order' => ['updated_at'],
-        'ReferralReward' => ['earned_at'],
-    ];
-
-    /**
-     * @return iterable<string, array{string, string}>
-     */
-    public static function siteNulls(): iterable
-    {
-        foreach (self::NULL_AS_THE_SITE_SENDS as $schema => $fields) {
-            foreach ($fields as $field) {
-                yield $schema . '.' . $field => [$schema, $field];
-            }
-        }
-    }
-
-    #[DataProvider('siteNulls')]
-    public function testEachFieldReadAsNullableAsTheSiteSendsItIsStillDeclaredRequired(string $schema, string $field): void
-    {
-        $declared = self::declaredType(Document::map(Document::map(Document::schema($schema)['properties'] ?? null)[$field] ?? null), $schema . '.' . $field);
-        self::assertTrue(!$declared['nullable'] && in_array($field, Document::list(Document::schema($schema)['required'] ?? []), true), sprintf(
-            'The pinned document now lets %s.%s be null or missing: the server documents what the model reads, so drop it from NULL_AS_THE_SITE_SENDS.',
-            $schema,
-            $field,
-        ));
-    }
-
-    /**
      * @return iterable<string, array{class-string, string}>
      */
     public static function models(): iterable
@@ -1033,10 +989,6 @@ final class ResourceContractTest extends TestCase
             }
             $declaration = Document::map(Document::map(self::nonNull(Document::resolve($parent))['properties'] ?? null)[$name] ?? null);
             $declared = self::declaredType($declaration, $schema . '.' . $path);
-            $owner = str_contains($path, '.') ? self::refOf($parent) : $schema;
-            if ($owner !== null && in_array($name, self::NULL_AS_THE_SITE_SENDS[$owner] ?? [], true)) {
-                $declared['nullable'] = true;
-            }
 
             foreach (array_unique($used) as $accessor) {
                 if ($accessor === 'any') {
@@ -1065,23 +1017,6 @@ final class ResourceContractTest extends TestCase
         }
 
         self::assertSame([], $mismatches, implode("\n", $mismatches));
-    }
-
-    /**
-     * The name of the component a node is, or is `oneOf` with null.
-     *
-     * @param array<array-key, mixed> $node
-     */
-    private static function refOf(array $node): ?string
-    {
-        foreach ([$node, ...Document::list($node['oneOf'] ?? $node['anyOf'] ?? [])] as $alternative) {
-            $name = Document::refName(Document::map($alternative));
-            if ($name !== null) {
-                return $name;
-            }
-        }
-
-        return null;
     }
 
     /**

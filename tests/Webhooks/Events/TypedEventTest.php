@@ -317,7 +317,7 @@ final class TypedEventTest extends TestCase
         self::assertSame(1900, $order->totalAmount);
         self::assertSame('final', $order->totalShown);
         self::assertSame('2026-10-08T11:58:40+00:00', $order->createdAt?->format(DATE_RFC3339));
-        self::assertSame('2026-10-08T11:59:58+00:00', $order->updatedAt?->format(DATE_RFC3339));
+        self::assertSame('2026-10-08T11:59:58+00:00', $order->updatedAt->format(DATE_RFC3339));
         self::assertCount(1, $order->items);
         $line = $order->items[0];
         self::assertSame('1c3e5a7b-9d1f-4b3c-8e5a-7c9e1b3d5f7a', $line->id);

@@ -18,6 +18,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING:** `Model\SubscriptionStillBilling` is renamed `Model\SubscriptionSource`, the document's name for it, and names who bills it with `BILLED_BY_SITE`, `BILLED_BY_APP_STORE` and `BILLED_BY_GOOGLE_PLAY`. `StorePurchaseIntent::$mayStillBill` is a list of `SubscriptionSource` rather than of strings: the site always sent objects there, so an intent naming a subscription still billed elsewhere was refused.
 - **BREAKING:** `me()->subscriptions()->resume($id, $returnUrl)` sends the address the site brings the member back to after confirming, which the site requires, and answers a `KeyedResult<MemberSubscriptionChange>`; `Model\MemberSubscriptionConfirmation` is removed.
 - **BREAKING:** `me()->subscriptions()->change()` takes an optional `$returnUrl` before `$idempotencyKey`, so a key passed by position is now passed by name, and reads a change handed to the member to confirm, which the site answers `202`.
+- **BREAKING:** `Order::$updatedAt` and `ReferralReward::$earnedAt` are never null, as the document has always declared them: the site now stamps both on every answer and refuses to send one without, so an answer lacking either is an `UnexpectedResponseException` rather than a null to check.
 
 ## [0.1.0] - 2026-10-13
 
