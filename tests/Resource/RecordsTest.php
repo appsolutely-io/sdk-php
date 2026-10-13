@@ -86,6 +86,15 @@ final class RecordsTest extends TestCase
         self::assertNull($orders->get('ord-2')->status);
     }
 
+    public function testAnOrderAwaitingPaymentNamesWhereToFinishPaying(): void
+    {
+        $site = (new SiteRecorder())->json(SiteFixture::record('order', ['payment_url' => 'https://shop.example/orders/SO-1/pay']))->json(SiteFixture::record('order'));
+        $orders = $site->provider->client()->api()->orders();
+
+        self::assertSame('https://shop.example/orders/SO-1/pay', $orders->get('ord-1')->paymentUrl);
+        self::assertNull($orders->get('ord-2')->paymentUrl);
+    }
+
     public function testAnOrderWithoutAnUpdateTimeIsRefused(): void
     {
         $site = (new SiteRecorder())->json(SiteFixture::record('order', ['updated_at' => null]));

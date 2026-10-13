@@ -12,6 +12,10 @@ final readonly class StorePurchaseTransaction implements SchemaModel
     /** @internal */
     public const string SCHEMA = 'StorePurchaseTransaction';
 
+    public const string OUTCOME_RECORDED = 'recorded';
+
+    public const string OUTCOME_UNCLAIMED = 'unclaimed';
+
     public const string KIND_SUBSCRIPTION = 'subscription';
 
     public const string KIND_ONE_TIME = 'one_time';
@@ -23,7 +27,7 @@ final readonly class StorePurchaseTransaction implements SchemaModel
     public const string ENVIRONMENT_SANDBOX = 'sandbox';
 
     /**
-     * @param string $outcome what the site did with the purchase
+     * @param string $outcome what the site did with the purchase, one of the OUTCOME_ constants
      * @param string|null $subscriptionId the subscription it started or renewed
      * @param string|null $status that subscription's status
      * @param string|null $kind one of the KIND_ constants
