@@ -322,7 +322,7 @@ final readonly class SiteApi
     {
         $asked = match (true) {
             $exception->status === 429 => $exception->retryAfter ?? $exception->rateLimit->exhausted()?->reset,
-            in_array($exception->status, [502, 503, 504], true) => $exception->retryAfter,
+            in_array($exception->status, RetryPolicy::RETRIED_STATUSES, true) => $exception->retryAfter,
             $exception->status === 500 && !$keyed => $exception->retryAfter,
             $exception->status === 409 && $keyed && $exception->hasType('idempotency-key-in-use') => $exception->retryAfter,
             default => false,

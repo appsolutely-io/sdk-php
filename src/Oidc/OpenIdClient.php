@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Oidc;
 
+use Appsolutely\Sdk\Api\RetryPolicy;
 use Appsolutely\Sdk\Config;
 use Appsolutely\Sdk\Exception\AuthorizationResponseException;
 use Appsolutely\Sdk\Exception\DiscoveryException;
@@ -46,9 +47,6 @@ final readonly class OpenIdClient
         'response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'nonce', 'code_challenge', 'code_challenge_method', 'max_age',
         'request', 'request_uri', 'response_mode', 'claims',
     ];
-
-    /** Answers a repeated machine-token request can change. */
-    private const array RETRIED_STATUSES = [429, 502, 503, 504];
 
     private Discovery $discovery;
 
@@ -376,7 +374,7 @@ final readonly class OpenIdClient
             }
 
             $status = $response->getStatusCode();
-            if (!in_array($status, self::RETRIED_STATUSES, true)) {
+            if (!in_array($status, RetryPolicy::RETRIED_STATUSES, true)) {
                 return $response;
             }
             $asked = $response->hasHeader(Header::RETRY_AFTER) ? RetryAfter::seconds($response->getHeaderLine(Header::RETRY_AFTER), $this->clock->now()) : null;

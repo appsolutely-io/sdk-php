@@ -24,6 +24,13 @@ use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
  */
 final readonly class RetryPolicy
 {
+    /**
+     * The statuses of a passing refusal, retried on every call that may be
+     * repeated: too many requests, and a gateway or the site failing before
+     * an answer.
+     */
+    public const array RETRIED_STATUSES = [429, 502, 503, 504];
+
     public const int MAX_RETRIES = 10;
     public const int MAX_DELAY = 300;
 
