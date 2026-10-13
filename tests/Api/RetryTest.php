@@ -501,8 +501,41 @@ final class RetryTest extends TestCase
      */
     public static function curlTransferFailures(): iterable
     {
-        yield 'failure sending' => [CURLE_SEND_ERROR];
-        yield 'failure receiving' => [CURLE_RECV_ERROR];
+        yield 'failure sending' => [55];
+        yield 'failure receiving' => [56];
+        yield 'HTTP/2 stream reset' => [92];
+    }
+
+    /**
+     * Every other cURL error Guzzle reports without a response fails the
+     * same way on the next attempt: a certificate, a CA file, a client
+     * certificate, a proxy that does not resolve, a protocol or a URL.
+     *
+     * @return iterable<string, array{int}>
+     */
+    public static function curlStandingFailures(): iterable
+    {
+        yield 'certificate not trusted' => [60];
+        yield 'CA file unreadable' => [77];
+        yield 'client certificate' => [58];
+        yield 'proxy not resolved' => [5];
+        yield 'unsupported protocol' => [1];
+        yield 'malformed URL' => [3];
+    }
+
+    #[DataProvider('curlStandingFailures')]
+    public function testAGuzzleFailureThatWouldRecurIsNotRetried(int $errno): void
+    {
+        $provider = self::answering(static fn(FakeProvider $provider, RequestInterface $request): never => throw new GuzzleRequestException('cURL error ' . $errno, $request, null, null, ['errno' => $errno]));
+
+        try {
+            $provider->client()->api()->raw()->get('/api/v1/articles/a-1');
+            self::fail('No exception was thrown.');
+        } catch (TransportException $exception) {
+            self::assertFalse($exception->isNetworkFailure());
+        }
+
+        self::assertCount(1, $provider->siteRequests());
     }
 
     #[DataProvider('curlTransferFailures')]
@@ -520,9 +553,9 @@ final class RetryTest extends TestCase
     }
 
     /**
-     * Guzzle refuses some requests itself before sending them (a URL
-     * without a scheme, a malformed proxy): those carry no cURL error and
-     * fail the same way every time.
+     * Guzzle refuses some requests itself before cURL runs (a URL without
+     * a scheme, a malformed proxy): those carry no cURL error and fail the
+     * same way every time.
      */
     public function testARequestGuzzleRefusesBeforeSendingIsNotRetried(): void
     {

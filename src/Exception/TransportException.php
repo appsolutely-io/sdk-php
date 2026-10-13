@@ -16,16 +16,26 @@ use RuntimeException;
 final class TransportException extends RuntimeException implements AppsolutelyException
 {
     /**
+     * The cURL errors that mean the connection broke while the request was
+     * in transit, which Guzzle reports as a RequestException rather than a
+     * ConnectException: a failure sending (55), a failure receiving (56)
+     * and an HTTP/2 stream reset (92). Every other cURL error it reports
+     * that way (a certificate, a CA file, a proxy, a protocol, a URL) fails
+     * the same way on the next attempt.
+     */
+    private const array CURL_IN_TRANSIT = [55, 56, 92];
+
+    /**
      * Whether the network failed, the one case a retry can change; a
-     * request the client refused fails the same way every time.
+     * request the client refused, or one that fails the same way each
+     * time, is not.
      *
      * The network failed when the HTTP client says so (PSR-18's
-     * NetworkExceptionInterface), and when Guzzle's cURL transfer failed
-     * before any answer arrived: Guzzle reports a connection lost after the
-     * request went out (cURL errors 55 and 56, say) as a RequestException
-     * without a response, with the cURL error in its handler context. One
-     * Guzzle refused before sending carries no cURL error. Guzzle need not
-     * be installed: without it the instanceof is simply false.
+     * NetworkExceptionInterface), and when Guzzle's cURL transfer broke in
+     * transit before any answer arrived: Guzzle reports that as a
+     * RequestException without a response, with the cURL error in its
+     * handler context. Guzzle need not be installed: without it the
+     * instanceof is simply false.
      */
     public function isNetworkFailure(): bool
     {
@@ -36,7 +46,6 @@ final class TransportException extends RuntimeException implements AppsolutelyEx
 
         return $previous instanceof GuzzleRequestException
             && $previous->getResponse() === null
-            && is_int($previous->getHandlerContext()['errno'] ?? null)
-            && $previous->getHandlerContext()['errno'] !== 0;
+            && in_array($previous->getHandlerContext()['errno'] ?? null, self::CURL_IN_TRANSIT, true);
     }
 }
