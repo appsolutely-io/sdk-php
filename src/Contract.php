@@ -21,10 +21,11 @@ final class Contract
     public const string REVISION = 'cdbebbb9331f5ba57ef8c1617b2208634dfd4240';
 
     /**
-     * REVISION as `git describe --tags` names it in the site software: the
-     * release tag when the commit is one (`v0.24.0`), otherwise the release
-     * before it, the commits since and the commit. Written by `composer
-     * pin-contract` with REVISION; never edit it by hand.
+     * REVISION's release in the site software: its version tag (`v0.24.0`),
+     * otherwise the version tag before it, the commits since and the full
+     * commit, as `git describe` names it, or `unreleased` when no version
+     * tag precedes it. Written by `composer pin-contract` with REVISION;
+     * never edit it by hand.
      */
     public const string RELEASE = 'v0.24.0';
 

@@ -9,8 +9,9 @@ declare(strict_types=1);
  *
  * copies `docs/api/openapi.yaml` as it is at <ref> (a commit, a branch or a
  * tag) into tests/Contract/openapi.yaml and writes the commit <ref> names into
- * Contract::REVISION, and that commit as `git describe --tags` names it (its
- * release tag, when it is one) into Contract::RELEASE. Both files are written by the same run so they cannot name
+ * Contract::REVISION, and that commit's release into Contract::RELEASE: its
+ * version tag (`v*`), or the version tag before it, the commits since and
+ * the full commit, or `unreleased` when no version tag precedes it. Both files are written by the same run so they cannot name
  * different commits: both are written to temporary files first and only then
  * renamed into place, and the originals are backed up first and put back
  * when a rename fails, so nothing is changed when either cannot be read or
@@ -29,6 +30,8 @@ const DOCUMENT_COPY = 'tests/Contract/openapi.yaml';
 const PINNING = '.pinning';
 const UNPINNED = '.unpinned';
 const REVISION_LINE = '/public const string REVISION = \'[0-9a-f]*\';/';
+/** What Contract::RELEASE holds for a commit no version tag precedes. */
+const UNRELEASED = 'unreleased';
 const RELEASE_LINE = '/public const string RELEASE = \'[A-Za-z0-9._+-]*\';/';
 
 function fail(string $message): never
@@ -251,10 +254,17 @@ if ($exitCode !== 0 || preg_match('/^[0-9a-f]{40}$/D', $commit) !== 1) {
     fail(sprintf('"%s" names no commit in %s. %s', $ref, $checkout, trim($error)));
 }
 
-[$exitCode, $release, $error] = git($checkout, ['describe', '--tags', '--always', $commit]);
-$release = trim($release);
-if ($exitCode !== 0 || preg_match('/^[A-Za-z0-9._+-]+$/D', $release) !== 1) {
-    fail(sprintf('git could not describe %s in %s. %s', $commit, $checkout, trim($error)));
+[$exitCode, $tags] = git($checkout, ['tag', '--merged', $commit, '--list', 'v*']);
+if ($exitCode !== 0) {
+    fail(sprintf('git could not list the version tags of %s in %s.', $commit, $checkout));
+}
+$release = UNRELEASED;
+if (trim($tags) !== '') {
+    [$exitCode, $release, $error] = git($checkout, ['describe', '--tags', '--match', 'v*', '--abbrev=40', $commit]);
+    $release = trim($release);
+    if ($exitCode !== 0 || preg_match('/^v[A-Za-z0-9._+]*(-[0-9]+-g[0-9a-f]{40})?$/D', $release) !== 1) {
+        fail(sprintf('git could not describe %s in %s by its version tags. %s', $commit, $checkout, trim($error)));
+    }
 }
 
 [$exitCode, $document, $error] = git($checkout, ['show', $commit . ':' . DOCUMENT]);

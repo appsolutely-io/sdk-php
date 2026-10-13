@@ -99,6 +99,34 @@ final class PinContractTest extends TestCase
         );
     }
 
+    /**
+     * Only a version tag names a release: another tag on the commit is
+     * passed over, and the full commit hash follows the release before it.
+     */
+    public function testATagThatIsNoVersionIsNotTakenForARelease(): void
+    {
+        $this->commitDocument(self::DOCUMENT);
+        $this->git('tag', 'v0.19.0');
+        $second = $this->commitDocument(str_replace('v1', 'v1-changed', self::DOCUMENT));
+        $this->git('tag', 'deployed');
+
+        [$exitCode, $output] = $this->pin('deployed');
+
+        self::assertSame(0, $exitCode, $output);
+        self::assertStringContainsString("public const string RELEASE = 'v0.19.0-1-g" . $second . "';", (string) file_get_contents($this->package(self::CONTRACT_FILE)));
+    }
+
+    public function testACommitWithNoReleaseBeforeItIsRecordedAsUnreleased(): void
+    {
+        $this->commitDocument(self::DOCUMENT);
+        $this->git('tag', 'deployed');
+
+        [$exitCode, $output] = $this->pin('main');
+
+        self::assertSame(0, $exitCode, $output);
+        self::assertStringContainsString("public const string RELEASE = 'unreleased';", (string) file_get_contents($this->package(self::CONTRACT_FILE)));
+    }
+
     public function testARefWithoutTheDocumentChangesNothing(): void
     {
         file_put_contents($this->site('README.md'), "site\n");
