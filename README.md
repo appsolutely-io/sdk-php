@@ -81,7 +81,7 @@ The backend client is the machine client registered for your app's backend, apar
 
 ### The cache
 
-In production, pass your application's shared PSR-16 cache (Redis, Memcached, APCu or your framework's cache). Without one, the client falls back to a cache in memory that lives as long as the PHP process; under PHP-FPM that is a single request, so every request fetches the discovery document and the signing keys again. The fallback exists so the client works anywhere, not for production.
+In production, pass your application's shared PSR-16 cache (Redis, Memcached, APCu or your framework's cache). Without one, the client falls back to a cache in memory that lives as long as the PHP process; under PHP-FPM that is a single request, so every request fetches the discovery document and the signing keys again. The fallback exists so the client works anywhere, not for production, and each client built on it logs one warning saying so.
 
 ### Timeouts
 

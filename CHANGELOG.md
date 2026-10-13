@@ -33,6 +33,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Contract::REVISION`, the commit of the site software whose API document the client is held to, and `composer pin-contract -- <checkout> <ref>`, which copies that document and writes the commit in one run, changing both or neither; a contract test fails when an operation has no method, a method names an operation or path the document lacks or sits on the wrong client, or a model reads a field its schema does not define or skips a required one.
 - Request timeouts: `Config::$timeout` (30 seconds by default) and `Config::$connectTimeout` (10 seconds) are applied to the HTTP client the SDK finds for itself when it is Guzzle or Symfony HttpClient; any other client found is used as it is, with a warning logged. A client passed in keeps its own timeouts.
 - Logging through the PSR-3 logger: each Site API attempt at `debug` (method, path, status, request id, attempt), giving up on a network failure, a 5xx or a refusal a retry could have passed at `warning`, and a failed backend token request at `warning`; headers, bodies, query strings, tokens and keys are never logged.
+- A `Client` built without a PSR-16 cache logs one warning that its memory cache refetches discovery, the signing keys and the backend token in every process.
 
 ### Security
 

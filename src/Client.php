@@ -54,7 +54,11 @@ final readonly class Client
             );
         }
 
-        $cache = $config->cache ?? new InMemoryCache($clock);
+        $cache = $config->cache;
+        if ($cache === null) {
+            $cache = new InMemoryCache($clock);
+            $logger->warning('No PSR-16 cache was passed in Config, so a memory cache that lives as long as this process is used: the discovery document, the signing keys and the backend token are fetched again in every process (under PHP-FPM, every request). Pass your application\'s shared cache.');
+        }
 
         $this->oidc = new OpenIdClient(
             $config,
