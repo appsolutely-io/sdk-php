@@ -21,17 +21,32 @@ final class ProblemTypeSlugsTest extends TestCase
 
     public function testEverySlugTheClientBranchesOnIsInTheDocument(): void
     {
-        $document = (string) file_get_contents(self::DOCUMENT);
+        $named = self::documentedSlugs();
         $slugs = self::branchedOnSlugs();
 
-        // Guards the scan itself: the client branches on at least these.
+        // Guards the scans themselves: the client branches on at least
+        // these, and a slug is read whole, so the start of one is not one.
         self::assertContains('idempotency-key-in-use', $slugs);
         self::assertContains('invalid-token', $slugs);
         self::assertContains('validation-failed', $slugs);
+        self::assertContains('idempotency-key-in-use', $named);
+        self::assertNotContains('idempotency-key', $named);
 
         foreach ($slugs as $slug) {
-            self::assertStringContainsString('https://appsolutely.io/problems/' . $slug, $document, sprintf('The client branches on the problem type "%s", which the pinned document never names.', $slug));
+            self::assertContains($slug, $named, sprintf('The client branches on the problem type "%s", which the pinned document never names.', $slug));
         }
+    }
+
+    /**
+     * Every slug the document names, each read to its end.
+     *
+     * @return list<string>
+     */
+    private static function documentedSlugs(): array
+    {
+        preg_match_all('~https://appsolutely\.io/problems/([a-z0-9-]+)(?![a-z0-9-])~', (string) file_get_contents(self::DOCUMENT), $matches);
+
+        return array_values(array_unique($matches[1]));
     }
 
     /**
