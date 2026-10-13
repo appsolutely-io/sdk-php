@@ -79,7 +79,7 @@
         "analyse": "Run PHPStan at level max with strict rules.",
         "cs": "Check coding style (PER-CS 3.0) without changing files.",
         "cs:fix": "Fix coding style (PER-CS 3.0) in place.",
-        "pin-contract": "Copy the Site API document from a checkout of the site software at a ref (composer pin-contract -- <checkout> <ref>) and record its commit in Contract::REVISION.",
+        "pin-contract": "Copy the Site API document from a checkout of the site software at a ref (composer pin-contract -- <checkout> <ref>) and record its commit in Contract::REVISION and its release in Contract::RELEASE.",
         "check": "Validate composer.json, then run cs, analyse and test."
     },
     "minimum-stability": "stable"
