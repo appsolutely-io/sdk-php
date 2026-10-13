@@ -28,6 +28,6 @@ final readonly class AccountStates
     #[Endpoint(Operation::ListAccountStates)]
     public function list(array $subjects): Page
     {
-        return $this->caller->onlyPage(Operation::ListAccountStates, AccountState::SCHEMA, AccountState::from(...), ['subjects' => $subjects]);
+        return $this->caller->onlyPage(Operation::ListAccountStates, AccountState::class, ['subjects' => $subjects]);
     }
 }

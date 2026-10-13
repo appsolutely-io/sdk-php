@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * An address the member has filed, such as for shipping.
  */
-final readonly class Address
+final readonly class Address implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'UserAddress';

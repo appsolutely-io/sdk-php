@@ -7,7 +7,9 @@ namespace Appsolutely\Sdk\Api;
 use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Model\Fields;
-use Closure;
+use Appsolutely\Sdk\Model\SchemaModel;
+use Appsolutely\Sdk\Model\SyncPull;
+use Appsolutely\Sdk\Model\SyncPush;
 use DateTimeInterface;
 use DateTimeZone;
 use LogicException;
@@ -96,66 +98,65 @@ final readonly class Caller
     /**
      * A list the site answers as one page that never has a cursor, as models.
      *
-     * @template T
+     * @template T of SchemaModel
      *
-     * @param Closure(Fields): T $read
+     * @param class-string<T> $model the model of the page's items, which names their schema
      * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query
      * @param array<string, string> $path
      * @return Page<T>
      */
-    public function onlyPage(Operation $operation, string $schema, Closure $read, #[\SensitiveParameter] array $query = [], array $path = []): Page
+    public function onlyPage(Operation $operation, string $model, #[\SensitiveParameter] array $query = [], array $path = []): Page
     {
         if ($operation->isCursorList()) {
             throw new LogicException(sprintf('%s is a cursor list.', $operation->value));
         }
 
         return Page::fromResponse($this->send($operation, $path, $query), $operation->path($path))
-            ->map(static fn(#[\SensitiveParameter] array $item): mixed => $read(Fields::of($item, $schema)));
+            ->map(static fn(#[\SensitiveParameter] array $item): SchemaModel => $model::from(Fields::of($item, $model::SCHEMA)));
     }
 
     /**
-     * The model an operation answered, read from the schema the document
-     * gives it.
+     * The model an operation answered, read from the schema the model names.
      *
-     * @template T
+     * @template T of SchemaModel
      *
-     * @param Closure(Fields): T $read
+     * @param class-string<T> $model
      * @param array<string, string> $path
      * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query
      * @param array<string, mixed>|null $body
      * @return T
      */
-    public function read(Operation $operation, string $schema, Closure $read, array $path = [], #[\SensitiveParameter] array $query = [], #[\SensitiveParameter] ?array $body = null): mixed
+    public function read(Operation $operation, string $model, array $path = [], #[\SensitiveParameter] array $query = [], #[\SensitiveParameter] ?array $body = null): SchemaModel
     {
-        return $read(Fields::of($this->object($operation, $path, $query, $body), $schema));
+        return $model::from(Fields::of($this->object($operation, $path, $query, $body), $model::SCHEMA));
     }
 
     /**
      * Every item of a cursor list as a model, a page at a time.
      *
-     * @template T
+     * @template T of SchemaModel
      *
-     * @param Closure(Fields): T $read
+     * @param class-string<T> $model the model of the list's items, which names their schema
      * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query the list's filters
      * @param array<string, string> $path
      * @return Paginator<T>
      */
-    public function list(Operation $operation, string $schema, Closure $read, #[\SensitiveParameter] array $query, int $limit, array $path = []): Paginator
+    public function list(Operation $operation, string $model, #[\SensitiveParameter] array $query, int $limit, array $path = []): Paginator
     {
-        return $this->paginate($operation, $path, $query, $limit)->map(static fn(#[\SensitiveParameter] array $item): mixed => $read(Fields::of($item, $schema)));
+        return $this->paginate($operation, $path, $query, $limit)->map(static fn(#[\SensitiveParameter] array $item): SchemaModel => $model::from(Fields::of($item, $model::SCHEMA)));
     }
 
     /**
      * A write sent with an Idempotency-Key, and the model it answered.
      *
-     * @template T
+     * @template T of SchemaModel
      *
-     * @param Closure(Fields): T $read
+     * @param class-string<T> $model
      * @param array<string, string> $path
      * @param array<string, mixed> $body
      * @return KeyedResult<T>
      */
-    public function keyed(Operation $operation, string $schema, Closure $read, array $path, #[\SensitiveParameter] array $body, ?string $idempotencyKey): KeyedResult
+    public function keyed(Operation $operation, string $model, array $path, #[\SensitiveParameter] array $body, ?string $idempotencyKey): KeyedResult
     {
         if (!$operation->takesIdempotencyKey()) {
             throw new LogicException(sprintf('%s takes no Idempotency-Key.', $operation->value));
@@ -164,11 +165,42 @@ final readonly class Caller
         $response = $this->send($operation, $path, [], $body, $idempotencyKey);
 
         return new KeyedResult(
-            $read(Fields::of(self::objectOf($response, $operation), $schema)),
+            $model::from(Fields::of(self::objectOf($response, $operation), $model::SCHEMA)),
             (string) $response->idempotencyKey,
             $response->replayed,
             $response,
         );
+    }
+
+    /**
+     * The changes to one resource since a cursor, its records read as the
+     * record model, from the feed schema that model's schema names.
+     *
+     * @template T of SchemaModel
+     *
+     * @param class-string<T> $record
+     * @return SyncPull<T>
+     */
+    public function pull(Operation $operation, string $record, ?string $cursor, ?int $limit): SyncPull
+    {
+        $json = Fields::of($this->object($operation, [], self::feed($cursor, $limit)), SyncPull::schemaFor($record::SCHEMA));
+
+        return SyncPull::from($json, static fn(#[\SensitiveParameter] Fields $item): SchemaModel => $record::from($item));
+    }
+
+    /**
+     * A batch of offline edits to one resource, each answered with the
+     * record as the record model reads it.
+     *
+     * @template T of SchemaModel
+     *
+     * @param class-string<T> $record
+     * @param list<array<string, mixed>> $mutations
+     * @return SyncPush<T>
+     */
+    public function push(Operation $operation, string $record, #[\SensitiveParameter] array $mutations): SyncPush
+    {
+        return SyncPush::from(Fields::of($this->object($operation, body: ['mutations' => $mutations]), SyncPush::SCHEMA), static fn(#[\SensitiveParameter] Fields $item): SchemaModel => $record::from($item));
     }
 
     /**
@@ -191,7 +223,7 @@ final readonly class Caller
      *
      * @return array{cursor: string|null, limit: int|null}
      */
-    public static function feed(?string $cursor, ?int $limit): array
+    private static function feed(?string $cursor, ?int $limit): array
     {
         if ($limit !== null && $limit < 1) {
             throw new InvalidArgumentValueException(sprintf('A sync pull\'s limit must be at least 1, got %d.', $limit));

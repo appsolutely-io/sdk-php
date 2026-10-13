@@ -51,7 +51,7 @@ final readonly class AdministratorApi
     #[Endpoint(Operation::GetApiVersion)]
     public function version(): ApiVersion
     {
-        return $this->anyone->read(Operation::GetApiVersion, ApiVersion::SCHEMA, ApiVersion::from(...));
+        return $this->anyone->read(Operation::GetApiVersion, ApiVersion::class);
     }
 
     /**

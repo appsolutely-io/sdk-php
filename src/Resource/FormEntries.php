@@ -26,12 +26,12 @@ final readonly class FormEntries
     #[Endpoint(Operation::ListFormEntries)]
     public function list(?string $sort = null, ?string $order = null, int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::ListFormEntries, FormEntry::SCHEMA, FormEntry::from(...), ['sort' => $sort, 'order' => $order], $limit);
+        return $this->caller->list(Operation::ListFormEntries, FormEntry::class, ['sort' => $sort, 'order' => $order], $limit);
     }
 
     #[Endpoint(Operation::GetFormEntry)]
     public function get(string $id): FormEntry
     {
-        return $this->caller->read(Operation::GetFormEntry, FormEntry::SCHEMA, FormEntry::from(...), ['id' => $id]);
+        return $this->caller->read(Operation::GetFormEntry, FormEntry::class, ['id' => $id]);
     }
 }

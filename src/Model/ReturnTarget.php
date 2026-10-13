@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * An address the site sends a member back to after a checkout or a visit to its billing pages.
  */
-final readonly class ReturnTarget
+final readonly class ReturnTarget implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'ReturnTarget';

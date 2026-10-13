@@ -18,6 +18,7 @@ use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\MediaType;
 use Appsolutely\Sdk\Model\Fields;
+use Appsolutely\Sdk\Model\SchemaModel;
 use Appsolutely\Sdk\Model\SyncPull;
 use Appsolutely\Sdk\Model\SyncPush;
 use Appsolutely\Sdk\Model\SyncResult;
@@ -303,10 +304,13 @@ final class ResourceContractTest extends TestCase
     {
         foreach (self::classes() as $class) {
             $reflection = new ReflectionClass($class);
-            if ($reflection->hasConstant('SCHEMA') && str_starts_with($class, SourceTokens::ROOT_NAMESPACE . 'Model\\')) {
-                $schema = $reflection->getConstant('SCHEMA');
-                self::assertIsString($schema);
-                yield $reflection->getShortName() => [$class, $schema];
+            if ($reflection->implementsInterface(SchemaModel::class) && !$reflection->isInterface()) {
+                $schema = $reflection->getReflectionConstant('SCHEMA');
+                self::assertNotFalse($schema);
+                self::assertSame($class, $schema->getDeclaringClass()->getName(), sprintf('%s names no schema of its own.', $class));
+                $name = $schema->getValue();
+                self::assertIsString($name);
+                yield $reflection->getShortName() => [$class, $name];
             }
         }
     }
@@ -466,6 +470,12 @@ final class ResourceContractTest extends TestCase
         self::assertIsCallable($from);
         self::assertIsCallable($read);
         $from($fields, \Closure::fromCallable($read));
+        if ($class === SyncPull::class) {
+            // A pull is read as the feed schema its record model names.
+            $recordSchema = (new ReflectionClass($record))->getConstant('SCHEMA');
+            self::assertIsString($recordSchema);
+            self::assertSame($schema, SyncPull::schemaFor($recordSchema), sprintf('A pull of %s is read as another schema than %s.', $record, $schema));
+        }
 
         self::assertReadsMatch($schema, $fields->reads(), $class);
         self::assertReadTypesMatch($schema, $fields->accessors(), $class);

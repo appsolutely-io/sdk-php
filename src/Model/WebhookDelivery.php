@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * One event's delivery to a webhook subscription, and how it went.
  */
-final readonly class WebhookDelivery
+final readonly class WebhookDelivery implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'WebhookDelivery';

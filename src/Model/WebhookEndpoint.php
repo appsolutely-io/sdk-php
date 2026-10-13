@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * An address the site sends webhook deliveries to, and which events it takes.
  */
-final readonly class WebhookEndpoint
+final readonly class WebhookEndpoint implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'WebhookEndpoint';

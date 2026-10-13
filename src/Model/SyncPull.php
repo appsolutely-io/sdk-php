@@ -25,6 +25,16 @@ final readonly class SyncPull
     public const array SCHEMAS = ['ArticleFeed', 'FormEntryFeed', 'OrderFeed', 'PageFeed', 'ProductFeed', 'UserAddressFeed'];
 
     /**
+     * The feed schema of a resource, named for its record's schema.
+     *
+     * @internal
+     */
+    public static function schemaFor(string $recordSchema): string
+    {
+        return $recordSchema . 'Feed';
+    }
+
+    /**
      * @param list<T> $upserts the records created or changed
      * @param list<SyncTombstone> $tombstones the records deleted
      * @param bool $hasMore whether more changes are waiting now; pull again from $nextCursor until it is false

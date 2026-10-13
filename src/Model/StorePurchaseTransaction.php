@@ -7,7 +7,7 @@ namespace Appsolutely\Sdk\Model;
 /**
  * What the site made of a store purchase it was handed.
  */
-final readonly class StorePurchaseTransaction
+final readonly class StorePurchaseTransaction implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'StorePurchaseTransaction';

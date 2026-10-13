@@ -10,7 +10,7 @@ use DateTimeImmutable;
  * One addend of a quantity the site totals per window: the plan's baseline,
  * or a pack still live with the order that paid for it.
  */
-final readonly class EntitlementTerm
+final readonly class EntitlementTerm implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'AccountEntitlementTerm';

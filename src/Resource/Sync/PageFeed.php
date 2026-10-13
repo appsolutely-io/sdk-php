@@ -8,7 +8,6 @@ use Appsolutely\Sdk\Api\Caller;
 use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\Operation;
 use Appsolutely\Sdk\Model\ContentPage;
-use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Model\SyncPull;
 
 /**
@@ -30,6 +29,6 @@ final readonly class PageFeed
     #[Endpoint(Operation::PullSyncPage)]
     public function pull(?string $cursor = null, ?int $limit = null): SyncPull
     {
-        return $this->caller->read(Operation::PullSyncPage, 'PageFeed', static fn(#[\SensitiveParameter] Fields $json): SyncPull => SyncPull::from($json, ContentPage::from(...)), query: Caller::feed($cursor, $limit));
+        return $this->caller->pull(Operation::PullSyncPage, ContentPage::class, $cursor, $limit);
     }
 }

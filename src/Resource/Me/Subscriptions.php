@@ -30,7 +30,7 @@ final readonly class Subscriptions
     #[Endpoint(Operation::ListMeSubscriptions)]
     public function list(): Page
     {
-        return $this->caller->onlyPage(Operation::ListMeSubscriptions, MemberSubscription::SCHEMA, MemberSubscription::from(...));
+        return $this->caller->onlyPage(Operation::ListMeSubscriptions, MemberSubscription::class);
     }
 
     /**
@@ -42,7 +42,7 @@ final readonly class Subscriptions
     #[Endpoint(Operation::CancelMeSubscription)]
     public function cancel(string $id, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::CancelMeSubscription, MemberSubscription::SCHEMA, MemberSubscription::from(...), ['subscription' => $id], [], $idempotencyKey);
+        return $this->caller->keyed(Operation::CancelMeSubscription, MemberSubscription::class, ['subscription' => $id], [], $idempotencyKey);
     }
 
     /**
@@ -54,7 +54,7 @@ final readonly class Subscriptions
     #[Endpoint(Operation::ResumeMeSubscription)]
     public function resume(string $id, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::ResumeMeSubscription, MemberSubscriptionConfirmation::SCHEMA, MemberSubscriptionConfirmation::from(...), ['subscription' => $id], [], $idempotencyKey);
+        return $this->caller->keyed(Operation::ResumeMeSubscription, MemberSubscriptionConfirmation::class, ['subscription' => $id], [], $idempotencyKey);
     }
 
     /**
@@ -68,6 +68,6 @@ final readonly class Subscriptions
     #[Endpoint(Operation::ChangeMeSubscription)]
     public function change(string $id, ?string $sku = null, ?int $quantity = null, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::ChangeMeSubscription, MemberSubscriptionChange::SCHEMA, MemberSubscriptionChange::from(...), ['subscription' => $id], ['sku' => $sku, 'quantity' => $quantity], $idempotencyKey);
+        return $this->caller->keyed(Operation::ChangeMeSubscription, MemberSubscriptionChange::class, ['subscription' => $id], ['sku' => $sku, 'quantity' => $quantity], $idempotencyKey);
     }
 }

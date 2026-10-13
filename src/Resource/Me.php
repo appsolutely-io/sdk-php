@@ -30,13 +30,13 @@ final readonly class Me
     #[Endpoint(Operation::GetMe)]
     public function get(): Member
     {
-        return $this->caller->read(Operation::GetMe, Member::SCHEMA, Member::from(...));
+        return $this->caller->read(Operation::GetMe, Member::class);
     }
 
     #[Endpoint(Operation::UpdateMe)]
     public function update(string $name): Member
     {
-        return $this->caller->read(Operation::UpdateMe, Member::SCHEMA, Member::from(...), body: ['name' => $name]);
+        return $this->caller->read(Operation::UpdateMe, Member::class, body: ['name' => $name]);
     }
 
     public function addresses(): Addresses

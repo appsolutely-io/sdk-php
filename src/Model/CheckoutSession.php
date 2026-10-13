@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * A hosted checkout the member is sent to, and where it stands.
  */
-final readonly class CheckoutSession
+final readonly class CheckoutSession implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'CheckoutSession';

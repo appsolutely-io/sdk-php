@@ -7,7 +7,7 @@ namespace Appsolutely\Sdk\Model;
 /**
  * What the member earns for a referral.
  */
-final readonly class ReferralTerms
+final readonly class ReferralTerms implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'ReferralTerms';

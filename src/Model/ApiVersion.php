@@ -11,7 +11,7 @@ use DateTimeImmutable;
  * current, and once it is deprecated, since when, until when, and what
  * replaces it.
  */
-final readonly class ApiVersion
+final readonly class ApiVersion implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'ApiVersion';

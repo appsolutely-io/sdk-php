@@ -31,7 +31,7 @@ final readonly class CheckoutSessions
     #[Endpoint(Operation::CreateCheckoutSession)]
     public function create(string $subject, array $lines, string $successUrl, string $cancelUrl, ?string $promotionCode = null, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::CreateCheckoutSession, CheckoutSession::SCHEMA, CheckoutSession::from(...), [], [
+        return $this->caller->keyed(Operation::CreateCheckoutSession, CheckoutSession::class, [], [
             'subject' => $subject,
             'lines' => $lines,
             'success_url' => $successUrl,
@@ -43,6 +43,6 @@ final readonly class CheckoutSessions
     #[Endpoint(Operation::GetCheckoutSession)]
     public function get(string $id): CheckoutSession
     {
-        return $this->caller->read(Operation::GetCheckoutSession, CheckoutSession::SCHEMA, CheckoutSession::from(...), ['session' => $id]);
+        return $this->caller->read(Operation::GetCheckoutSession, CheckoutSession::class, ['session' => $id]);
     }
 }

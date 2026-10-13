@@ -30,6 +30,6 @@ final readonly class PortalSessions
     #[Endpoint(Operation::CreatePortalSession)]
     public function create(string $subject, string $returnUrl, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::CreatePortalSession, PortalSession::SCHEMA, PortalSession::from(...), [], ['subject' => $subject, 'return_url' => $returnUrl], $idempotencyKey);
+        return $this->caller->keyed(Operation::CreatePortalSession, PortalSession::class, [], ['subject' => $subject, 'return_url' => $returnUrl], $idempotencyKey);
     }
 }

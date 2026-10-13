@@ -7,7 +7,7 @@ namespace Appsolutely\Sdk\Model;
 /**
  * A subscription bought by quantity, and its seats.
  */
-final readonly class SeatPool
+final readonly class SeatPool implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'SeatPool';

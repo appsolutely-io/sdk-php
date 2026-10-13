@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * A feature a product may grant, by key, and the kind of value it holds.
  */
-final readonly class FeatureKey
+final readonly class FeatureKey implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'FeatureKey';

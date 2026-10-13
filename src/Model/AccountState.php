@@ -14,7 +14,7 @@ namespace Appsolutely\Sdk\Model;
  * `status`, not from the event type: changes close together can arrive as
  * fewer deliveries, each carrying the state when it was sent.
  */
-final readonly class AccountState
+final readonly class AccountState implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'AccountState';

@@ -7,7 +7,6 @@ namespace Appsolutely\Sdk\Resource\Sync;
 use Appsolutely\Sdk\Api\Caller;
 use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\Operation;
-use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Model\FormEntry;
 use Appsolutely\Sdk\Model\SyncPull;
 
@@ -30,6 +29,6 @@ final readonly class FormEntryFeed
     #[Endpoint(Operation::PullSyncFormEntry)]
     public function pull(?string $cursor = null, ?int $limit = null): SyncPull
     {
-        return $this->caller->read(Operation::PullSyncFormEntry, 'FormEntryFeed', static fn(#[\SensitiveParameter] Fields $json): SyncPull => SyncPull::from($json, FormEntry::from(...)), query: Caller::feed($cursor, $limit));
+        return $this->caller->pull(Operation::PullSyncFormEntry, FormEntry::class, $cursor, $limit);
     }
 }

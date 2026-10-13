@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * A seat in a pool, held by one member.
  */
-final readonly class Seat
+final readonly class Seat implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'Seat';

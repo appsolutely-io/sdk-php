@@ -8,7 +8,6 @@ use Appsolutely\Sdk\Api\Caller;
 use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\Operation;
 use Appsolutely\Sdk\Model\Address;
-use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Model\SyncPull;
 use Appsolutely\Sdk\Model\SyncPush;
 use DateTimeInterface;
@@ -32,7 +31,7 @@ final readonly class MemberAddressFeed
     #[Endpoint(Operation::PullSyncMeAddress)]
     public function pull(?string $cursor = null, ?int $limit = null): SyncPull
     {
-        return $this->caller->read(Operation::PullSyncMeAddress, 'UserAddressFeed', static fn(#[\SensitiveParameter] Fields $json): SyncPull => SyncPull::from($json, Address::from(...)), query: Caller::feed($cursor, $limit));
+        return $this->caller->pull(Operation::PullSyncMeAddress, Address::class, $cursor, $limit);
     }
 
     /**
@@ -48,6 +47,6 @@ final readonly class MemberAddressFeed
     #[Endpoint(Operation::PushSyncMeAddress)]
     public function push(array $mutations): SyncPush
     {
-        return $this->caller->read(Operation::PushSyncMeAddress, 'SyncPushResults', static fn(#[\SensitiveParameter] Fields $json): SyncPush => SyncPush::from($json, Address::from(...)), body: ['mutations' => $mutations]);
+        return $this->caller->push(Operation::PushSyncMeAddress, Address::class, $mutations);
     }
 }

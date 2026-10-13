@@ -7,7 +7,7 @@ namespace Appsolutely\Sdk\Model;
 /**
  * The machine client a backend token was granted to, as the site sees it.
  */
-final readonly class BackendClient
+final readonly class BackendClient implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'BackendClient';

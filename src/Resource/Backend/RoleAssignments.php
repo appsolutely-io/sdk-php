@@ -27,7 +27,7 @@ final readonly class RoleAssignments
     #[Endpoint(Operation::ListRoleAssignments)]
     public function list(?string $role = null, int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::ListRoleAssignments, RolesHeld::SCHEMA, RolesHeld::from(...), ['role' => $role], $limit);
+        return $this->caller->list(Operation::ListRoleAssignments, RolesHeld::class, ['role' => $role], $limit);
     }
 
     /**
@@ -36,7 +36,7 @@ final readonly class RoleAssignments
     #[Endpoint(Operation::GetRoleAssignment)]
     public function get(string $subject): RolesHeld
     {
-        return $this->caller->read(Operation::GetRoleAssignment, RolesHeld::SCHEMA, RolesHeld::from(...), ['sub' => $subject]);
+        return $this->caller->read(Operation::GetRoleAssignment, RolesHeld::class, ['sub' => $subject]);
     }
 
     /**
@@ -47,7 +47,7 @@ final readonly class RoleAssignments
     #[Endpoint(Operation::AssignRoleAssignment)]
     public function assign(string $subject, string $role): RolesHeld
     {
-        return $this->caller->read(Operation::AssignRoleAssignment, RolesHeld::SCHEMA, RolesHeld::from(...), ['sub' => $subject, 'key' => $role]);
+        return $this->caller->read(Operation::AssignRoleAssignment, RolesHeld::class, ['sub' => $subject, 'key' => $role]);
     }
 
     /**

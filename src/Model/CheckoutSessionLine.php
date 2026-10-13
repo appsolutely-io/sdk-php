@@ -7,7 +7,7 @@ namespace Appsolutely\Sdk\Model;
 /**
  * One line of a checkout: a product by slug and how many.
  */
-final readonly class CheckoutSessionLine
+final readonly class CheckoutSessionLine implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'CheckoutSessionLine';

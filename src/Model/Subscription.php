@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * A subscription as the site describes it.
  */
-final readonly class Subscription
+final readonly class Subscription implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'AccountSubscription';

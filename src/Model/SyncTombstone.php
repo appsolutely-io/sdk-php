@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * A record deleted since the cursor a sync pull was asked from.
  */
-final readonly class SyncTombstone
+final readonly class SyncTombstone implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'SyncTombstone';

@@ -10,7 +10,7 @@ use DateTimeImmutable;
  * Something an account may use now, such as a plan or a number of seats.
  * What granted it is not sent.
  */
-final readonly class Entitlement
+final readonly class Entitlement implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'AccountEntitlement';

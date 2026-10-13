@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * The signed-in member.
  */
-final readonly class Member
+final readonly class Member implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'Member';

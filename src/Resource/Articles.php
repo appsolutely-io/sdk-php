@@ -34,13 +34,13 @@ final readonly class Articles
     #[Endpoint(Operation::ListArticles)]
     public function list(?string $sort = null, ?string $order = null, int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::ListArticles, Article::SCHEMA, Article::from(...), ['sort' => $sort, 'order' => $order], $limit);
+        return $this->caller->list(Operation::ListArticles, Article::class, ['sort' => $sort, 'order' => $order], $limit);
     }
 
     #[Endpoint(Operation::GetArticle)]
     public function get(string $id): Article
     {
-        return $this->caller->read(Operation::GetArticle, Article::SCHEMA, Article::from(...), ['id' => $id]);
+        return $this->caller->read(Operation::GetArticle, Article::class, ['id' => $id]);
     }
 
     /**
@@ -56,7 +56,7 @@ final readonly class Articles
     #[Endpoint(Operation::CreateArticle)]
     public function create(array $article, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::CreateArticle, Article::SCHEMA, Article::from(...), [], $article, $idempotencyKey);
+        return $this->caller->keyed(Operation::CreateArticle, Article::class, [], $article, $idempotencyKey);
     }
 
     /**
@@ -67,6 +67,6 @@ final readonly class Articles
     #[Endpoint(Operation::UpdateArticle)]
     public function update(string $id, array $changes): Article
     {
-        return $this->caller->read(Operation::UpdateArticle, Article::SCHEMA, Article::from(...), ['id' => $id], body: $changes);
+        return $this->caller->read(Operation::UpdateArticle, Article::class, ['id' => $id], body: $changes);
     }
 }

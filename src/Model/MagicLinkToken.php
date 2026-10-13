@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * The member token a magic link was exchanged for, and what it may do.
  */
-final readonly class MagicLinkToken
+final readonly class MagicLinkToken implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'MagicLinkToken';

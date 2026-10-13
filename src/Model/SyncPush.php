@@ -16,11 +16,19 @@ use Closure;
 final readonly class SyncPush
 {
     /**
-     * The schemas of the document this is read from, one per resource.
+     * The schema of the document this is read from, the same for every
+     * resource.
      *
      * @internal
      */
-    public const array SCHEMAS = ['SyncPushResults'];
+    public const string SCHEMA = 'SyncPushResults';
+
+    /**
+     * The schemas of the document this is read from.
+     *
+     * @internal
+     */
+    public const array SCHEMAS = [self::SCHEMA];
 
     /**
      * @param list<SyncResult<T>> $results

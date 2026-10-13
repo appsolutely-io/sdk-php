@@ -7,7 +7,7 @@ namespace Appsolutely\Sdk\Model;
 /**
  * The value a product grants for a feature key.
  */
-final readonly class ProductFeatureValue
+final readonly class ProductFeatureValue implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'ProductFeatureValue';

@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * A role the site's backend defined, by key.
  */
-final readonly class Role
+final readonly class Role implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'Role';

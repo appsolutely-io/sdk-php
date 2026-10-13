@@ -9,7 +9,7 @@ namespace Appsolutely\Sdk\Model;
  * mode that was owed it: the deliveries queued again, and the endpoints that
  * refuse it now, each with why.
  */
-final readonly class Redelivery
+final readonly class Redelivery implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'Redelivery';

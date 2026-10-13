@@ -29,7 +29,7 @@ final readonly class Addresses
     #[Endpoint(Operation::ListMeAddresses)]
     public function list(?string $sort = null, ?string $order = null, int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::ListMeAddresses, Address::SCHEMA, Address::from(...), ['sort' => $sort, 'order' => $order], $limit);
+        return $this->caller->list(Operation::ListMeAddresses, Address::class, ['sort' => $sort, 'order' => $order], $limit);
     }
 
     /**
@@ -42,7 +42,7 @@ final readonly class Addresses
     #[Endpoint(Operation::CreateMeAddress)]
     public function create(array $address, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::CreateMeAddress, Address::SCHEMA, Address::from(...), [], $address, $idempotencyKey);
+        return $this->caller->keyed(Operation::CreateMeAddress, Address::class, [], $address, $idempotencyKey);
     }
 
     /**
@@ -53,7 +53,7 @@ final readonly class Addresses
     #[Endpoint(Operation::UpdateMeAddress)]
     public function update(string $id, array $changes): Address
     {
-        return $this->caller->read(Operation::UpdateMeAddress, Address::SCHEMA, Address::from(...), ['id' => $id], body: $changes);
+        return $this->caller->read(Operation::UpdateMeAddress, Address::class, ['id' => $id], body: $changes);
     }
 
     #[Endpoint(Operation::DeleteMeAddress)]

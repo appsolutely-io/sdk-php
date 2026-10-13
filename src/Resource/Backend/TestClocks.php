@@ -27,7 +27,7 @@ final readonly class TestClocks
     #[Endpoint(Operation::AttachTestClock)]
     public function attach(string $subscription, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::AttachTestClock, TestClock::SCHEMA, TestClock::from(...), ['subscription' => $subscription], [], $idempotencyKey);
+        return $this->caller->keyed(Operation::AttachTestClock, TestClock::class, ['subscription' => $subscription], [], $idempotencyKey);
     }
 
     /**
@@ -40,6 +40,6 @@ final readonly class TestClocks
     #[Endpoint(Operation::AdvanceTestClock)]
     public function advance(string $subscription, int $seconds, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::AdvanceTestClock, TestClock::SCHEMA, TestClock::from(...), ['subscription' => $subscription], ['seconds' => $seconds], $idempotencyKey);
+        return $this->caller->keyed(Operation::AdvanceTestClock, TestClock::class, ['subscription' => $subscription], ['seconds' => $seconds], $idempotencyKey);
     }
 }

@@ -26,12 +26,12 @@ final readonly class Pages
     #[Endpoint(Operation::ListPages)]
     public function list(?string $sort = null, ?string $order = null, int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::ListPages, ContentPage::SCHEMA, ContentPage::from(...), ['sort' => $sort, 'order' => $order], $limit);
+        return $this->caller->list(Operation::ListPages, ContentPage::class, ['sort' => $sort, 'order' => $order], $limit);
     }
 
     #[Endpoint(Operation::GetPage)]
     public function get(string $id): ContentPage
     {
-        return $this->caller->read(Operation::GetPage, ContentPage::SCHEMA, ContentPage::from(...), ['id' => $id]);
+        return $this->caller->read(Operation::GetPage, ContentPage::class, ['id' => $id]);
     }
 }

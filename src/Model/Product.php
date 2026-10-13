@@ -11,7 +11,7 @@ use DateTimeImmutable;
  * delivery both carry it. Money is an integer count of the currency's minor
  * units beside its ISO 4217 currency.
  */
-final readonly class Product
+final readonly class Product implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'Product';

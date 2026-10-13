@@ -51,7 +51,7 @@ final readonly class BackendApi
     #[Endpoint(Operation::GetClient)]
     public function client(): BackendClient
     {
-        return $this->backend->read(Operation::GetClient, BackendClient::SCHEMA, BackendClient::from(...));
+        return $this->backend->read(Operation::GetClient, BackendClient::class);
     }
 
     public function accountStates(): AccountStates

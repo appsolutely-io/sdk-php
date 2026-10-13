@@ -7,7 +7,6 @@ namespace Appsolutely\Sdk\Resource\Sync;
 use Appsolutely\Sdk\Api\Caller;
 use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\Operation;
-use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Model\Order;
 use Appsolutely\Sdk\Model\SyncPull;
 
@@ -30,6 +29,6 @@ final readonly class OrderFeed
     #[Endpoint(Operation::PullSyncOrder)]
     public function pull(?string $cursor = null, ?int $limit = null): SyncPull
     {
-        return $this->caller->read(Operation::PullSyncOrder, 'OrderFeed', static fn(#[\SensitiveParameter] Fields $json): SyncPull => SyncPull::from($json, Order::from(...)), query: Caller::feed($cursor, $limit));
+        return $this->caller->pull(Operation::PullSyncOrder, Order::class, $cursor, $limit);
     }
 }

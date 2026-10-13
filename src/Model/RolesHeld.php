@@ -7,7 +7,7 @@ namespace Appsolutely\Sdk\Model;
 /**
  * The roles one member holds.
  */
-final readonly class RolesHeld
+final readonly class RolesHeld implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'RolesHeld';
