@@ -957,7 +957,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/idempotency-key-in-use', 'https://appsolutely.io/problems/purchases-unavailable', 'https://appsolutely.io/problems/subscription-awaiting-payment', 'https://appsolutely.io/problems/billed-elsewhere'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/idempotency-key-in-use', 'https://appsolutely.io/problems/purchases-unavailable', 'https://appsolutely.io/problems/subscription-awaiting-payment', 'https://appsolutely.io/problems/billed-elsewhere'] }, order: { type: string, description: "On `subscription-awaiting-payment`: the reference of the order waiting for its payment; the member pays it or cancels it from that order's page." } } }] }
         415:
           description: 'Refused: `unsupported-media-type`.'
           headers:
@@ -3294,7 +3294,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/idempotency-key-in-use', 'https://appsolutely.io/problems/purchases-unavailable', 'https://appsolutely.io/problems/subscription-awaiting-payment', 'https://appsolutely.io/problems/billed-elsewhere'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/idempotency-key-in-use', 'https://appsolutely.io/problems/purchases-unavailable', 'https://appsolutely.io/problems/subscription-awaiting-payment', 'https://appsolutely.io/problems/billed-elsewhere'] }, order: { type: string, description: "On `subscription-awaiting-payment`: the reference of the order waiting for its payment; the member pays it or cancels it from that order's page." } } }] }
         415:
           description: 'Refused: `unsupported-media-type`.'
           headers:
@@ -4490,7 +4490,7 @@ paths:
           description: 'Refused: `billed-elsewhere`, `subscription-recovering`, `subscription-awaiting-payment`.'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/billed-elsewhere', 'https://appsolutely.io/problems/subscription-recovering', 'https://appsolutely.io/problems/subscription-awaiting-payment'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/billed-elsewhere', 'https://appsolutely.io/problems/subscription-recovering', 'https://appsolutely.io/problems/subscription-awaiting-payment'] }, order: { type: string, description: "On `subscription-awaiting-payment`: the reference of the order waiting for its payment; the member pays it or cancels it from that order's page." } } }] }
           headers:
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -4680,7 +4680,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable', 'https://appsolutely.io/problems/store-purchase-unavailable'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable', 'https://appsolutely.io/problems/store-purchase-unavailable'] }, reason: { type: string, enum: [app_unregistered, product_unmapped, store_unreadable], description: 'On `store-purchase-unavailable`: why the site cannot record the purchase yet; submit it again once the cause is gone.' } } }] }
       requestBody:
         required: true
         content:
@@ -8131,7 +8131,7 @@ paths:
           description: 'Refused: `billed-elsewhere`, `subscription-recovering`, `subscription-awaiting-payment`.'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/billed-elsewhere', 'https://appsolutely.io/problems/subscription-recovering', 'https://appsolutely.io/problems/subscription-awaiting-payment'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/billed-elsewhere', 'https://appsolutely.io/problems/subscription-recovering', 'https://appsolutely.io/problems/subscription-awaiting-payment'] }, order: { type: string, description: "On `subscription-awaiting-payment`: the reference of the order waiting for its payment; the member pays it or cancels it from that order's page." } } }] }
           headers:
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -8322,7 +8322,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable', 'https://appsolutely.io/problems/store-purchase-unavailable'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable', 'https://appsolutely.io/problems/store-purchase-unavailable'] }, reason: { type: string, enum: [app_unregistered, product_unmapped, store_unreadable], description: 'On `store-purchase-unavailable`: why the site cannot record the purchase yet; submit it again once the cause is gone.' } } }] }
       requestBody:
         required: true
         content:
@@ -12142,6 +12142,11 @@ components:
           type:
             - string
             - 'null'
+        payment_url:
+          description: "Where to send the signed-in member to finish paying for this order, on the site's own address: a page that sends them on to the provider page the payment was started on. Null on a guest's order (that page opens only with the order's own token, which no API answer carries), when there is nothing to pay there (the order is not waiting for its money, or no payment is in flight on a provider page), and once that provider page has expired. Where the provider gave the page no expiry, it is named until the order itself stops waiting."
+          type:
+            - string
+            - 'null'
         created_at:
           type:
             - string
@@ -13146,6 +13151,9 @@ components:
       properties:
         outcome:
           type: string
+          enum:
+            - recorded
+            - unclaimed
         subscription_id:
           type:
             - string
