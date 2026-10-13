@@ -332,28 +332,113 @@ final class ResourceContractTest extends TestCase
      * (`STATUS_PAST_DUE = 'past_due'`), so a caller compares with a name
      * and a value the document adds fails here until it has one. The field
      * itself stays a plain string, so a value a newer site sends still reads.
+     * Fields nested in the schema's own objects and lists count, under
+     * their own name; a nested schema of its own is its model's. Every
+     * other string constant of the model is one of those values, so a value
+     * the document drops fails here until its constant goes too.
      *
      * @param class-string $class
      */
     #[DataProvider('models')]
     public function testEveryValueAModelsSchemaEnumeratesIsAConstantOfTheModel(string $class, string $schema): void
     {
-        $constants = (new ReflectionClass($class))->getConstants();
-        $missing = [];
+        $enumerated = [];
         foreach (Document::map(Document::schema($schema)['properties'] ?? null) as $field => $declaration) {
-            foreach (Document::list(self::nonNull(Document::resolve(Document::map($declaration)))['enum'] ?? []) as $value) {
-                if ($value === null) {
-                    continue;
-                }
-                self::assertIsString($value, sprintf('%s.%s enumerates a value that is not a string.', $schema, $field));
-                $name = strtoupper((string) preg_replace('/[^A-Za-z0-9]+/', '_', $field . '_' . $value));
-                if (($constants[$name] ?? null) !== $value) {
-                    $missing[] = sprintf('%s = \'%s\'', $name, $value);
-                }
+            self::collectEnumerated((string) $field, Document::map($declaration), $schema . '.' . $field, $enumerated);
+        }
+        foreach (self::VALUES_AS_THE_SITE_SENDS[$schema] ?? [] as $field => $values) {
+            foreach ($values as $value) {
+                $enumerated[strtoupper($field . '_' . $value)] = $value;
+            }
+        }
+
+        $constants = [];
+        foreach ((new ReflectionClass($class))->getReflectionConstants(\ReflectionClassConstant::IS_PUBLIC) as $constant) {
+            if ($constant->getDeclaringClass()->getName() === $class && $constant->getName() !== 'SCHEMA' && is_string($constant->getValue())) {
+                $constants[$constant->getName()] = $constant->getValue();
+            }
+        }
+
+        $missing = [];
+        foreach ($enumerated as $name => $value) {
+            if (($constants[$name] ?? null) !== $value) {
+                $missing[] = sprintf('%s = \'%s\'', $name, $value);
+            }
+        }
+        $stale = [];
+        foreach ($constants as $name => $value) {
+            if (($enumerated[$name] ?? null) !== $value) {
+                $stale[] = sprintf('%s = \'%s\'', $name, $value);
             }
         }
 
         self::assertSame([], $missing, sprintf('%s reads %s, whose document enumerates values it has no constant for: %s.', $class, $schema, implode(', ', $missing)));
+        self::assertSame([], $stale, sprintf('%s has constants for values %s no longer enumerates: %s.', $class, $schema, implode(', ', $stale)));
+    }
+
+    /**
+     * Fields the pinned document leaves a plain string whose values the
+     * site enumerates, where the model has a constant per value. Each
+     * applies only while the document still enumerates nothing for the
+     * field; once it does, the constants are checked against it and the
+     * entry is dropped.
+     *
+     * A referral reward's `type` is the site's reward type enum.
+     */
+    private const array VALUES_AS_THE_SITE_SENDS = [
+        'ReferralReward' => ['type' => ['credit', 'cashback']],
+    ];
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function siteValues(): iterable
+    {
+        foreach (self::VALUES_AS_THE_SITE_SENDS as $schema => $fields) {
+            foreach (array_keys($fields) as $field) {
+                yield $schema . '.' . $field => [$schema, $field];
+            }
+        }
+    }
+
+    #[DataProvider('siteValues')]
+    public function testEachFieldWhoseValuesTheSiteEnumeratesIsStillUnenumerated(string $schema, string $field): void
+    {
+        $declared = self::nonNull(Document::resolve(Document::map(Document::map(Document::schema($schema)['properties'] ?? null)[$field] ?? null)));
+
+        self::assertSame('string', $declared['type'] ?? null, sprintf('%s.%s is no longer a string.', $schema, $field));
+        self::assertArrayNotHasKey('enum', $declared, sprintf('The pinned document now enumerates %s.%s: drop it from VALUES_AS_THE_SITE_SENDS.', $schema, $field));
+    }
+
+    /**
+     * The constant each value enumerated for a field should have, the
+     * field's own and those of the objects and lists inside it, stopping
+     * at an object schema of its own.
+     *
+     * @param array<array-key, mixed> $declaration
+     * @param string $where the field, for a failure
+     * @param array<string, string> $enumerated
+     */
+    private static function collectEnumerated(string $field, array $declaration, string $where, array &$enumerated): void
+    {
+        $node = self::nonNull(Document::resolve($declaration));
+        $named = Document::refName($declaration) !== null || Document::refName(Document::map(Document::list($declaration['oneOf'] ?? $declaration['anyOf'] ?? [])[0] ?? null)) !== null;
+        if ($named && isset($node['properties'])) {
+            return;
+        }
+        foreach (Document::list($node['enum'] ?? []) as $value) {
+            if ($value === null) {
+                continue;
+            }
+            self::assertIsString($value, sprintf('%s enumerates a value that is not a string.', $where));
+            $enumerated[strtoupper((string) preg_replace('/[^A-Za-z0-9]+/', '_', $field . '_' . $value))] = $value;
+        }
+        if (isset($node['items'])) {
+            self::collectEnumerated($field, Document::map($node['items']), $where . '[]', $enumerated);
+        }
+        foreach (Document::map($node['properties'] ?? null) as $nested => $nestedDeclaration) {
+            self::collectEnumerated((string) $nested, Document::map($nestedDeclaration), $where . '.' . $nested, $enumerated);
+        }
     }
 
     /**
