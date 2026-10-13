@@ -462,6 +462,6 @@ final class Fields
      */
     private function refusal(string $inDelivery, string $inAnswer): RuntimeException
     {
-        return $this->delivery ? new UnexpectedPayloadException($inDelivery) : new UnexpectedResponseException($inAnswer, 0);
+        return $this->delivery ? new UnexpectedPayloadException($inDelivery) : new UnexpectedResponseException($inAnswer, 0, $this->source);
     }
 }

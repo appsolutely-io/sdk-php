@@ -22,8 +22,9 @@ final class UnexpectedResponseException extends RuntimeException implements Apps
 {
     /**
      * @param int $statusCode the HTTP status of the answer; 0 when the fault is a field of a successful answer's body
+     * @param string|null $schema the name of the document's schema the answer was read as, when a field broke it
      */
-    public function __construct(string $message, public readonly int $statusCode)
+    public function __construct(string $message, public readonly int $statusCode, public readonly ?string $schema = null)
     {
         parent::__construct($message);
     }

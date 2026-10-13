@@ -550,10 +550,11 @@ final class ResourceContractTest extends TestCase
     /**
      * The schema a method reads its answer as is learnt by answering it with
      * an empty object, or a page of one empty item: the model refuses it at
-     * its first required field, naming the schema it was handed. That must
-     * be the schema the document gives the operation's success answer, or
-     * the items of its page, so a method that reads its answer as another
-     * schema fails, even where the two share their required fields.
+     * its first required field, and the refusal names the schema it was
+     * read as. That must be the schema the document gives the operation's
+     * success answer, or the items of its page, so a method that reads its
+     * answer as another schema fails, even where the two share their
+     * required fields.
      */
     #[DataProvider('documentedOperations')]
     public function testEveryMethodReadsItsAnswerAsTheSchemaItsOperationDocuments(string $id): void
@@ -572,16 +573,42 @@ final class ResourceContractTest extends TestCase
         self::drive($endpoint, optional: false, answer: $page ? ['data' => [[]]] : []);
         $failure = self::$failure;
         self::assertInstanceOf(UnexpectedResponseException::class, $failure, sprintf('%s read an empty %s without refusing it, so the schema it reads it as is not learnt: %s', $endpoint['method'], $page ? 'page item' : 'object', $failure === null ? 'it returned.' : $failure::class . ': ' . $failure->getMessage()));
-        self::assertMatchesRegularExpression(self::READ_AS, $failure->getMessage());
-        preg_match(self::READ_AS, $failure->getMessage(), $match);
 
-        self::assertSame($answered[0], $match[1] ?? null, sprintf('%s reads the answer of %s as the schema %s; the document gives it %s.', $endpoint['method'], $id, $match[1] ?? 'none', $answered[0]));
+        self::assertSame($answered[0], $failure->schema, sprintf('%s reads the answer of %s as the schema %s; the document gives it %s.', $endpoint['method'], $id, $failure->schema ?? 'none', $answered[0]));
     }
 
     /**
-     * How a model's refusal of an answer names the schema it read it as.
+     * Answered with a sample of the schema the document gives its success,
+     * every field present and of its documented type, a method reads it
+     * without a refusal, so the model it reads with is one of that schema
+     * and not only one that refuses the same empty answer.
      */
-    private const string READ_AS = '/^The site answered a "([^"]+)" object /';
+    #[DataProvider('documentedOperations')]
+    public function testEveryMethodReadsASampleOfItsDocumentedAnswer(string $id): void
+    {
+        $endpoint = self::endpointOf($id);
+        $documented = self::successSchema($id);
+        if ($documented === null) {
+            self::addToAssertionCount(1);
+
+            return;
+        }
+        $answered = self::answeredSchemas($documented);
+        self::assertCount(1, $answered, sprintf('%s answers %s, a page whose items name no schema.', $id, $documented));
+
+        $answer = $answered !== [$documented] ? ['data' => [self::sampleOf($answered[0])]] : self::sampleOf($documented);
+        if (in_array($documented, SyncPush::SCHEMAS, true)) {
+            // The document leaves a push result's record an open object; the
+            // site sends the resource's record, as the matching pull does.
+            $record = self::sampleOf((string) Document::refName(Document::map(Document::map(Document::map(Document::schema((string) self::successSchema(str_replace('pushSync.', 'pullSync.', $id)))['properties'] ?? null)['upserts'] ?? null)['items'] ?? null)));
+            $answer['results'] = array_map(static fn(mixed $result): array => [...Document::map($result), 'server_record' => $record], Document::list($answer['results'] ?? null));
+        }
+
+        self::drive($endpoint, optional: false, answer: $answer);
+        $failure = self::$failure;
+
+        self::assertNull($failure, sprintf('%s refused a sample of %s: %s', $endpoint['method'], $answered[0], $failure === null ? '' : $failure::class . ': ' . $failure->getMessage()));
+    }
 
     /**
      * The name of the schema an operation's success answers with as JSON, or
