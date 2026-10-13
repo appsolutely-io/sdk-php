@@ -33,7 +33,7 @@ The package is not on Packagist yet, so Composer installs it from its GitHub rep
 ```
 
 ```bash
-composer require "appsolutely/sdk-php:^0.1"
+composer require "appsolutely/sdk-php:^0.2"
 ```
 
 The client finds an installed PSR-18 HTTP client through `php-http/discovery`, which is a Composer plugin; allow it in your `composer.json`:
