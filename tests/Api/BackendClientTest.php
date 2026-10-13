@@ -105,25 +105,29 @@ final class BackendClientTest extends TestCase
         $backend = $this->provider->backendClient()->backend()->raw();
 
         $backend->get('/api/v1/client');
-        $this->provider->clock->advance(BackendToken::DEFAULT_LIFETIME - BackendToken::EXPIRY_MARGIN - 1);
+        $this->provider->clock->advance(BackendToken::DEFAULT_LIFETIME - BackendToken::EXPIRY_MARGIN - BackendToken::REFRESH_WINDOW - 1);
         $backend->get('/api/v1/client');
         self::assertCount(1, $this->provider->requestsTo('POST', self::TOKEN_URL));
 
-        $this->provider->clock->advance(2);
+        $this->provider->clock->advance(BackendToken::REFRESH_WINDOW + 1);
         $backend->get('/api/v1/client');
         self::assertCount(2, $this->provider->requestsTo('POST', self::TOKEN_URL));
     }
 
+    /**
+     * Kept until its refresh window, replaced at a random point within it
+     * (see BackendTokenTest), and never used past its margin.
+     */
     public function testATokenIsKeptUntilShortlyBeforeItExpires(): void
     {
         $backend = $this->provider->backendClient()->backend()->raw();
 
         $backend->get('/api/v1/client');
-        $this->provider->clock->advance(3600 - 61);
+        $this->provider->clock->advance(3600 - BackendToken::EXPIRY_MARGIN - BackendToken::REFRESH_WINDOW - 1);
         $backend->get('/api/v1/client');
         self::assertCount(1, $this->provider->requestsTo('POST', self::TOKEN_URL));
 
-        $this->provider->clock->advance(2);
+        $this->provider->clock->advance(BackendToken::REFRESH_WINDOW + 1);
         $backend->get('/api/v1/client');
         self::assertCount(2, $this->provider->requestsTo('POST', self::TOKEN_URL));
         self::assertSame('Bearer machine-2', $this->provider->siteRequests()[2]->getHeaderLine('Authorization'));

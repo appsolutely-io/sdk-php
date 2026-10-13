@@ -9,7 +9,7 @@ namespace Appsolutely\Sdk\Model;
  * subscription as it now stands, or waiting for the member to confirm it on
  * the site's billing pages.
  */
-final readonly class MemberSubscriptionChange
+final readonly class MemberSubscriptionChange implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'MemberSubscriptionChange';

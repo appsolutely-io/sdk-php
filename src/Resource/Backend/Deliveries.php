@@ -30,7 +30,7 @@ final readonly class Deliveries
     #[Endpoint(Operation::ListDeliveries)]
     public function list(?string $status = null, ?DateTimeInterface $since = null, int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::ListDeliveries, EndpointWebhookDelivery::SCHEMA, EndpointWebhookDelivery::from(...), ['status' => $status, 'since' => $since], $limit);
+        return $this->caller->list(Operation::ListDeliveries, EndpointWebhookDelivery::class, ['status' => $status, 'since' => $since], $limit);
     }
 
     /**
@@ -43,6 +43,6 @@ final readonly class Deliveries
     #[Endpoint(Operation::RedeliverDelivery)]
     public function redeliver(string $webhookId, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::RedeliverDelivery, Redelivery::SCHEMA, Redelivery::from(...), ['event' => $webhookId], [], $idempotencyKey);
+        return $this->caller->keyed(Operation::RedeliverDelivery, Redelivery::class, ['event' => $webhookId], [], $idempotencyKey);
     }
 }

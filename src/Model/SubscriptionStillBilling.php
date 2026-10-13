@@ -7,7 +7,7 @@ namespace Appsolutely\Sdk\Model;
 /**
  * A subscription of the member's that another party still bills, which buying here would not stop.
  */
-final readonly class SubscriptionStillBilling
+final readonly class SubscriptionStillBilling implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'SubscriptionStillBilling';

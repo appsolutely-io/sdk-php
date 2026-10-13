@@ -11,6 +11,15 @@ Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://git
 - PHP 8.3 or newer
 - A PSR-18 HTTP client (any installed one is discovered)
 
+## Compatibility
+
+The client is written and tested against the Site API document of the site software v0.24.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
+
+The document's `v1` is stable for the life of the version: the site adds paths and fields to it but never removes or retypes one, and a breaking change arrives as a new version while `v1` keeps serving. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
+
+- **A newer site** answers everything this client calls. Fields it adds stay readable in each model's `$extra`, an enumerated value it adds reads as the plain string it is (the model's constants name only the values this client knows), and an operation it adds is reachable through the untyped calls of `api()->raw()` until a release of the client types it.
+- **An older site** lacks what was added after it. Calling an operation it does not have is refused with an `Exception\ApiException` (a `NotFoundException` for a path it does not have), and an answer without a field this client requires throws an `Exception\UnexpectedResponseException` naming the schema and the field rather than reading a wrong value. Keep the site at least at the version above.
+
 ## Installation
 
 The package is not on Packagist yet, so Composer installs it from its GitHub repository:
@@ -75,13 +84,33 @@ $client = new Client(new Config(
 
 The administrator token is a long-lived credential issued on the site's API-token screen; it is sent on the calls your server makes on its own behalf. Leave it out when your server only acts for signed-in members. Keep it, like the client secret, out of version control.
 
+Only `baseUrl` is always required. The member sign-in client (`clientId` with `clientSecret`) is needed only to sign members in, and the `issuer` only for that or for the backend client: a backend-only integration gives `issuer` and the backend client, an administrator-only one just `apiToken`. `Client::oidc()` throws an `InvalidConfigException` when the Config holds no sign-in client.
+
 The backend client is the machine client registered for your app's backend, apart from the client that signs members in; `Client::backend()` calls as it (see [The site's backend](#the-sites-backend)). `backendScopes` narrows what its token may do; without it, the token carries every scope the client is registered with. `backendClientAuthentication` says how that client authenticates to the token endpoint when it differs from the sign-in client's `clientAuthentication`.
 
 `Config` also takes a PSR-18 client and PSR-17 factories, a PSR-20 clock, a PSR-3 logger, the token-endpoint authentication (`client_secret_basic` by default, or `ClientAuthentication::ClientSecretPost`), the clock leeway for ID tokens (60 seconds by default) and the retry policy for Site API calls (see [Writes that must happen once](#writes-that-must-happen-once)).
 
 ### The cache
 
-In production, pass your application's shared PSR-16 cache (Redis, Memcached, APCu or your framework's cache). Without one, the client falls back to a cache in memory that lives as long as the PHP process; under PHP-FPM that is a single request, so every request fetches the discovery document and the signing keys again. The fallback exists so the client works anywhere, not for production.
+In production, pass your application's shared PSR-16 cache (Redis, Memcached, APCu or your framework's cache). Without one, the client falls back to a cache in memory that lives as long as the PHP process; under PHP-FPM that is a single request, so every request fetches the discovery document and the signing keys again. The fallback exists so the client works anywhere, not for production, and each client built on it logs one warning saying so.
+
+### Timeouts
+
+PSR-18 has no portable way to set a timeout, and Guzzle's default is to wait forever. When you pass no HTTP client, the SDK finds one and, if it is Guzzle or Symfony HttpClient, builds it with `Config::$timeout` (30 seconds per request by default) and `Config::$connectTimeout` (10 seconds to connect; Symfony HttpClient has no separate connect limit, so its idle timeout is the request timeout). Thirty seconds is above the 20 seconds the site may hold a keyed write that repeats one still running, and far below the minutes a stuck connection would otherwise hold a worker; Stripe's PHP library, for comparison, waits 80 seconds per request and 30 to connect. Any other client it finds is used as it is, with a warning in the log.
+
+A client you pass in keeps its own timeouts, so build it with them:
+
+```php
+use GuzzleHttp\Client as Guzzle;
+use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpClient\Psr18Client;
+
+$http = new Guzzle(['timeout' => 30, 'connect_timeout' => 10]);
+// or
+$http = new Psr18Client(HttpClient::create(['timeout' => 30, 'max_duration' => 30]));
+
+$client = new Client(new Config(/* ... */, httpClient: $http));
+```
 
 ## Signing a member in with OpenID Connect
 
@@ -214,7 +243,34 @@ Feeds exist for articles, form entries, orders, pages and products. A `410` `cur
 
 ### The site's backend
 
-The backend's token is asked for when first needed and kept in the cache from `Config` until a minute before it expires, so under PHP-FPM it is asked for once per token, not once per request. A token answered without `expires_in` is taken to live five minutes. When the site answers `invalid-token`, a new one is asked for and the call sent again, once.
+The backend's token is asked for when first needed and kept in the cache from `Config` until a minute before it expires, so under PHP-FPM it is asked for once per token, not once per request. A token answered without `expires_in` is taken to live five minutes. When the site answers `invalid-token`, a new one is asked for and the call sent again, once. Asking for a token is retried like a read (after a network failure, a `429`, a `502`, a `503` or a `504`).
+
+So that the processes sharing the cache do not all find the token due at the same moment, each read in the minute before it is due replaces it at a random point. That read still holds a good token, so it asks once, without retrying or waiting for a lock, and sends the current token if asking fails; the one request is made in that call and takes at most `Config::$timeout`. A failed early request is logged at `info` (a lock that throws, at `warning`). To have only one of them ask, pass `Config::$tokenLock`, an `Appsolutely\Sdk\Cache\TokenLock` built on your framework's lock. Early, a process asks only when the lock is free (`runIfFree()`) and otherwise keeps its token; once the token has expired, the others wait for the holder (`run()`) and take the new token from the cache:
+
+```php
+use Appsolutely\Sdk\Cache\TokenLock;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
+
+final class LaravelTokenLock implements TokenLock
+{
+    public function run(string $name, int $seconds, callable $fetch): mixed
+    {
+        try {
+            return Cache::lock($name, $seconds)->block($seconds, $fetch);
+        } catch (LockTimeoutException) {
+            return $fetch();
+        }
+    }
+
+    public function runIfFree(string $name, int $seconds, callable $fetch): ?string
+    {
+        $fetched = Cache::lock($name, $seconds)->get($fetch);
+
+        return $fetched === false ? null : $fetched;
+    }
+}
+```
 
 ```php
 $backend = $client->backend();
@@ -311,7 +367,7 @@ $savedCursor = $page->nextCursor;       // null on the last page
 
 Every call sends `Accept: application/json, application/problem+json`, the SDK's `User-Agent` and an `X-Request-Id`. An answer that breaks the document, such as a required field missing or a time without an offset, is an `Exception\UnexpectedResponseException` naming the schema and the field, never a value read as something else.
 
-A refusal is thrown as an `Exception\ApiException` built from the site's RFC 9457 problem: `$type` (branch on it, or on `hasType('validation-failed')`), `$title`, `$status`, `$detail`, `$errors`, `$requestId`, `$retryAfter`, `$challenge` (the `WWW-Authenticate` header) and any other member through `extension('required_ability')`. `ValidationFailedException`, `NotFoundException`, `UnauthenticatedException`, `ForbiddenException`, `ConflictException`, `RateLimitedException` and `ServiceUnavailableException` extend it for the cases you are likely to handle; an answer that is not a problem (a proxy's error page) is an `ApiException` with `$isProblem` false and the raw `$body`. A request that never got an answer is an `Exception\TransportException`.
+A refusal is thrown as an `Exception\ApiException` built from the site's RFC 9457 problem: `$type` (branch on it, or on `hasType('validation-failed')`), `$title`, `$status`, `$detail`, `$errors`, `$requestId`, `$retryAfter`, `$challenge` (the `WWW-Authenticate` header) and any other member through `extension('required_ability')`. `BadRequestException` (400), `ValidationFailedException`, `NotFoundException`, `UnauthenticatedException`, `ForbiddenException`, `ConflictException`, `RateLimitedException` and `ServerErrorException` (any 5xx, with `ServiceUnavailableException` for a 503 beneath it) extend it for the cases you are likely to handle, so catching `ApiException` still catches them all; an answer that is not a problem (a proxy's error page) keeps `$isProblem` false and the raw `$body`. A request that never got an answer is an `Exception\TransportException`; `isNetworkFailure()` says whether the network failed, the only case a retry can change, or the HTTP client refused the request. The network failed when the client throws PSR-18's `NetworkExceptionInterface`, or Guzzle's cURL transfer broke in transit before an answer (cURL error 55, 56 or 92, which Guzzle reports as a `RequestException` without a response); any other cURL error, a certificate one included, is not retried.
 
 ### Untyped calls
 
@@ -320,14 +376,14 @@ Each client's `raw()` gives the calls underneath the typed methods, with the sam
 ```php
 $data = $client->api()->raw()->get('/api/v1/articles/' . rawurlencode($id), requestId: $traceId)->data;
 
-foreach ($client->api()->raw()->paginate('/api/v1/orders', ['status' => 'paid'], limit: 100) as $order) {
-    // every paid order as decoded JSON, 100 per request
+foreach ($client->api()->raw()->paginate('/api/v1/orders', ['sort' => 'updated_at', 'order' => 'desc'], limit: 100) as $order) {
+    // every order as decoded JSON, most recently changed first, 100 per request
 }
 ```
 
 ### Writes that must happen once
 
-Creating an article, filing a member's address and redelivering a webhook accept an `Idempotency-Key`, and their methods always send one: yours (1 to 255 printable ASCII characters, one per operation) or a fresh UUID v4. The same key goes with every retry, so a retry after a lost answer is answered with the first answer instead of creating a second record, and the result says which key was sent and whether the answer was replayed:
+Creating an article, filing a member's address and redelivering a webhook accept an `Idempotency-Key`, and their methods always send one: yours (1 to 255 printable ASCII characters, spaces included, one per operation) or a fresh UUID v4, sent as a quoted Structured Field String (RFC 9651) as the Idempotency-Key draft defines it. The same key goes with every retry, so a retry after a lost answer is answered with the first answer instead of creating a second record, and the result says which key was sent and whether the answer was replayed:
 
 ```php
 $filed = $member->me()->addresses()->create($address, idempotencyKey: $formSubmissionId);
@@ -338,7 +394,7 @@ $filed->idempotencyKey;   // the key that was sent; send it again to retry the s
 
 Untyped, the same is `raw()->postIdempotent($path, $body, $key)`.
 
-Reads and keyed writes are retried after a network failure, a `429`, a `503`, and, for a keyed write, the `409` of an attempt with the same key still running. Each wait is what the site asks in `Retry-After` (or, on a `429` without it, until the spent quota in `RateLimit` turns over), otherwise a jittered backoff doubling from half a second. Other refusals are thrown at once, and so is a `500` under a key, whose outcome only reading the current state can settle; send the operation again under a new key if it still needs doing. Other writes (`update()`, `delete()`, a sync push, and `raw()`'s `post()`, `put()`, `patch()` and `delete()`) are never retried. Tune or turn this off in `Config`:
+Reads and keyed writes are retried after a network failure, a `429`, a `502`, a `503` or a `504`, a read also after a `500`, and, for a keyed write, the `409` of an attempt with the same key still running. Each wait is what the site asks in `Retry-After` (or, on a `429` without it, until the spent quota in `RateLimit` turns over), otherwise a jittered backoff doubling from half a second. Other refusals are thrown at once, and so is a `500` under a key, whose outcome only reading the current state can settle; send the operation again under a new key if it still needs doing. Other writes (`update()`, `delete()`, a sync push, and `raw()`'s `post()`, `put()`, `patch()` and `delete()`) are never retried. Tune or turn this off in `Config`:
 
 ```php
 use Appsolutely\Sdk\Api\RetryPolicy;
@@ -347,7 +403,7 @@ new Config(/* ... */, retryPolicy: new RetryPolicy(maxRetries: 3, maxDelay: 60))
 new Config(/* ... */, retryPolicy: RetryPolicy::none());
 ```
 
-`maxRetries` runs from 0 to 10 (2 by default), and a wait the site asks for beyond `maxDelay` seconds (30 by default) is not made: the refusal is thrown instead. Each retry is logged at `info` through the PSR-3 logger.
+`maxRetries` runs from 0 to 10 (2 by default), and a wait the site asks for beyond `maxDelay` seconds (30 by default) is not made: the refusal is thrown instead. Through the PSR-3 logger, each attempt is logged at `debug` with its method, path, status, request id and attempt number, each retry at `info`, and giving up on a network failure, a `5xx` or a refusal a retry could have passed at `warning`, as is a failed request for the backend's token. Headers, bodies, query strings, tokens and keys are never logged.
 
 When the site refuses a token with `UnauthenticatedException`, renew it rather than retrying: refused credentials count against a budget of their own, and a client that keeps sending a dead token locks out every caller behind the same address.
 
@@ -465,10 +521,27 @@ The classes in `Appsolutely\Sdk\Testing` are test helpers: use them in your test
 
 ```php
 use Appsolutely\Sdk\Testing\WebhookFactory;
+use Appsolutely\Sdk\Webhooks\EventType;
 
-$delivery = (new WebhookFactory(['whsec_...']))->make('entitlement.granted', ['member' => 'm_1']);
+$delivery = (new WebhookFactory(['whsec_...']))->make(EventType::ROLE_ASSIGNMENT_CHANGED, [
+    'subject' => 'member-sub', 'role' => 'editor', 'change' => 'added', 'cause' => 'app', 'roles' => ['editor'], 'sequence' => 7,
+]);
 // $delivery->body and $delivery->headers are what your endpoint receives.
 ```
+
+## Versioning
+
+The package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html), and every change is listed in the [CHANGELOG](CHANGELOG.md).
+
+- **Before 1.0**, the public API may still change: a breaking change raises the minor version (`0.1` to `0.2`) and is marked as breaking in the CHANGELOG, while a patch release (`0.1.1`) never breaks. A `^0.1` constraint therefore never takes a breaking release.
+- **From 1.0**, a breaking change waits for the next major version.
+- **Deprecations**: a method, class or option to be removed is first marked `@deprecated` with its replacement and listed under *Deprecated* in the CHANGELOG, and stays for at least one minor release before it is removed in a release that may break (the next minor before 1.0, the next major after it).
+
+Everything marked `@internal` is outside the public API and may change in any release.
+
+## Security
+
+Report a vulnerability privately, as [SECURITY.md](SECURITY.md) describes, never in a public issue.
 
 ## License
 

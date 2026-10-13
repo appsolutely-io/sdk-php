@@ -8,7 +8,7 @@ namespace Appsolutely\Sdk\Model;
  * An endpoint just registered, with the secret its deliveries are signed
  * with: sent this once, so keep it now.
  */
-final readonly class WebhookEndpointCreated
+final readonly class WebhookEndpointCreated implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'WebhookEndpointWithSecret';

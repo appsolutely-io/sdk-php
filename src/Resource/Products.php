@@ -26,12 +26,12 @@ final readonly class Products
     #[Endpoint(Operation::ListProducts)]
     public function list(?string $sort = null, ?string $order = null, int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::ListProducts, Product::SCHEMA, Product::from(...), ['sort' => $sort, 'order' => $order], $limit);
+        return $this->caller->list(Operation::ListProducts, Product::class, ['sort' => $sort, 'order' => $order], $limit);
     }
 
     #[Endpoint(Operation::GetProduct)]
     public function get(string $id): Product
     {
-        return $this->caller->read(Operation::GetProduct, Product::SCHEMA, Product::from(...), ['id' => $id]);
+        return $this->caller->read(Operation::GetProduct, Product::class, ['id' => $id]);
     }
 }

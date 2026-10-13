@@ -8,7 +8,7 @@ namespace Appsolutely\Sdk\Model;
  * A category an article is filed under: enough to link or group by, not the
  * whole category.
  */
-final readonly class ArticleCategory
+final readonly class ArticleCategory implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'ArticleCategorySummary';

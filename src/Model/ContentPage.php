@@ -11,7 +11,7 @@ use DateTimeImmutable;
  * answer and a `page.*` delivery both carry it, named so it is not mistaken
  * for Api\Page, a page of a list.
  */
-final readonly class ContentPage
+final readonly class ContentPage implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'Page';

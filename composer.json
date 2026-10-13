@@ -24,6 +24,7 @@
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.95",
+        "guzzlehttp/guzzle": "^7.15.5",
         "nyholm/psr7": "^1.8.2",
         "php-http/client-common": "^2.7",
         "php-http/message": "^1.16",
@@ -32,7 +33,12 @@
         "phpstan/phpstan-strict-rules": "^2.1",
         "phpunit/phpunit": "^12.5 || ^13.0",
         "standard-webhooks/standard-webhooks": "1.0.2",
+        "symfony/http-client": "^7.4.20 || ^8.1.8",
         "symfony/yaml": "^7.3 || ^8.0"
+    },
+    "suggest": {
+        "guzzlehttp/guzzle": "An HTTP client the SDK gives the Config's request and connect timeouts when it finds one for itself (^7.0).",
+        "symfony/http-client": "An HTTP client the SDK gives the Config's request timeout when it finds one for itself (6.2 or later)."
     },
     "autoload": {
         "psr-4": {
@@ -73,7 +79,7 @@
         "analyse": "Run PHPStan at level max with strict rules.",
         "cs": "Check coding style (PER-CS 3.0) without changing files.",
         "cs:fix": "Fix coding style (PER-CS 3.0) in place.",
-        "pin-contract": "Copy the Site API document from a checkout of the site software at a ref (composer pin-contract -- <checkout> <ref>) and record its commit in Contract::REVISION.",
+        "pin-contract": "Copy the Site API document from a checkout of the site software at a ref (composer pin-contract -- <checkout> <ref>) and record its commit in Contract::REVISION and its release in Contract::RELEASE.",
         "check": "Validate composer.json, then run cs, analyse and test."
     },
     "minimum-stability": "stable"

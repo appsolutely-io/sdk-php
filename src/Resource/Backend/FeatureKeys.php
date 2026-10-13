@@ -27,7 +27,7 @@ final readonly class FeatureKeys
     #[Endpoint(Operation::ListFeatureKeys)]
     public function list(): Page
     {
-        return $this->caller->onlyPage(Operation::ListFeatureKeys, FeatureKey::SCHEMA, FeatureKey::from(...));
+        return $this->caller->onlyPage(Operation::ListFeatureKeys, FeatureKey::class);
     }
 
     /**
@@ -39,7 +39,7 @@ final readonly class FeatureKeys
     #[Endpoint(Operation::CreateFeatureKey)]
     public function create(string $key, string $kind): FeatureKey
     {
-        return $this->caller->read(Operation::CreateFeatureKey, FeatureKey::SCHEMA, FeatureKey::from(...), body: ['key' => $key, 'kind' => $kind]);
+        return $this->caller->read(Operation::CreateFeatureKey, FeatureKey::class, body: ['key' => $key, 'kind' => $kind]);
     }
 
     /**
@@ -49,6 +49,6 @@ final readonly class FeatureKeys
     #[Endpoint(Operation::RetireFeatureKey)]
     public function retire(string $key): FeatureKey
     {
-        return $this->caller->read(Operation::RetireFeatureKey, FeatureKey::SCHEMA, FeatureKey::from(...), ['key' => $key]);
+        return $this->caller->read(Operation::RetireFeatureKey, FeatureKey::class, ['key' => $key]);
     }
 }

@@ -27,7 +27,7 @@ final readonly class FeatureValues
     #[Endpoint(Operation::ListProductFeatureValues)]
     public function list(string $product): Page
     {
-        return $this->caller->onlyPage(Operation::ListProductFeatureValues, ProductFeatureValue::SCHEMA, ProductFeatureValue::from(...), path: ['product' => $product]);
+        return $this->caller->onlyPage(Operation::ListProductFeatureValues, ProductFeatureValue::class, path: ['product' => $product]);
     }
 
     /**
@@ -39,7 +39,7 @@ final readonly class FeatureValues
     #[Endpoint(Operation::UpdateProductFeatureValue)]
     public function set(string $product, string $key, mixed $value): ProductFeatureValue
     {
-        return $this->caller->read(Operation::UpdateProductFeatureValue, ProductFeatureValue::SCHEMA, ProductFeatureValue::from(...), ['product' => $product, 'key' => $key], body: ['value' => $value]);
+        return $this->caller->read(Operation::UpdateProductFeatureValue, ProductFeatureValue::class, ['product' => $product, 'key' => $key], body: ['value' => $value]);
     }
 
     /**

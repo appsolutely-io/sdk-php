@@ -24,7 +24,7 @@ final readonly class Referral
     #[Endpoint(Operation::GetMeReferral)]
     public function get(): ReferralModel
     {
-        return $this->caller->read(Operation::GetMeReferral, ReferralModel::SCHEMA, ReferralModel::from(...));
+        return $this->caller->read(Operation::GetMeReferral, ReferralModel::class);
     }
 
     /**
@@ -33,6 +33,6 @@ final readonly class Referral
     #[Endpoint(Operation::RewardsMeReferral)]
     public function rewards(int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::RewardsMeReferral, ReferralReward::SCHEMA, ReferralReward::from(...), [], $limit);
+        return $this->caller->list(Operation::RewardsMeReferral, ReferralReward::class, [], $limit);
     }
 }

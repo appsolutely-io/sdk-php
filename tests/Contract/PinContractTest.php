@@ -53,6 +53,18 @@ final class PinContractTest extends TestCase
         self::assertSame('3.1.0', $document['openapi'] ?? null);
     }
 
+    /**
+     * The README names the release the client is held to; it must be the
+     * one the pin recorded, so the two cannot drift apart.
+     */
+    public function testTheReadmeNamesThePinnedRelease(): void
+    {
+        self::assertStringContainsString(
+            'the site software ' . Contract::RELEASE . ', the commit `Contract::REVISION` names',
+            (string) file_get_contents(self::own('README.md')),
+        );
+    }
+
     public function testItCopiesTheDocumentAndRecordsTheCommitTheRefNames(): void
     {
         $first = $this->commitDocument(self::DOCUMENT);
@@ -64,7 +76,55 @@ final class PinContractTest extends TestCase
         self::assertSame(0, $exitCode, $output);
         self::assertSame(self::DOCUMENT, file_get_contents($this->package(self::DOCUMENT_COPY)));
         self::assertStringContainsString("public const string REVISION = '" . $first . "';", (string) file_get_contents($this->package(self::CONTRACT_FILE)));
+        self::assertStringContainsString("public const string RELEASE = 'v0.19.0';", (string) file_get_contents($this->package(self::CONTRACT_FILE)));
         self::assertStringContainsString($first, $output);
+    }
+
+    /**
+     * A commit that is no release is recorded as git describes it: the
+     * release before it, the commits since and the commit.
+     */
+    public function testACommitAfterAReleaseIsRecordedAsDescribed(): void
+    {
+        $this->commitDocument(self::DOCUMENT);
+        $this->git('tag', 'v0.19.0');
+        $second = $this->commitDocument(str_replace('v1', 'v1-changed', self::DOCUMENT));
+
+        [$exitCode, $output] = $this->pin('main');
+
+        self::assertSame(0, $exitCode, $output);
+        self::assertMatchesRegularExpression(
+            "/public const string RELEASE = 'v0\\.19\\.0-1-g" . substr($second, 0, 7) . "[0-9a-f]*';/",
+            (string) file_get_contents($this->package(self::CONTRACT_FILE)),
+        );
+    }
+
+    /**
+     * Only a version tag names a release: another tag on the commit is
+     * passed over, and the full commit hash follows the release before it.
+     */
+    public function testATagThatIsNoVersionIsNotTakenForARelease(): void
+    {
+        $this->commitDocument(self::DOCUMENT);
+        $this->git('tag', 'v0.19.0');
+        $second = $this->commitDocument(str_replace('v1', 'v1-changed', self::DOCUMENT));
+        $this->git('tag', 'deployed');
+
+        [$exitCode, $output] = $this->pin('deployed');
+
+        self::assertSame(0, $exitCode, $output);
+        self::assertStringContainsString("public const string RELEASE = 'v0.19.0-1-g" . $second . "';", (string) file_get_contents($this->package(self::CONTRACT_FILE)));
+    }
+
+    public function testACommitWithNoReleaseBeforeItIsRecordedAsUnreleased(): void
+    {
+        $this->commitDocument(self::DOCUMENT);
+        $this->git('tag', 'deployed');
+
+        [$exitCode, $output] = $this->pin('main');
+
+        self::assertSame(0, $exitCode, $output);
+        self::assertStringContainsString("public const string RELEASE = 'unreleased';", (string) file_get_contents($this->package(self::CONTRACT_FILE)));
     }
 
     public function testARefWithoutTheDocumentChangesNothing(): void

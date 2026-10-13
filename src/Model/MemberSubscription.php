@@ -9,17 +9,23 @@ use DateTimeImmutable;
 /**
  * One of the member's own subscriptions, as the member manages it.
  */
-final readonly class MemberSubscription
+final readonly class MemberSubscription implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'MemberSubscription';
+
+    public const string BILLED_BY_SITE = 'site';
+
+    public const string BILLED_BY_APP_STORE = 'app_store';
+
+    public const string BILLED_BY_GOOGLE_PLAY = 'google_play';
 
     /**
      * @param string|null $product the product's slug
      * @param string|null $sku the slug of the plan it renews on
      * @param string|null $pendingSku the plan it changes to at its next renewal
      * @param int|null $pendingQuantity the quantity it changes to at its next renewal
-     * @param string $billedBy who bills it: `site`, `app_store` or `google_play`
+     * @param string $billedBy who bills it: one of the BILLED_BY_ constants
      * @param string|null $manageUrl where a store bills it, the store's page for managing it
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */

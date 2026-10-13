@@ -25,7 +25,8 @@ use RuntimeException;
  *
  * The members read are remembered twice: per object, so what the site sends
  * beyond them stays readable as extra(); and as paths across the whole
- * answer, so the contract test can hold every model to its schema.
+ * answer, each with the accessor that read it, so the contract test can
+ * hold every model to its schema: what it reads, and as what type.
  *
  * @internal
  */
@@ -45,6 +46,7 @@ final class Fields
      * @param string $source what the object came in, for a refusal: a schema name, or an event type
      * @param bool $delivery whether it is a webhook delivery's data rather than an API answer
      * @param \ArrayObject<int, string> $reads shared by an object and the objects nested in it
+     * @param \ArrayObject<string, list<string>> $accessors the accessors of each read path, shared as $reads is
      * @param string $path the object's place in what was sent, for a refusal: `items[1]`
      * @param string $readPath the object's place in its schema, for the record: `items[]`
      */
@@ -54,6 +56,7 @@ final class Fields
         private readonly string $source,
         private readonly bool $delivery,
         private readonly \ArrayObject $reads,
+        private readonly \ArrayObject $accessors,
         private readonly string $path,
         private readonly string $readPath,
     ) {}
@@ -67,7 +70,7 @@ final class Fields
      */
     public static function of(#[\SensitiveParameter] array $object, string $schema): self
     {
-        return new self($object, $schema, false, new \ArrayObject(), '', '');
+        return new self($object, $schema, false, new \ArrayObject(), new \ArrayObject(), '', '');
     }
 
     /**
@@ -78,7 +81,7 @@ final class Fields
      */
     public static function ofDelivery(#[\SensitiveParameter] array $data, string $type): self
     {
-        return new self($data, $type, true, new \ArrayObject(), 'data', '');
+        return new self($data, $type, true, new \ArrayObject(), new \ArrayObject(), 'data', '');
     }
 
     /**
@@ -87,7 +90,7 @@ final class Fields
      */
     public function except(string ...$names): self
     {
-        return new self(array_diff_key($this->object, array_flip($names)), $this->source, $this->delivery, $this->reads, $this->path, $this->readPath);
+        return new self(array_diff_key($this->object, array_flip($names)), $this->source, $this->delivery, $this->reads, $this->accessors, $this->path, $this->readPath);
     }
 
     /**
@@ -113,62 +116,58 @@ final class Fields
     }
 
     /**
+     * The accessors each field was read with (`string`, `nullableTime`),
+     * by the path reads() gives it.
+     *
+     * @return array<string, list<string>>
+     */
+    public function accessors(): array
+    {
+        return $this->accessors->getArrayCopy();
+    }
+
+    /**
      * A member whose type the record it belongs to names, as decoded; null
      * when it is null or missing.
      */
     public function any(string $name): mixed
     {
-        return $this->value($name);
+        return $this->value($name, __FUNCTION__);
     }
 
     public function string(string $name): string
     {
-        return $this->nullableString($name) ?? $this->missing($name);
+        return $this->readString($name, __FUNCTION__) ?? $this->missing($name);
     }
 
     public function nullableString(string $name): ?string
     {
-        $value = $this->value($name);
-        if ($value !== null && !is_string($value)) {
-            $this->refuse($name, 'a string', $value);
-        }
-
-        return $value;
+        return $this->readString($name, __FUNCTION__);
     }
 
     public function int(string $name): int
     {
-        return $this->nullableInt($name) ?? $this->missing($name);
+        return $this->readInt($name, __FUNCTION__) ?? $this->missing($name);
     }
 
     public function nullableInt(string $name): ?int
     {
-        $value = $this->value($name);
-        if ($value !== null && !is_int($value)) {
-            $this->refuse($name, 'an integer', $value);
-        }
-
-        return $value;
+        return $this->readInt($name, __FUNCTION__);
     }
 
     public function bool(string $name): bool
     {
-        return $this->nullableBool($name) ?? $this->missing($name);
+        return $this->readBool($name, __FUNCTION__) ?? $this->missing($name);
     }
 
     public function nullableBool(string $name): ?bool
     {
-        $value = $this->value($name);
-        if ($value !== null && !is_bool($value)) {
-            $this->refuse($name, 'a boolean', $value);
-        }
-
-        return $value;
+        return $this->readBool($name, __FUNCTION__);
     }
 
     public function time(string $name): DateTimeImmutable
     {
-        return $this->nullableTime($name) ?? $this->missing($name);
+        return $this->readTime($name, __FUNCTION__) ?? $this->missing($name);
     }
 
     /**
@@ -180,7 +179,130 @@ final class Fields
      */
     public function nullableTime(string $name): ?DateTimeImmutable
     {
-        $value = $this->value($name);
+        return $this->readTime($name, __FUNCTION__);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function strings(string $name): array
+    {
+        $values = $this->list($name, 'a list of strings', __FUNCTION__);
+        foreach ($values as $value) {
+            if (!is_string($value)) {
+                $this->refuse($name, 'a list of strings', $values);
+            }
+        }
+
+        /** @var list<string> $values */
+        return $values;
+    }
+
+    /**
+     * A free-form object, such as a form entry's answers, kept as decoded.
+     * `{}` and `[]` both decode to an empty array. A member named like a
+     * decimal integer has an integer key, as in extra().
+     *
+     * @return array<array-key, mixed>
+     */
+    public function map(string $name): array
+    {
+        return $this->readMap($name, __FUNCTION__) ?? $this->missing($name);
+    }
+
+    /**
+     * @return array<array-key, mixed>|null
+     */
+    public function nullableMap(string $name): ?array
+    {
+        return $this->readMap($name, __FUNCTION__);
+    }
+
+    /**
+     * An object of integers, such as an account's totals, which the site
+     * sends as `{}` when there are none.
+     *
+     * @return array<array-key, int>
+     */
+    public function intMap(string $name): array
+    {
+        $integers = [];
+        foreach ($this->readMap($name, __FUNCTION__) ?? $this->missing($name) as $member => $value) {
+            if (!is_int($value)) {
+                $this->refuse($name . '.' . $member, 'an integer', $value);
+            }
+            $integers[$member] = $value;
+        }
+
+        return $integers;
+    }
+
+    /**
+     * A nested object, read with the same record and refusals.
+     */
+    public function object(string $name): self
+    {
+        return $this->readObject($name, __FUNCTION__) ?? $this->missing($name);
+    }
+
+    public function nullableObject(string $name): ?self
+    {
+        return $this->readObject($name, __FUNCTION__);
+    }
+
+    /**
+     * A list of nested objects.
+     *
+     * @return list<self>
+     */
+    public function objects(string $name): array
+    {
+        return $this->readObjects($name, __FUNCTION__) ?? $this->missing($name);
+    }
+
+    /**
+     * A list of nested objects, or null.
+     *
+     * @return list<self>|null
+     */
+    public function nullableObjects(string $name): ?array
+    {
+        return $this->readObjects($name, __FUNCTION__);
+    }
+
+    private function readString(string $name, string $accessor): ?string
+    {
+        $value = $this->value($name, $accessor);
+        if ($value !== null && !is_string($value)) {
+            $this->refuse($name, 'a string', $value);
+        }
+
+        return $value;
+    }
+
+    private function readInt(string $name, string $accessor): ?int
+    {
+        $value = $this->value($name, $accessor);
+        if ($value !== null && !is_int($value)) {
+            $this->refuse($name, 'an integer', $value);
+        }
+
+        return $value;
+    }
+
+    private function readBool(string $name, string $accessor): ?bool
+    {
+        $value = $this->value($name, $accessor);
+        if ($value !== null && !is_bool($value)) {
+            $this->refuse($name, 'a boolean', $value);
+        }
+
+        return $value;
+    }
+
+    private function readTime(string $name, string $accessor): ?DateTimeImmutable
+    {
+        $value = $this->value($name, $accessor);
         if ($value === null) {
             return null;
         }
@@ -219,39 +341,11 @@ final class Fields
     }
 
     /**
-     * @return list<string>
-     */
-    public function strings(string $name): array
-    {
-        $values = $this->list($name, 'a list of strings');
-        foreach ($values as $value) {
-            if (!is_string($value)) {
-                $this->refuse($name, 'a list of strings', $values);
-            }
-        }
-
-        /** @var list<string> $values */
-        return $values;
-    }
-
-    /**
-     * A free-form object, such as a form entry's answers, kept as decoded.
-     * `{}` and `[]` both decode to an empty array. A member named like a
-     * decimal integer has an integer key, as in extra().
-     *
-     * @return array<array-key, mixed>
-     */
-    public function map(string $name): array
-    {
-        return $this->nullableMap($name) ?? $this->missing($name);
-    }
-
-    /**
      * @return array<array-key, mixed>|null
      */
-    public function nullableMap(string $name): ?array
+    private function readMap(string $name, string $accessor): ?array
     {
-        $value = $this->value($name);
+        $value = $this->value($name, $accessor);
         if ($value === null) {
             return null;
         }
@@ -262,36 +356,9 @@ final class Fields
         return $value;
     }
 
-    /**
-     * An object of integers, such as an account's totals, which the site
-     * sends as `{}` when there are none.
-     *
-     * @return array<array-key, int>
-     */
-    public function intMap(string $name): array
+    private function readObject(string $name, string $accessor): ?self
     {
-        $integers = [];
-        foreach ($this->map($name) as $member => $value) {
-            if (!is_int($value)) {
-                $this->refuse($name . '.' . $member, 'an integer', $value);
-            }
-            $integers[$member] = $value;
-        }
-
-        return $integers;
-    }
-
-    /**
-     * A nested object, read with the same record and refusals.
-     */
-    public function object(string $name): self
-    {
-        return $this->nullableObject($name) ?? $this->missing($name);
-    }
-
-    public function nullableObject(string $name): ?self
-    {
-        $value = $this->value($name);
+        $value = $this->value($name, $accessor);
         if ($value === null) {
             return null;
         }
@@ -299,27 +366,15 @@ final class Fields
             $this->refuse($name, 'an object', $value);
         }
 
-        return new self($value, $this->source, $this->delivery, $this->reads, $this->join($this->path, $name), $this->join($this->readPath, $name));
+        return new self($value, $this->source, $this->delivery, $this->reads, $this->accessors, $this->join($this->path, $name), $this->join($this->readPath, $name));
     }
 
     /**
-     * A list of nested objects.
-     *
-     * @return list<self>
-     */
-    public function objects(string $name): array
-    {
-        return $this->nullableObjects($name) ?? $this->missing($name);
-    }
-
-    /**
-     * A list of nested objects, or null.
-     *
      * @return list<self>|null
      */
-    public function nullableObjects(string $name): ?array
+    private function readObjects(string $name, string $accessor): ?array
     {
-        $list = $this->value($name);
+        $list = $this->value($name, $accessor);
         if ($list === null) {
             return null;
         }
@@ -332,7 +387,7 @@ final class Fields
             if (!self::isObject($value)) {
                 $this->refuse($name . '[' . $index . ']', 'an object', $value);
             }
-            $objects[] = new self($value, $this->source, $this->delivery, $this->reads, $this->join($this->path, $name) . '[' . $index . ']', $this->join($this->readPath, $name) . '[]');
+            $objects[] = new self($value, $this->source, $this->delivery, $this->reads, $this->accessors, $this->join($this->path, $name) . '[' . $index . ']', $this->join($this->readPath, $name) . '[]');
         }
 
         return $objects;
@@ -341,9 +396,9 @@ final class Fields
     /**
      * @return list<mixed>
      */
-    private function list(string $name, string $expected): array
+    private function list(string $name, string $expected, string $accessor): array
     {
-        $value = $this->value($name) ?? $this->missing($name);
+        $value = $this->value($name, $accessor) ?? $this->missing($name);
         if (!is_array($value) || !array_is_list($value)) {
             $this->refuse($name, $expected, $value);
         }
@@ -351,10 +406,15 @@ final class Fields
         return $value;
     }
 
-    private function value(string $name): mixed
+    /**
+     * @param string $accessor the public method reading it, for the record
+     */
+    private function value(string $name, string $accessor): mixed
     {
+        $path = $this->join($this->readPath, $name);
         $this->read[$name] = true;
-        $this->reads[] = $this->join($this->readPath, $name);
+        $this->reads[] = $path;
+        $this->accessors[$path] = [...$this->accessors[$path] ?? [], $accessor];
 
         return $this->object[$name] ?? null;
     }
@@ -402,6 +462,6 @@ final class Fields
      */
     private function refusal(string $inDelivery, string $inAnswer): RuntimeException
     {
-        return $this->delivery ? new UnexpectedPayloadException($inDelivery) : new UnexpectedResponseException($inAnswer, 0);
+        return $this->delivery ? new UnexpectedPayloadException($inDelivery) : new UnexpectedResponseException($inAnswer, 0, $this->source);
     }
 }

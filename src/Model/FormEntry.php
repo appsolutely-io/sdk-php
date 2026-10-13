@@ -10,7 +10,7 @@ use DateTimeImmutable;
  * One submission of one of the site's forms, as an API answer and a
  * `form.submitted` delivery both carry it.
  */
-final readonly class FormEntry
+final readonly class FormEntry implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'FormEntry';

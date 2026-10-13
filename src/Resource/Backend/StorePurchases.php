@@ -29,7 +29,7 @@ final readonly class StorePurchases
     #[Endpoint(Operation::IntentsStorePurchase)]
     public function intent(string $subject, string $store, string $product, ?string $sku = null): StorePurchaseIntent
     {
-        return $this->caller->read(Operation::IntentsStorePurchase, StorePurchaseIntent::SCHEMA, StorePurchaseIntent::from(...), body: ['subject' => $subject, 'store' => $store, 'product' => $product, 'sku' => $sku]);
+        return $this->caller->read(Operation::IntentsStorePurchase, StorePurchaseIntent::class, body: ['subject' => $subject, 'store' => $store, 'product' => $product, 'sku' => $sku]);
     }
 
     /**
@@ -53,7 +53,7 @@ final readonly class StorePurchases
         #[\SensitiveParameter]
         ?string $purchaseToken = null,
     ): StorePurchaseTransaction {
-        return $this->caller->read(Operation::TransactionsStorePurchase, StorePurchaseTransaction::SCHEMA, StorePurchaseTransaction::from(...), body: array_filter([
+        return $this->caller->read(Operation::TransactionsStorePurchase, StorePurchaseTransaction::class, body: array_filter([
             'subject' => $subject,
             'store' => $store,
             'initiation' => $initiation,

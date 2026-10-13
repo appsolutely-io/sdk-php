@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * A visit to the site's billing pages for one member, and where it stands.
  */
-final readonly class PortalSession
+final readonly class PortalSession implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'PortalSession';

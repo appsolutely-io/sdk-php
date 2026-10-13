@@ -8,7 +8,6 @@ use Appsolutely\Sdk\Api\Caller;
 use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\Operation;
 use Appsolutely\Sdk\Model\Article;
-use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Model\SyncPull;
 use Appsolutely\Sdk\Model\SyncPush;
 use DateTimeInterface;
@@ -32,7 +31,7 @@ final readonly class ArticleFeed
     #[Endpoint(Operation::PullSyncArticle)]
     public function pull(?string $cursor = null, ?int $limit = null): SyncPull
     {
-        return $this->caller->read(Operation::PullSyncArticle, 'ArticleSyncPull', static fn(#[\SensitiveParameter] Fields $json): SyncPull => SyncPull::from($json, Article::from(...)), query: Caller::feed($cursor, $limit));
+        return $this->caller->pull(Operation::PullSyncArticle, Article::class, $cursor, $limit);
     }
 
     /**
@@ -48,6 +47,6 @@ final readonly class ArticleFeed
     #[Endpoint(Operation::PushSyncArticle)]
     public function push(array $mutations): SyncPush
     {
-        return $this->caller->read(Operation::PushSyncArticle, 'ArticleSyncPush', static fn(#[\SensitiveParameter] Fields $json): SyncPush => SyncPush::from($json, Article::from(...)), body: ['mutations' => $mutations]);
+        return $this->caller->push(Operation::PushSyncArticle, Article::class, $mutations);
     }
 }

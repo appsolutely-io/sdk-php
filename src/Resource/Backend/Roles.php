@@ -26,7 +26,7 @@ final readonly class Roles
     #[Endpoint(Operation::ListRoles)]
     public function list(): Page
     {
-        return $this->caller->onlyPage(Operation::ListRoles, Role::SCHEMA, Role::from(...));
+        return $this->caller->onlyPage(Operation::ListRoles, Role::class);
     }
 
     /**
@@ -35,7 +35,7 @@ final readonly class Roles
     #[Endpoint(Operation::CreateRole)]
     public function create(string $key): Role
     {
-        return $this->caller->read(Operation::CreateRole, Role::SCHEMA, Role::from(...), body: ['key' => $key]);
+        return $this->caller->read(Operation::CreateRole, Role::class, body: ['key' => $key]);
     }
 
     /**
@@ -44,6 +44,6 @@ final readonly class Roles
     #[Endpoint(Operation::RetireRole)]
     public function retire(string $key): Role
     {
-        return $this->caller->read(Operation::RetireRole, Role::SCHEMA, Role::from(...), ['key' => $key]);
+        return $this->caller->read(Operation::RetireRole, Role::class, ['key' => $key]);
     }
 }

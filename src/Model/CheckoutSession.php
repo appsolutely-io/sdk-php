@@ -9,15 +9,31 @@ use DateTimeImmutable;
 /**
  * A hosted checkout the member is sent to, and where it stands.
  */
-final readonly class CheckoutSession
+final readonly class CheckoutSession implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'CheckoutSession';
 
+    public const string STATUS_OPEN = 'open';
+
+    public const string STATUS_EXPIRED = 'expired';
+
+    public const string STATUS_AWAITING_PAYMENT = 'awaiting_payment';
+
+    public const string STATUS_PAYMENT_OVERDUE = 'payment_overdue';
+
+    public const string STATUS_COMPLETE = 'complete';
+
+    public const string STATUS_CANCELED = 'canceled';
+
+    public const string MODE_PRODUCTION = 'production';
+
+    public const string MODE_TEST = 'test';
+
     /**
      * @param string $url where to send the member
-     * @param string $status `open`, `expired`, `awaiting_payment`, `payment_overdue`, `complete` or `canceled`
-     * @param string $mode `production` or `test`
+     * @param string $status one of the STATUS_ constants
+     * @param string $mode one of the MODE_ constants
      * @param list<CheckoutSessionLine> $lines
      * @param string|null $promotionCode the code the checkout was started with
      * @param string|null $orderReference the reference of the order the checkout placed, or null before it placed one

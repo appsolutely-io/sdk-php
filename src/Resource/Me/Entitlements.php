@@ -26,6 +26,6 @@ final readonly class Entitlements
     #[Endpoint(Operation::ListMeEntitlements)]
     public function list(): Page
     {
-        return $this->caller->onlyPage(Operation::ListMeEntitlements, Entitlement::SCHEMA, Entitlement::from(...));
+        return $this->caller->onlyPage(Operation::ListMeEntitlements, Entitlement::class);
     }
 }

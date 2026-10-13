@@ -29,7 +29,7 @@ final readonly class BillingEntry
     #[Endpoint(Operation::GetMeBillingEntry)]
     public function get(string $store, ?string $storefront = null, #[\SensitiveParameter] ?string $storeToken = null, ?string $platform = null, ?string $osVersion = null): BillingEntryModel
     {
-        return $this->caller->read(Operation::GetMeBillingEntry, BillingEntryModel::SCHEMA, BillingEntryModel::from(...), query: [
+        return $this->caller->read(Operation::GetMeBillingEntry, BillingEntryModel::class, query: [
             'store' => $store,
             'storefront' => $storefront,
             'store_token' => $storeToken,

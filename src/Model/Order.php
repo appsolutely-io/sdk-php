@@ -11,7 +11,7 @@ use DateTimeImmutable;
  * carry it. Every amount is an integer count of `$currency`'s minor units
  * (`1999` with `USD` is 19.99).
  */
-final readonly class Order
+final readonly class Order implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'Order';

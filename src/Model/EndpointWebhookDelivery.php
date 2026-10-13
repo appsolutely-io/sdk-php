@@ -7,7 +7,7 @@ namespace Appsolutely\Sdk\Model;
 /**
  * A delivery of an event to one of the backend's endpoints.
  */
-final readonly class EndpointWebhookDelivery
+final readonly class EndpointWebhookDelivery implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'EndpointWebhookDelivery';

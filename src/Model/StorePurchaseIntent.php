@@ -7,7 +7,7 @@ namespace Appsolutely\Sdk\Model;
 /**
  * What an app passes to a store's purchase sheet to buy a product the site sells there.
  */
-final readonly class StorePurchaseIntent
+final readonly class StorePurchaseIntent implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'StorePurchaseIntent';

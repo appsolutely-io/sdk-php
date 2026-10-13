@@ -90,7 +90,7 @@ final class ContentTest extends TestCase
         ], idempotencyKey: 'import-42');
 
         self::assertSame('POST /api/v1/articles', $site->line());
-        self::assertSame('import-42', $site->request()->getHeaderLine('Idempotency-Key'));
+        self::assertSame('"import-42"', $site->request()->getHeaderLine('Idempotency-Key'));
         self::assertSame(['title' => 'Hello', 'content' => '<p>Hi</p>', 'published_at' => '2026-10-08T12:34:56Z', 'categories' => ['cat-1']], $site->body());
         self::assertSame('art-9', $created->value->id);
         self::assertSame('import-42', $created->idempotencyKey);
@@ -104,8 +104,8 @@ final class ContentTest extends TestCase
 
         $created = $site->provider->client()->api()->articles()->create(['title' => 'Hello', 'content' => 'Hi']);
 
-        self::assertMatchesRegularExpression('/^[0-9a-f-]{36}$/D', $site->request()->getHeaderLine('Idempotency-Key'));
-        self::assertSame($site->request()->getHeaderLine('Idempotency-Key'), $created->idempotencyKey);
+        self::assertMatchesRegularExpression('/^"[0-9a-f-]{36}"$/D', $site->request()->getHeaderLine('Idempotency-Key'));
+        self::assertSame($site->request()->getHeaderLine('Idempotency-Key'), '"' . $created->idempotencyKey . '"');
         self::assertFalse($created->replayed);
     }
 

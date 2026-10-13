@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * A test subscription's own clock, and the subscription as it stands at that time.
  */
-final readonly class TestClock
+final readonly class TestClock implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'TestClock';

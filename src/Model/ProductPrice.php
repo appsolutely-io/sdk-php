@@ -8,7 +8,7 @@ namespace Appsolutely\Sdk\Model;
  * A product's price in one currency, in that currency's minor units
  * (`1999` with `USD` is 19.99).
  */
-final readonly class ProductPrice
+final readonly class ProductPrice implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'ProductPriceSummary';

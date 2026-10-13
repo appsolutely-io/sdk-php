@@ -28,7 +28,7 @@ final readonly class WebhookEndpoints
     #[Endpoint(Operation::ListWebhookEndpoints)]
     public function list(int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::ListWebhookEndpoints, WebhookEndpoint::SCHEMA, WebhookEndpoint::from(...), [], $limit);
+        return $this->caller->list(Operation::ListWebhookEndpoints, WebhookEndpoint::class, [], $limit);
     }
 
     /**
@@ -41,19 +41,19 @@ final readonly class WebhookEndpoints
     #[Endpoint(Operation::CreateWebhookEndpoint)]
     public function create(string $url, array $eventTypes, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::CreateWebhookEndpoint, WebhookEndpointCreated::SCHEMA, WebhookEndpointCreated::from(...), [], ['url' => $url, 'event_types' => $eventTypes], $idempotencyKey);
+        return $this->caller->keyed(Operation::CreateWebhookEndpoint, WebhookEndpointCreated::class, [], ['url' => $url, 'event_types' => $eventTypes], $idempotencyKey);
     }
 
     #[Endpoint(Operation::DisableWebhookEndpoint)]
     public function disable(string $id): WebhookEndpoint
     {
-        return $this->caller->read(Operation::DisableWebhookEndpoint, WebhookEndpoint::SCHEMA, WebhookEndpoint::from(...), ['endpoint' => $id]);
+        return $this->caller->read(Operation::DisableWebhookEndpoint, WebhookEndpoint::class, ['endpoint' => $id]);
     }
 
     #[Endpoint(Operation::EnableWebhookEndpoint)]
     public function enable(string $id): WebhookEndpoint
     {
-        return $this->caller->read(Operation::EnableWebhookEndpoint, WebhookEndpoint::SCHEMA, WebhookEndpoint::from(...), ['endpoint' => $id]);
+        return $this->caller->read(Operation::EnableWebhookEndpoint, WebhookEndpoint::class, ['endpoint' => $id]);
     }
 
     /**
@@ -74,7 +74,7 @@ final readonly class WebhookEndpoints
     #[Endpoint(Operation::StartWebhookEndpointsSecretRotation)]
     public function startRotation(string $id, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::StartWebhookEndpointsSecretRotation, WebhookEndpointRotation::SCHEMA, WebhookEndpointRotation::from(...), ['endpoint' => $id], [], $idempotencyKey);
+        return $this->caller->keyed(Operation::StartWebhookEndpointsSecretRotation, WebhookEndpointRotation::class, ['endpoint' => $id], [], $idempotencyKey);
     }
 
     /**
@@ -85,7 +85,7 @@ final readonly class WebhookEndpoints
     #[Endpoint(Operation::CompleteWebhookEndpointsSecretRotation)]
     public function completeRotation(string $id, string $rotationId): WebhookEndpoint
     {
-        return $this->caller->read(Operation::CompleteWebhookEndpointsSecretRotation, WebhookEndpoint::SCHEMA, WebhookEndpoint::from(...), ['endpoint' => $id], body: ['confirm' => $rotationId]);
+        return $this->caller->read(Operation::CompleteWebhookEndpointsSecretRotation, WebhookEndpoint::class, ['endpoint' => $id], body: ['confirm' => $rotationId]);
     }
 
     /**
@@ -96,6 +96,6 @@ final readonly class WebhookEndpoints
     #[Endpoint(Operation::CancelWebhookEndpointsSecretRotation)]
     public function cancelRotation(string $id, string $rotationId): WebhookEndpoint
     {
-        return $this->caller->read(Operation::CancelWebhookEndpointsSecretRotation, WebhookEndpoint::SCHEMA, WebhookEndpoint::from(...), ['endpoint' => $id], body: ['confirm' => $rotationId]);
+        return $this->caller->read(Operation::CancelWebhookEndpointsSecretRotation, WebhookEndpoint::class, ['endpoint' => $id], body: ['confirm' => $rotationId]);
     }
 }

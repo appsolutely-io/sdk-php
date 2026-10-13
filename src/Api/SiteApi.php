@@ -140,14 +140,16 @@ final readonly class SiteApi
      * for the operations the site's API document gives an Idempotency-Key.
      *
      * @param array<string, mixed> $body
-     * @param string|null $idempotencyKey a key for this one operation, 1 to 255 printable ASCII characters;
-     *                                    a fresh UUID when none is given. Never reuse one for a different request.
+     * @param string|null $idempotencyKey a key for this one operation, 1 to 255 printable ASCII characters
+     *                                    (spaces included); a fresh UUID when none is given. Pass the raw
+     *                                    key: the client quotes it as an RFC 9651 String. Never reuse one
+     *                                    for a different request.
      */
     public function postIdempotent(string $path, #[\SensitiveParameter] array $body = [], ?string $idempotencyKey = null, ?string $requestId = null): ApiResponse
     {
         $idempotencyKey ??= Uuid::v4();
-        if (preg_match('/^[\x21-\x7E](?:[\x20-\x7E]{0,253}[\x21-\x7E])?$/D', $idempotencyKey) !== 1) {
-            throw new InvalidArgumentValueException('An Idempotency-Key must be 1 to 255 printable ASCII characters, not starting or ending with a space.');
+        if (preg_match('/^[\x20-\x7E]{1,255}$/D', $idempotencyKey) !== 1) {
+            throw new InvalidArgumentValueException('An Idempotency-Key must be 1 to 255 printable ASCII characters.');
         }
 
         return $this->call('POST', $path, [], $body, $requestId, retryable: true, idempotencyKey: $idempotencyKey);
@@ -264,18 +266,24 @@ final readonly class SiteApi
         }
         $renewed = false;
         if ($idempotencyKey !== null) {
-            $headers[Header::IDEMPOTENCY_KEY] = $idempotencyKey;
+            $headers[Header::IDEMPOTENCY_KEY] = self::structuredFieldString($idempotencyKey);
         }
         $encoded = $body === null ? null : self::encode($body);
 
+        $attempt = 0;
         for ($retry = 0; ; $retry++) {
+            $context = ['method' => $method, 'path' => Untrusted::text($path, Untrusted::MAX_LONG_LENGTH), 'status' => null, 'request_id' => $requestId, 'attempt' => ++$attempt];
             try {
                 $response = $this->http->json($method, $url, $headers, $encoded);
             } catch (TransportException $exception) {
-                $this->waitBeforeRetrying($exception, $retryable, $retry, $method, $path, 'a network failure', $this->retryPolicy->backoff($retry + 1));
+                $this->logger->debug(sprintf('%s %s failed before an answer.', $method, $context['path']), $context);
+                $this->waitBeforeRetrying($exception, $retryable, $retry, $context, 'a network failure', $exception->isNetworkFailure() ? $this->retryPolicy->backoff($retry + 1) : null);
 
                 continue;
             }
+
+            $context['status'] = $response->getStatusCode();
+            $this->logger->debug(sprintf('%s %s answered %d.', $method, $context['path'], $context['status']), $context);
 
             if (HttpTransport::isSuccessful($response)) {
                 return $this->answer($response, $method, $path, $requestId, $idempotencyKey);
@@ -297,21 +305,26 @@ final readonly class SiteApi
                 continue;
             }
 
-            $this->waitBeforeRetrying($exception, $retryable, $retry, $method, $path, (string) $exception->status, $this->delay($exception, $idempotencyKey !== null, $retry + 1));
+            $this->waitBeforeRetrying($exception, $retryable, $retry, $context, (string) $exception->status, $this->delay($exception, $idempotencyKey !== null, $retry + 1));
         }
     }
 
     /**
      * Seconds to wait before retrying after this refusal, or null when it is
-     * not one a retry can change: a 429 or a 503, or the 409 of a keyed
-     * request still in flight, waiting what the site asks.
+     * not one a retry can change: a 429; a 502, 503 or 504, a gateway or the
+     * site failing before an answer; the 409 `idempotency-key-in-use` of a
+     * keyed request still running; and, for a read only, a 500. A keyed
+     * write's 500 is thrown: its outcome is unknown, and only reading the
+     * current state can settle it. The wait is what the site asks, or the
+     * policy's backoff.
      */
     private function delay(ApiException $exception, bool $keyed, int $retry): ?float
     {
         $asked = match (true) {
             $exception->status === 429 => $exception->retryAfter ?? $exception->rateLimit->exhausted()?->reset,
-            $exception->status === 503 => $exception->retryAfter,
-            $exception->status === 409 && $keyed && $exception->hasType('idempotency-request-in-flight') => $exception->retryAfter,
+            in_array($exception->status, RetryPolicy::RETRIED_STATUSES, true) => $exception->retryAfter,
+            $exception->status === 500 && !$keyed => $exception->retryAfter,
+            $exception->status === 409 && $keyed && $exception->hasType('idempotency-key-in-use') => $exception->retryAfter,
             default => false,
         };
 
@@ -325,18 +338,27 @@ final readonly class SiteApi
     /**
      * Waits before the next attempt, or throws the failure when the call is
      * not retried, the retries are spent, or the wait asked for is beyond
-     * the policy's ceiling.
+     * the policy's ceiling. Giving up on a failure that was not the site's
+     * considered answer (a network failure, a 5xx, a refusal a later
+     * attempt could have passed) is a warning; any other refusal is the
+     * caller's to report.
+     *
+     * @param array{method: string, path: string, status: int|null, request_id: string, attempt: int} $context
      */
-    private function waitBeforeRetrying(TransportException|ApiException $failure, bool $retryable, int $retry, string $method, string $path, string $reason, ?float $delay): void
+    private function waitBeforeRetrying(TransportException|ApiException $failure, bool $retryable, int $retry, array $context, string $reason, ?float $delay): void
     {
         if (!$retryable || $delay === null || $retry >= $this->retryPolicy->maxRetries || $delay > $this->retryPolicy->maxDelay) {
+            if ($delay !== null || $failure instanceof TransportException || $failure->status >= 500) {
+                $this->logger->warning(sprintf('%s %s failed after %d attempt(s): %s.', $context['method'], $context['path'], $context['attempt'], $reason), $context);
+            }
+
             throw $failure;
         }
 
         $this->logger->info(sprintf(
             'Retrying %s %s after %s, in %.1f seconds (retry %d of %d).',
-            $method,
-            Untrusted::text($path, Untrusted::MAX_LONG_LENGTH),
+            $context['method'],
+            $context['path'],
             $reason,
             $delay,
             $retry + 1,
@@ -419,8 +441,18 @@ final readonly class SiteApi
     }
 
     /**
-     * 1 to 255 visible ASCII characters, the site's rule for a key and a
-     * safe one for any header value.
+     * The key as an RFC 9651 String (section 4.1.6), the form the IETF
+     * Idempotency-Key draft defines: quoted, with `\` and `"` escaped, so
+     * a key holding a space, a colon or a quote arrives as it was given
+     * rather than as a bare token the site would refuse.
+     */
+    private static function structuredFieldString(string $value): string
+    {
+        return '"' . addcslashes($value, '"\\') . '"';
+    }
+
+    /**
+     * 1 to 255 visible ASCII characters, a safe rule for any header value.
      */
     private static function assertHeaderValue(string $name, string $value): void
     {

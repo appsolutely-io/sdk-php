@@ -7,7 +7,7 @@ namespace Appsolutely\Sdk\Model;
 /**
  * One line of an order, priced in its currency's minor units.
  */
-final readonly class OrderLine
+final readonly class OrderLine implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'OrderLineSummary';

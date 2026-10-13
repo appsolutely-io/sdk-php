@@ -9,13 +9,19 @@ use DateTimeImmutable;
 /**
  * A feature a product may grant, by key, and the kind of value it holds.
  */
-final readonly class FeatureKey
+final readonly class FeatureKey implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'FeatureKey';
 
+    public const string KIND_BOOLEAN = 'boolean';
+
+    public const string KIND_QUANTITY = 'quantity';
+
+    public const string KIND_CONFIG = 'config';
+
     /**
-     * @param string $kind `boolean`, `quantity` or `config`
+     * @param string $kind one of the KIND_ constants
      * @param bool $retired whether no product may be given it any longer
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */

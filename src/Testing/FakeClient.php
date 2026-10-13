@@ -13,6 +13,7 @@ use Appsolutely\Sdk\Exception\ApiException;
 use Appsolutely\Sdk\Exception\UnarrangedCallException;
 use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Http\MediaType;
+use Appsolutely\Sdk\Http\StructuredFieldList;
 use Appsolutely\Sdk\MemberClient;
 use Http\Discovery\Psr17FactoryDiscovery;
 use LogicException;
@@ -194,14 +195,14 @@ final class FakeClient
         $decoded = $body === '' ? null : json_decode($body, true);
         $authorization = $request->getHeaderLine(Header::AUTHORIZATION);
         $requestId = $request->getHeaderLine(Header::REQUEST_ID);
-        $key = $request->getHeaderLine(Header::IDEMPOTENCY_KEY);
+        $key = self::idempotencyKey($request->getHeaderLine(Header::IDEMPOTENCY_KEY));
 
         $this->calls[] = new RecordedCall(
             $operation,
             $parameters,
             $query,
             is_array($decoded) ? $decoded : null,
-            $key === '' ? null : $key,
+            $key,
             $requestId,
             str_starts_with($authorization, 'Bearer ') ? substr($authorization, strlen('Bearer ')) : null,
         );
@@ -229,6 +230,20 @@ final class FakeClient
         }
 
         return $response;
+    }
+
+    /**
+     * The key an Idempotency-Key field carries, unquoted from the
+     * Structured Field String it is sent as; null when none was sent.
+     */
+    private static function idempotencyKey(string $field): ?string
+    {
+        if ($field === '') {
+            return null;
+        }
+        $members = StructuredFieldList::parse($field);
+
+        return $members !== null && count($members) === 1 && $members[0][1] === [] ? $members[0][0] : $field;
     }
 
     /**

@@ -9,7 +9,9 @@ declare(strict_types=1);
  *
  * copies `docs/api/openapi.yaml` as it is at <ref> (a commit, a branch or a
  * tag) into tests/Contract/openapi.yaml and writes the commit <ref> names into
- * Contract::REVISION. Both are written by the same run so they cannot name
+ * Contract::REVISION, and that commit's release into Contract::RELEASE: its
+ * version tag (`v*`), or the version tag before it, the commits since and
+ * the full commit, or `unreleased` when no version tag precedes it. Both files are written by the same run so they cannot name
  * different commits: both are written to temporary files first and only then
  * renamed into place, and the originals are backed up first and put back
  * when a rename fails, so nothing is changed when either cannot be read or
@@ -28,6 +30,9 @@ const DOCUMENT_COPY = 'tests/Contract/openapi.yaml';
 const PINNING = '.pinning';
 const UNPINNED = '.unpinned';
 const REVISION_LINE = '/public const string REVISION = \'[0-9a-f]*\';/';
+/** What Contract::RELEASE holds for a commit no version tag precedes. */
+const UNRELEASED = 'unreleased';
+const RELEASE_LINE = '/public const string RELEASE = \'[A-Za-z0-9._+-]*\';/';
 
 function fail(string $message): never
 {
@@ -216,7 +221,7 @@ if (get_included_files()[0] !== __FILE__) {
     return;
 }
 
-const USAGE = "Usage: composer pin-contract -- [--root=<package>] <site-software checkout> <ref>\n\nCopies " . DOCUMENT . ' at <ref> into ' . DOCUMENT_COPY . ' and records the commit in Contract::REVISION (' . CONTRACT_FILE . ").\n--root=<package> pins another copy of this package than the one the tool sits in.";
+const USAGE = "Usage: composer pin-contract -- [--root=<package>] <site-software checkout> <ref>\n\nCopies " . DOCUMENT . ' at <ref> into ' . DOCUMENT_COPY . ' and records the commit in Contract::REVISION and Contract::RELEASE (' . CONTRACT_FILE . ").\n--root=<package> pins another copy of this package than the one the tool sits in.";
 
 $root = dirname(__DIR__);
 $arguments = [];
@@ -249,6 +254,19 @@ if ($exitCode !== 0 || preg_match('/^[0-9a-f]{40}$/D', $commit) !== 1) {
     fail(sprintf('"%s" names no commit in %s. %s', $ref, $checkout, trim($error)));
 }
 
+[$exitCode, $tags] = git($checkout, ['tag', '--merged', $commit, '--list', 'v*']);
+if ($exitCode !== 0) {
+    fail(sprintf('git could not list the version tags of %s in %s.', $commit, $checkout));
+}
+$release = UNRELEASED;
+if (trim($tags) !== '') {
+    [$exitCode, $release, $error] = git($checkout, ['describe', '--tags', '--match', 'v*', '--abbrev=40', $commit]);
+    $release = trim($release);
+    if ($exitCode !== 0 || preg_match('/^v[A-Za-z0-9._+]*(-[0-9]+-g[0-9a-f]{40})?$/D', $release) !== 1) {
+        fail(sprintf('git could not describe %s in %s by its version tags. %s', $commit, $checkout, trim($error)));
+    }
+}
+
 [$exitCode, $document, $error] = git($checkout, ['show', $commit . ':' . DOCUMENT]);
 if ($exitCode !== 0 || $document === '') {
     fail(sprintf('%s has no %s at %s. %s', $checkout, DOCUMENT, $commit, trim($error)));
@@ -262,13 +280,17 @@ $pinned = preg_replace(REVISION_LINE, "public const string REVISION = '" . $comm
 if ($pinned === null || $count !== 1) {
     fail(sprintf('%s does not hold exactly one REVISION constant to write.', $contractPath));
 }
+$pinned = preg_replace(RELEASE_LINE, "public const string RELEASE = '" . $release . "';", $pinned, -1, $count);
+if ($pinned === null || $count !== 1) {
+    fail(sprintf('%s does not hold exactly one RELEASE constant to write.', $contractPath));
+}
 
 $warnings = writeAll([
     $contractPath => $pinned,
     $documentPath => $document,
 ]);
 
-fwrite(STDOUT, sprintf("Pinned %s at %s (%s).\n", DOCUMENT, $commit, $ref));
+fwrite(STDOUT, sprintf("Pinned %s at %s (%s, %s).\n", DOCUMENT, $commit, $ref, $release));
 foreach ($warnings as $warning) {
     fwrite(STDERR, $warning . "\n");
 }

@@ -13,7 +13,7 @@ use DateTimeImmutable;
  * A `credit` reward is a coupon only the referrer can spend, through its
  * code; a `cashback` reward is a refund to the referrer, and has no code.
  */
-final readonly class ReferralReward
+final readonly class ReferralReward implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'ReferralReward';

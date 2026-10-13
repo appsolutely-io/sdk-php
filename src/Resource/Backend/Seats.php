@@ -30,7 +30,7 @@ final readonly class Seats
     #[Endpoint(Operation::CreateSeat)]
     public function grant(string $pool, string $payer, string $member, ?string $label = null): Seat
     {
-        return $this->caller->read(Operation::CreateSeat, Seat::SCHEMA, Seat::from(...), body: ['pool' => $pool, 'payer' => $payer, 'member' => $member, 'label' => $label]);
+        return $this->caller->read(Operation::CreateSeat, Seat::class, body: ['pool' => $pool, 'payer' => $payer, 'member' => $member, 'label' => $label]);
     }
 
     /**
@@ -54,6 +54,6 @@ final readonly class Seats
     #[Endpoint(Operation::ListSeatPools)]
     public function pools(string $payer): Page
     {
-        return $this->caller->onlyPage(Operation::ListSeatPools, SeatPool::SCHEMA, SeatPool::from(...), path: ['payer' => $payer]);
+        return $this->caller->onlyPage(Operation::ListSeatPools, SeatPool::class, path: ['payer' => $payer]);
     }
 }

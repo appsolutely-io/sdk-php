@@ -27,7 +27,7 @@ final readonly class ReturnTargets
     #[Endpoint(Operation::ListReturnTargets)]
     public function list(): Page
     {
-        return $this->caller->onlyPage(Operation::ListReturnTargets, ReturnTarget::SCHEMA, ReturnTarget::from(...));
+        return $this->caller->onlyPage(Operation::ListReturnTargets, ReturnTarget::class);
     }
 
     /**
@@ -37,7 +37,7 @@ final readonly class ReturnTargets
     #[Endpoint(Operation::CreateReturnTarget)]
     public function create(string $url): ReturnTarget
     {
-        return $this->caller->read(Operation::CreateReturnTarget, ReturnTarget::SCHEMA, ReturnTarget::from(...), body: ['url' => $url]);
+        return $this->caller->read(Operation::CreateReturnTarget, ReturnTarget::class, body: ['url' => $url]);
     }
 
     #[Endpoint(Operation::DeleteReturnTarget)]

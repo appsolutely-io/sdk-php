@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk;
 
 use Appsolutely\Sdk\Api\RetryPolicy;
+use Appsolutely\Sdk\Cache\TokenLock;
 use Appsolutely\Sdk\Exception\InvalidConfigException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Http\BearerToken;
@@ -19,10 +20,10 @@ use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 
 /**
- * Everything the client needs to talk to one site: where its API answers,
- * the OpenID issuer its members sign in with, the OAuth client that signs
- * them in, and optionally the administrator token issued on the site for
- * server-side calls. A site hosted for you and one you host yourself answer
+ * Everything the client needs to talk to one site: where its API answers
+ * and, as the integration needs them, the OpenID issuer its members sign in
+ * with, the OAuth client that signs them in, the administrator token issued
+ * on the site for server-side calls, and the site backend's machine client. A site hosted for you and one you host yourself answer
  * the same paths in the same shapes, so moving between them changes the base
  * URL, the issuer and the credentials, nothing else.
  *
@@ -47,8 +48,24 @@ final readonly class Config
     public const int MAX_CLOCK_LEEWAY = 300;
 
     /**
+     * Seconds a request may take, end to end. Above the 20 seconds the site
+     * holds a keyed duplicate before answering it, so that wait is never cut
+     * short; well below the minutes a worker would otherwise hang.
+     */
+    public const float DEFAULT_TIMEOUT = 30.0;
+
+    /** Seconds to establish a connection, TLS included. */
+    public const float DEFAULT_CONNECT_TIMEOUT = 10.0;
+
+    /** A request timeout beyond this is no timeout a worker can live with. */
+    public const float MAX_TIMEOUT = 600.0;
+
+    /**
      * @param string $baseUrl the site's origin, such as `https://shop.example.com`, which every API path is joined to
-     * @param string $issuer the site's OpenID issuer, exactly as its discovery document names it
+     * @param string|null $issuer the site's OpenID issuer, exactly as its discovery document names it; needed for
+     *                           member sign-in and for the backend client, not for administrator calls alone
+     * @param string|null $clientId the OAuth client that signs members in, with its secret; leave both out when
+     *                              the integration never signs members in (Client::oidc() is then refused)
      * @param string|null $apiToken the long-lived administrator token issued on the site, sent on server-side
      *                              calls; without one, those calls go out without a credential
      * @param string|null $backendClientId the site backend's machine client, registered apart from the one that
@@ -57,13 +74,19 @@ final readonly class Config
      *                                    machine client is registered with
      * @param ClientAuthentication|null $backendClientAuthentication how the backend's client authenticates to the
      *                                                               token endpoint; null for $clientAuthentication
+     * @param float $timeout seconds a request may take, applied to the HTTP client the SDK finds for itself
+     *                       (Guzzle or Symfony HttpClient); a client passed in keeps its own
+     * @param float $connectTimeout seconds to connect, applied the same way (Guzzle only; Symfony's idle
+     *                              timeout is the request timeout)
+     * @param TokenLock|null $tokenLock a lock shared by the processes that share the cache, so one of them asks
+     *                                  for the backend's token when it is due; without one, each asks for its own
      */
     public function __construct(
         public string $baseUrl,
-        public string $issuer,
-        public string $clientId,
+        public ?string $issuer = null,
+        public ?string $clientId = null,
         #[\SensitiveParameter]
-        private string $clientSecret,
+        private ?string $clientSecret = null,
         #[\SensitiveParameter]
         private ?string $apiToken = null,
         public ?ClientInterface $httpClient = null,
@@ -80,9 +103,14 @@ final readonly class Config
         private ?string $backendClientSecret = null,
         public array $backendScopes = [],
         public ?ClientAuthentication $backendClientAuthentication = null,
+        public float $timeout = self::DEFAULT_TIMEOUT,
+        public float $connectTimeout = self::DEFAULT_CONNECT_TIMEOUT,
+        public ?TokenLock $tokenLock = null,
     ) {
         self::assertBaseUrl($baseUrl);
-        self::assertIssuer($issuer);
+        if ($issuer !== null) {
+            self::assertIssuer($issuer);
+        }
 
         if ($clientId === '') {
             throw new InvalidConfigException('The client id must not be empty.');
@@ -90,6 +118,10 @@ final readonly class Config
 
         if ($clientSecret === '') {
             throw new InvalidConfigException('The client secret must not be empty.');
+        }
+
+        if (($clientId === null) !== ($clientSecret === null)) {
+            throw new InvalidConfigException('The member sign-in client id and secret go together: give both, or neither.');
         }
 
         if ($apiToken !== null && !BearerToken::isSendable($apiToken)) {
@@ -104,6 +136,10 @@ final readonly class Config
             throw new InvalidConfigException('The backend client id and secret must not be empty.');
         }
 
+        if ($issuer === null && ($clientId !== null || $backendClientId !== null)) {
+            throw new InvalidConfigException('The issuer is needed to sign members in and to call as the backend: give the site\'s OpenID issuer.');
+        }
+
         foreach ($backendScopes as $scope) {
             // RFC 6749 section 3.3: a scope token is printable ASCII without
             // a space, a double quote or a backslash.
@@ -115,12 +151,20 @@ final readonly class Config
         if ($clockLeeway < 0 || $clockLeeway > self::MAX_CLOCK_LEEWAY) {
             throw new InvalidConfigException(sprintf('The clock leeway must be between 0 and %d seconds, got %d.', self::MAX_CLOCK_LEEWAY, $clockLeeway));
         }
+
+        if ($timeout <= 0 || $timeout > self::MAX_TIMEOUT) {
+            throw new InvalidConfigException(sprintf('The request timeout must be above zero and at most %d seconds, got %s.', (int) self::MAX_TIMEOUT, $timeout));
+        }
+
+        if ($connectTimeout <= 0 || $connectTimeout > $timeout) {
+            throw new InvalidConfigException(sprintf('The connect timeout must be above zero and at most the request timeout, got %s seconds.', $connectTimeout));
+        }
     }
 
     /**
      * @internal read by the client to authenticate itself; not a way to get the secret back out
      */
-    public function clientSecret(): string
+    public function clientSecret(): ?string
     {
         return $this->clientSecret;
     }
@@ -170,6 +214,9 @@ final readonly class Config
             'backendClientSecret' => $this->backendClientSecret === null ? null : '[redacted]',
             'backendScopes' => $this->backendScopes,
             'backendClientAuthentication' => $this->backendClientAuthentication,
+            'timeout' => $this->timeout,
+            'connectTimeout' => $this->connectTimeout,
+            'tokenLock' => $this->tokenLock,
         ];
     }
 

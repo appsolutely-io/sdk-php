@@ -10,7 +10,7 @@ use DateTimeImmutable;
  * An article of the site's content, as an API answer and an `article.*`
  * delivery both carry it.
  */
-final readonly class Article
+final readonly class Article implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'Article';

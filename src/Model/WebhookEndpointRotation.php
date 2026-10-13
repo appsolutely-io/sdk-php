@@ -9,7 +9,7 @@ namespace Appsolutely\Sdk\Model;
  * signed with the old secret and this one together until the rotation is
  * completed or cancelled with its id.
  */
-final readonly class WebhookEndpointRotation
+final readonly class WebhookEndpointRotation implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'WebhookEndpointRotation';

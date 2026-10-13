@@ -152,7 +152,7 @@ final class RecordsTest extends TestCase
         $result = $site->provider->client()->api()->webhookDeliveries()->redeliver('sub-1', 'msg_1', idempotencyKey: 'redeliver-msg_1');
 
         self::assertSame('POST /api/v1/webhook-subscriptions/sub-1/deliveries/msg_1/redeliver', $site->line());
-        self::assertSame('redeliver-msg_1', $site->request()->getHeaderLine('Idempotency-Key'));
+        self::assertSame('"redeliver-msg_1"', $site->request()->getHeaderLine('Idempotency-Key'));
         self::assertSame('pending', $result->value->status);
         self::assertSame('redeliver-msg_1', $result->idempotencyKey);
     }
@@ -160,9 +160,9 @@ final class RecordsTest extends TestCase
     public function testARedeliveryStillRunningUnderTheKeyIsRetriedThenThrown(): void
     {
         $site = (new SiteRecorder())
-            ->problem(409, 'idempotency-request-in-flight', [])
-            ->problem(409, 'idempotency-request-in-flight', [])
-            ->problem(409, 'idempotency-request-in-flight', []);
+            ->problem(409, 'idempotency-key-in-use', [])
+            ->problem(409, 'idempotency-key-in-use', [])
+            ->problem(409, 'idempotency-key-in-use', []);
 
         try {
             $site->provider->client()->api()->webhookDeliveries()->redeliver('sub-1', 'msg_1', idempotencyKey: 'k-1');
@@ -171,7 +171,7 @@ final class RecordsTest extends TestCase
         }
 
         $keys = array_map(static fn(\Psr\Http\Message\RequestInterface $request): string => $request->getHeaderLine('Idempotency-Key'), $site->provider->siteRequests());
-        self::assertSame(['k-1', 'k-1', 'k-1'], $keys);
+        self::assertSame(['"k-1"', '"k-1"', '"k-1"'], $keys);
     }
 
     public function testAMissingOrderIsNotFound(): void

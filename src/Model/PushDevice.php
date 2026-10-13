@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * A device the member is reached on by push.
  */
-final readonly class PushDevice
+final readonly class PushDevice implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'PushDevice';

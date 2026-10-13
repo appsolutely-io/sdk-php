@@ -8,7 +8,7 @@ namespace Appsolutely\Sdk\Model;
  * What became of resuming a member's subscription: applied, or waiting for
  * the member to confirm it on the site's billing pages.
  */
-final readonly class MemberSubscriptionConfirmation
+final readonly class MemberSubscriptionConfirmation implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'MemberSubscriptionConfirmation';

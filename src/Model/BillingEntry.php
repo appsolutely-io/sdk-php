@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * Where the member manages their billing for one store, if anywhere.
  */
-final readonly class BillingEntry
+final readonly class BillingEntry implements SchemaModel
 {
     /** @internal */
     public const string SCHEMA = 'BillingEntry';

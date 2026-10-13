@@ -26,7 +26,7 @@ final readonly class AccountStates
     #[Endpoint(Operation::ListBackendEntitlements)]
     public function list(int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::ListBackendEntitlements, AccountState::SCHEMA, AccountState::from(...), [], $limit);
+        return $this->caller->list(Operation::ListBackendEntitlements, AccountState::class, [], $limit);
     }
 
     /**
@@ -38,6 +38,6 @@ final readonly class AccountStates
     #[Endpoint(Operation::GetBackendEntitlement)]
     public function get(string $subject): AccountState
     {
-        return $this->caller->read(Operation::GetBackendEntitlement, AccountState::SCHEMA, AccountState::from(...), ['sub' => $subject]);
+        return $this->caller->read(Operation::GetBackendEntitlement, AccountState::class, ['sub' => $subject]);
     }
 }
