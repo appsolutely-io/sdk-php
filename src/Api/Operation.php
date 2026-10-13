@@ -270,6 +270,7 @@ enum Operation: string
             self::TokenMagicLink, self::CreateArticle, self::CreateMeAddress, self::CreateSeat, self::CreateWebhookEndpoint, self::StartWebhookEndpointsSecretRotation => [201],
             self::CreateCheckoutSession, self::CreateFeatureKey, self::CreateMeCheckoutSession, self::CreateMePortalSession, self::CreatePortalSession, self::CreateReturnTarget, self::CreateRole => [201, 200],
             self::RequestMagicLink, self::RedeliverWebhookDelivery, self::RedeliverDelivery, self::ResumeMeSubscription, self::TestDeliveriesWebhookEndpoint => [202],
+            self::ChangeMeSubscription => [200, 202],
             self::DeleteMeAddress, self::UnregisterMePushDevice, self::DeleteProductFeatureValue, self::DeleteReturnTarget, self::DeleteSeat, self::RevokeRoleAssignment => [204],
             default => [200],
         };

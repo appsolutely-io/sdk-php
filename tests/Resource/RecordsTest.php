@@ -6,6 +6,7 @@ namespace Appsolutely\Sdk\Tests\Resource;
 
 use Appsolutely\Sdk\Exception\ConflictException;
 use Appsolutely\Sdk\Exception\NotFoundException;
+use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Tests\Support\SiteFixture;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
@@ -85,11 +86,23 @@ final class RecordsTest extends TestCase
         self::assertNull($orders->get('ord-2')->status);
     }
 
-    public function testAnOrderNotYetUpdatedHasNoUpdateTime(): void
+    public function testAnOrderAwaitingPaymentNamesWhereToFinishPaying(): void
+    {
+        $site = (new SiteRecorder())->json(SiteFixture::record('order', ['payment_url' => 'https://shop.example/orders/SO-1/pay']))->json(SiteFixture::record('order'));
+        $orders = $site->provider->client()->api()->orders();
+
+        self::assertSame('https://shop.example/orders/SO-1/pay', $orders->get('ord-1')->paymentUrl);
+        self::assertNull($orders->get('ord-2')->paymentUrl);
+    }
+
+    public function testAnOrderWithoutAnUpdateTimeIsRefused(): void
     {
         $site = (new SiteRecorder())->json(SiteFixture::record('order', ['updated_at' => null]));
 
-        self::assertNull($site->provider->client()->api()->orders()->get('ord-1')->updatedAt);
+        $this->expectException(UnexpectedResponseException::class);
+        $this->expectExceptionMessage('"updated_at"');
+
+        $site->provider->client()->api()->orders()->get('ord-1');
     }
 
     public function testFormEntriesAreListedAndReadWithTheirAnswers(): void

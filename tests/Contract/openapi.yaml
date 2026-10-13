@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: 'Laravel public API'
   version: v1
-  description: "The public developer API of this install, major version v1 (current). Every path here is stable for the life of the version: fields are added, never removed or retyped, and a breaking change arrives as a new version while this one keeps serving. A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key. A machine holds only the secret of an endpoint it owns: the site's backend receives the signing secret of a webhook endpoint it registers and alone changes that endpoint, and an administrator credential never creates an endpoint or receives a secret."
+  description: "The public developer API of this install, major version v1 (current). Every path here is stable for the life of the version: fields are added, never removed or retyped, and a breaking change arrives as a new version while this one keeps serving. A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key. A machine holds only the secret of an endpoint it owns: the site's backend receives the signing secret of a webhook endpoint it registers and alone changes that endpoint, and an administrator credential never creates an endpoint or receives a secret."
 servers:
   - url: /
 tags:
@@ -110,8 +110,6 @@ paths:
       summary: 'List account states'
       parameters:
         - name: 'subjects[]'
-          style: form
-          explode: true
           in: query
           required: true
           schema:
@@ -121,6 +119,8 @@ paths:
               maxLength: 191
             minItems: 1
             maxItems: 100
+          style: form
+          explode: true
       responses:
         200:
           description: OK
@@ -151,16 +151,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `mode-from-credential`.'
           content:
@@ -218,10 +221,12 @@ paths:
           in: query
           required: false
           schema:
-            type:
-              - string
-              - 'null'
-            maxLength: 64
+            type: string
+            enum:
+              - title
+              - published_at
+              - created_at
+              - updated_at
         - name: order
           in: query
           required: false
@@ -263,16 +268,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `invalid-cursor`, `mode-from-credential`.'
           content:
@@ -311,7 +319,7 @@ paths:
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -364,16 +372,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         409:
           description: 'Refused: `idempotency-key-in-use`.'
           headers:
@@ -466,6 +477,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         200:
           description: OK
@@ -496,16 +508,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -558,6 +573,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         200:
           description: OK
@@ -588,16 +604,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -843,7 +862,7 @@ paths:
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -908,16 +927,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         409:
           description: 'Refused: `idempotency-key-in-use`, `purchases-unavailable`, `subscription-awaiting-payment`, `billed-elsewhere`.'
           headers:
@@ -935,7 +957,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/idempotency-key-in-use', 'https://appsolutely.io/problems/purchases-unavailable', 'https://appsolutely.io/problems/subscription-awaiting-payment', 'https://appsolutely.io/problems/billed-elsewhere'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/idempotency-key-in-use', 'https://appsolutely.io/problems/purchases-unavailable', 'https://appsolutely.io/problems/subscription-awaiting-payment', 'https://appsolutely.io/problems/billed-elsewhere'] }, order: { type: string, description: "On `subscription-awaiting-payment`: the reference of the order waiting for its payment; the member pays it or cancels it from that order's page." } } }] }
         415:
           description: 'Refused: `unsupported-media-type`.'
           headers:
@@ -1047,16 +1069,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -1274,16 +1299,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `invalid-cursor`, `mode-from-credential`.'
           content:
@@ -1344,7 +1372,7 @@ paths:
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -1394,16 +1422,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -1545,16 +1576,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `invalid-cursor`, `mode-from-credential`.'
           content:
@@ -1642,16 +1676,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -1745,16 +1782,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `mode-from-credential`.'
           content:
@@ -1847,16 +1887,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         409:
           description: 'Refused: `feature-key-declared`, `feature-key-kind-fixed`, `feature-key-retired`.'
           content:
@@ -1977,16 +2020,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -2087,10 +2133,11 @@ paths:
           in: query
           required: false
           schema:
-            type:
-              - string
-              - 'null'
-            maxLength: 64
+            type: string
+            enum:
+              - submitted_at
+              - created_at
+              - updated_at
         - name: order
           in: query
           required: false
@@ -2132,16 +2179,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `invalid-cursor`, `mode-from-credential`.'
           content:
@@ -2183,6 +2233,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         200:
           description: OK
@@ -2213,16 +2264,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -2300,16 +2354,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         422:
           description: 'Refused: `mode-from-credential`.'
           content:
@@ -2389,16 +2446,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         415:
           description: 'Refused: `unsupported-media-type`.'
           headers:
@@ -2492,10 +2552,10 @@ paths:
           in: query
           required: false
           schema:
-            type:
-              - string
-              - 'null'
-            maxLength: 64
+            type: string
+            enum:
+              - created_at
+              - updated_at
         - name: order
           in: query
           required: false
@@ -2537,16 +2597,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `invalid-cursor`, `mode-from-credential`.'
           content:
@@ -2600,7 +2663,7 @@ paths:
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -2650,16 +2713,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         409:
           description: 'Refused: `idempotency-key-in-use`.'
           headers:
@@ -2752,6 +2818,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         204:
           description: 'No Content'
@@ -2779,16 +2846,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -2856,6 +2926,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         200:
           description: OK
@@ -2886,16 +2957,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -3058,16 +3132,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `mode-from-credential`.'
           content:
@@ -3122,7 +3199,7 @@ paths:
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -3187,16 +3264,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         409:
           description: 'Refused: `idempotency-key-in-use`, `purchases-unavailable`, `subscription-awaiting-payment`, `billed-elsewhere`.'
           headers:
@@ -3214,7 +3294,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/idempotency-key-in-use', 'https://appsolutely.io/problems/purchases-unavailable', 'https://appsolutely.io/problems/subscription-awaiting-payment', 'https://appsolutely.io/problems/billed-elsewhere'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/idempotency-key-in-use', 'https://appsolutely.io/problems/purchases-unavailable', 'https://appsolutely.io/problems/subscription-awaiting-payment', 'https://appsolutely.io/problems/billed-elsewhere'] }, order: { type: string, description: "On `subscription-awaiting-payment`: the reference of the order waiting for its payment; the member pays it or cancels it from that order's page." } } }] }
         415:
           description: 'Refused: `unsupported-media-type`.'
           headers:
@@ -3325,16 +3405,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -3427,16 +3510,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         422:
           description: 'Refused: `mode-from-credential`.'
           content:
@@ -3509,10 +3595,12 @@ paths:
           in: query
           required: false
           schema:
-            type:
-              - string
-              - 'null'
-            maxLength: 64
+            type: string
+            enum:
+              - reference
+              - total_amount
+              - created_at
+              - updated_at
         - name: order
           in: query
           required: false
@@ -3554,16 +3642,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `invalid-cursor`, `mode-from-credential`.'
           content:
@@ -3650,16 +3741,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -3726,7 +3820,7 @@ paths:
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -3791,16 +3885,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         409:
           description: 'Refused: `idempotency-key-in-use`, `billed-elsewhere`.'
           headers:
@@ -3923,16 +4020,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         415:
           description: 'Refused: `unsupported-media-type`.'
           headers:
@@ -4031,16 +4131,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         415:
           description: 'Refused: `unsupported-media-type`.'
           headers:
@@ -4142,16 +4245,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         404:
           description: 'Refused: `referral-unavailable`.'
           content:
@@ -4262,16 +4368,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         404:
           description: 'Refused: `referral-unavailable`.'
           content:
@@ -4364,21 +4473,24 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         409:
           description: 'Refused: `billed-elsewhere`, `subscription-recovering`, `subscription-awaiting-payment`.'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/billed-elsewhere', 'https://appsolutely.io/problems/subscription-recovering', 'https://appsolutely.io/problems/subscription-awaiting-payment'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/billed-elsewhere', 'https://appsolutely.io/problems/subscription-recovering', 'https://appsolutely.io/problems/subscription-awaiting-payment'] }, order: { type: string, description: "On `subscription-awaiting-payment`: the reference of the order waiting for its payment; the member pays it or cancels it from that order's page." } } }] }
           headers:
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -4487,16 +4599,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         409:
           description: 'Refused: `belongs-to-another-account`.'
           content:
@@ -4565,7 +4680,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable', 'https://appsolutely.io/problems/store-purchase-unavailable'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable', 'https://appsolutely.io/problems/store-purchase-unavailable'] }, reason: { type: string, enum: [app_unregistered, product_unmapped, store_unreadable], description: 'On `store-purchase-unavailable`: why the site cannot record the purchase yet; submit it again once the cause is gone.' } } }] }
       requestBody:
         required: true
         content:
@@ -4610,16 +4725,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         422:
           description: 'Refused: `mode-from-credential`.'
           content:
@@ -4676,10 +4794,11 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -4732,6 +4851,9 @@ paths:
           headers:
             Idempotent-Replayed:
               description: '`true` on an answer repeated for a request sent again under the same key.'
+              schema: { type: string }
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
               schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -4846,10 +4968,11 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -4857,6 +4980,21 @@ paths:
       responses:
         200:
           description: OK
+          headers:
+            Idempotent-Replayed:
+              description: '`true` on an answer repeated for a request sent again under the same key.'
+              schema: { type: string }
+            RateLimit:
+              $ref: '#/components/headers/RateLimit'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimit-Policy'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberSubscriptionChange' }
+        202:
+          description: Accepted
           headers:
             Idempotent-Replayed:
               description: '`true` on an answer repeated for a request sent again under the same key.'
@@ -4902,6 +5040,9 @@ paths:
           headers:
             Idempotent-Replayed:
               description: '`true` on an answer repeated for a request sent again under the same key.'
+              schema: { type: string }
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
               schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -5025,10 +5166,11 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -5048,7 +5190,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/MemberSubscriptionConfirmation' }
+              schema: { $ref: '#/components/schemas/MemberSubscriptionChange' }
         400:
           description: 'Refused: `idempotency-key-required`, `idempotency-key-invalid`.'
           content:
@@ -5081,6 +5223,9 @@ paths:
           headers:
             Idempotent-Replayed:
               description: '`true` on an answer repeated for a request sent again under the same key.'
+              schema: { type: string }
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
               schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -5140,7 +5285,7 @@ paths:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unsupported-media-type'] } } }] }
         422:
-          description: 'Refused: `mode-from-credential`, `idempotency-key-reused`, `validation-failed`.'
+          description: 'Refused: `validation-failed`, `mode-from-credential`, `idempotency-key-reused`.'
           headers:
             Idempotent-Replayed:
               description: '`true` on an answer repeated for a request sent again under the same key.'
@@ -5153,7 +5298,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/ValidationProblem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/mode-from-credential', 'https://appsolutely.io/problems/idempotency-key-reused', 'https://appsolutely.io/problems/validation-failed'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/ValidationProblem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/validation-failed', 'https://appsolutely.io/problems/mode-from-credential', 'https://appsolutely.io/problems/idempotency-key-reused'] } } }] }
         429:
           description: 'Refused: `rate-limited`.'
           headers:
@@ -5184,6 +5329,12 @@ paths:
           content:
             application/problem+json:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable', 'https://appsolutely.io/problems/temporarily-unavailable'] } } }] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResumeMeSubscriptionPayload'
       security:
         - bearerAuth: []
   /api/v1/openapi.json:
@@ -5226,10 +5377,12 @@ paths:
           in: query
           required: false
           schema:
-            type:
-              - string
-              - 'null'
-            maxLength: 64
+            type: string
+            enum:
+              - reference
+              - total_amount
+              - created_at
+              - updated_at
         - name: order
           in: query
           required: false
@@ -5271,16 +5424,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `invalid-cursor`, `mode-from-credential`.'
           content:
@@ -5352,16 +5508,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -5431,10 +5590,11 @@ paths:
           in: query
           required: false
           schema:
-            type:
-              - string
-              - 'null'
-            maxLength: 64
+            type: string
+            enum:
+              - published_at
+              - created_at
+              - updated_at
         - name: order
           in: query
           required: false
@@ -5476,16 +5636,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `invalid-cursor`, `mode-from-credential`.'
           content:
@@ -5527,6 +5690,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         200:
           description: OK
@@ -5557,16 +5721,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -5618,7 +5785,7 @@ paths:
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -5683,16 +5850,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         409:
           description: 'Refused: `idempotency-key-in-use`, `billed-elsewhere`.'
           headers:
@@ -5808,10 +5978,13 @@ paths:
           in: query
           required: false
           schema:
-            type:
-              - string
-              - 'null'
-            maxLength: 64
+            type: string
+            enum:
+              - title
+              - slug
+              - published_at
+              - created_at
+              - updated_at
         - name: order
           in: query
           required: false
@@ -5853,16 +6026,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `invalid-cursor`, `mode-from-credential`.'
           content:
@@ -5904,6 +6080,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         200:
           description: OK
@@ -5934,16 +6111,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -6027,16 +6207,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -6138,16 +6321,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -6251,16 +6437,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -6387,16 +6576,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `mode-from-credential`.'
           content:
@@ -6489,16 +6681,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         415:
           description: 'Refused: `unsupported-media-type`.'
           headers:
@@ -6577,6 +6772,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         204:
           description: 'No Content'
@@ -6604,16 +6800,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -6708,7 +6907,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/RoleHolderPage' }
+              schema: { $ref: '#/components/schemas/RolesHeldPage' }
           headers:
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -6733,16 +6932,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `invalid-cursor`, `mode-from-credential`.'
           content:
@@ -6830,16 +7032,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -6944,16 +7149,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -7081,16 +7289,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -7184,16 +7395,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `mode-from-credential`.'
           content:
@@ -7286,16 +7500,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         409:
           description: 'Refused: `role-limit-reached`, `role-retired`.'
           content:
@@ -7416,16 +7633,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -7540,16 +7760,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -7643,16 +7866,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -7782,16 +8008,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -7885,21 +8114,24 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         409:
           description: 'Refused: `billed-elsewhere`, `subscription-recovering`, `subscription-awaiting-payment`.'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/billed-elsewhere', 'https://appsolutely.io/problems/subscription-recovering', 'https://appsolutely.io/problems/subscription-awaiting-payment'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/billed-elsewhere', 'https://appsolutely.io/problems/subscription-recovering', 'https://appsolutely.io/problems/subscription-awaiting-payment'] }, order: { type: string, description: "On `subscription-awaiting-payment`: the reference of the order waiting for its payment; the member pays it or cancels it from that order's page." } } }] }
           headers:
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -8009,16 +8241,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         409:
           description: 'Refused: `belongs-to-another-account`.'
           content:
@@ -8087,7 +8322,7 @@ paths:
               $ref: '#/components/headers/X-Request-Id'
           content:
             application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable', 'https://appsolutely.io/problems/store-purchase-unavailable'] } } }] }
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/standing-unavailable', 'https://appsolutely.io/problems/store-purchase-unavailable'] }, reason: { type: string, enum: [app_unregistered, product_unmapped, store_unreadable], description: 'On `store-purchase-unavailable`: why the site cannot record the purchase yet; submit it again once the cause is gone.' } } }] }
       requestBody:
         required: true
         content:
@@ -8109,10 +8344,11 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -8165,6 +8401,9 @@ paths:
           headers:
             Idempotent-Replayed:
               description: '`true` on an answer repeated for a request sent again under the same key.'
+              schema: { type: string }
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
               schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -8280,10 +8519,11 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -8336,6 +8576,9 @@ paths:
           headers:
             Idempotent-Replayed:
               description: '`true` on an answer repeated for a request sent again under the same key.'
+              schema: { type: string }
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
               schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -8499,16 +8742,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         410:
           description: 'Refused: `cursor-expired`.'
           content:
@@ -8585,16 +8831,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         415:
           description: 'Refused: `unsupported-media-type`.'
           headers:
@@ -8696,16 +8945,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         410:
           description: 'Refused: `cursor-expired`.'
           content:
@@ -8798,16 +9050,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         410:
           description: 'Refused: `cursor-expired`.'
           content:
@@ -8899,16 +9154,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         415:
           description: 'Refused: `unsupported-media-type`.'
           headers:
@@ -9025,16 +9283,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `account-suspended`, `account-deletion-pending`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/account-suspended', 'https://appsolutely.io/problems/account-deletion-pending'] } } }] }
         410:
           description: 'Refused: `cursor-expired`.'
           content:
@@ -9142,16 +9403,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         410:
           description: 'Refused: `cursor-expired`.'
           content:
@@ -9244,16 +9508,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         410:
           description: 'Refused: `cursor-expired`.'
           content:
@@ -9346,16 +9613,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         410:
           description: 'Refused: `cursor-expired`.'
           content:
@@ -9451,16 +9721,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         422:
           description: 'Refused: `validation-failed`, `invalid-cursor`, `mode-from-credential`.'
           content:
@@ -9515,7 +9788,7 @@ paths:
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -9565,16 +9838,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         409:
           description: 'Refused: `idempotency-key-in-use`, `endpoint-exists`.'
           headers:
@@ -9671,6 +9947,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         200:
           description: OK
@@ -9701,16 +9978,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -9795,6 +10075,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         200:
           description: OK
@@ -9825,16 +10106,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -9919,10 +10203,11 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -9975,6 +10260,9 @@ paths:
           headers:
             Idempotent-Replayed:
               description: '`true` on an answer repeated for a request sent again under the same key.'
+              schema: { type: string }
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
               schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
@@ -10087,6 +10375,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         200:
           description: OK
@@ -10117,16 +10406,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -10229,6 +10521,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         200:
           description: OK
@@ -10259,16 +10552,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -10371,6 +10667,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         202:
           description: Accepted
@@ -10398,16 +10695,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`, `forbidden`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope', 'https://appsolutely.io/problems/forbidden'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -10504,6 +10804,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: status
           in: query
           required: false
@@ -10566,16 +10867,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -10629,6 +10933,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: event
           in: path
           required: true
@@ -10637,7 +10942,7 @@ paths:
         - name: Idempotency-Key
           in: header
           required: true
-          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters, chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running waits for it for up to 20 seconds, then is answered `409` `idempotency-key-in-use` with `Retry-After` and should be sent again, as is any request whose key could not be claimed in that time; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
+          description: 'A create a retry could repeat takes an `Idempotency-Key` header: a structured-field String or a bare token of 1 to 255 characters once unquoted, at most 512 on the wire (a String with every character escaped), chosen by the client per request. The same key with the same request answers the first outcome again, with `Idempotent-Replayed: true`; with a different request it is refused. A duplicate sent while the first is still running is answered `409` `idempotency-key-in-use` with `Retry-After` at once and should be sent again once the first has finished, as is a request whose key is free but could not be claimed within 20 seconds; a create whose own write waits on a lock longer than the database allows a statement is answered `503` `temporarily-unavailable` with `Retry-After` at once, without being run again. Neither spends the key. A key is honoured for 24 hours, then is a new key.'
           schema:
             type: string
             minLength: 1
@@ -10687,16 +10992,19 @@ paths:
               schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/unauthenticated', 'https://appsolutely.io/problems/invalid-token'] } } }] }
         403:
           description: 'Refused: `wrong-audience`, `insufficient-scope`.'
-          content:
-            application/problem+json:
-              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
           headers:
+            WWW-Authenticate:
+              description: 'Present only on `insufficient-scope`: the Bearer challenge naming the scope the token lacks (`error="insufficient_scope", scope="…"`, RFC 6750 section 3.1).'
+              schema: { type: string }
             RateLimit:
               $ref: '#/components/headers/RateLimit'
             RateLimit-Policy:
               $ref: '#/components/headers/RateLimit-Policy'
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema: { allOf: [{ $ref: '#/components/schemas/Problem' }, { properties: { type: { enum: ['https://appsolutely.io/problems/wrong-audience', 'https://appsolutely.io/problems/insufficient-scope'] } } }] }
         404:
           description: 'Refused: `not-found`.'
           content:
@@ -10870,13 +11178,13 @@ components:
         - breakdown
     AccountEntitlementList:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/AccountEntitlement'
-      required:
-        - data
     AccountEntitlementTerm:
       type: object
       properties:
@@ -10942,31 +11250,31 @@ components:
         - subscriptions
     AccountStateList:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/AccountState'
-      required:
-        - data
     AccountStatePage:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/AccountState'
         next_cursor:
-          type:
-            - string
-            - 'null'
-      required:
-        - data
+          type: string
+          description: 'Pass as `cursor` for the next page. Absent on the last page.'
     AccountSubscription:
       type: object
       properties:
         id:
           type: string
+          format: uuid
         type:
           type: string
         status:
@@ -11115,6 +11423,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         title:
           type: string
         slug:
@@ -11171,6 +11480,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         title:
           type: string
         slug:
@@ -11318,6 +11628,10 @@ components:
             - integer
             - 'null'
           minimum: 1
+        return_url:
+          type:
+            - string
+            - 'null'
     CheckoutSession:
       type: object
       properties:
@@ -11361,7 +11675,7 @@ components:
         may_still_bill:
           type: array
           items:
-            $ref: '#/components/schemas/SubscriptionStillBilling'
+            $ref: '#/components/schemas/SubscriptionSource'
       required:
         - id
         - url
@@ -11403,6 +11717,7 @@ components:
       properties:
         endpoint_id:
           type: string
+          format: uuid
         webhook_id:
           description: "The delivery's `webhook-id` header: deduplicate on it, and name it to ask for a redelivery."
           type: string
@@ -11447,17 +11762,16 @@ components:
         - failed_at
     EndpointWebhookDeliveryPage:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/EndpointWebhookDelivery'
         next_cursor:
-          type:
-            - string
-            - 'null'
-      required:
-        - data
+          type: string
+          description: 'Pass as `cursor` for the next page. Absent on the last page.'
     FeatureKey:
       type: object
       properties:
@@ -11482,18 +11796,19 @@ components:
         - retired
     FeatureKeyList:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/FeatureKey'
-      required:
-        - data
     FormEntry:
       type: object
       properties:
         id:
           type: string
+          format: uuid
         form:
           type:
             - string
@@ -11524,7 +11839,7 @@ components:
             - 'null'
           additionalProperties: true
         is_spam:
-          type: integer
+          type: boolean
         submitted_at:
           type: string
           format: date-time
@@ -11657,6 +11972,7 @@ components:
       type: object
       properties:
         id:
+          description: 'The account subject: the name an application the member signed in to knows them by, and the `subject` of their account state.'
           type: string
         name:
           type:
@@ -11688,6 +12004,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         product:
           type:
             - string
@@ -11749,26 +12066,15 @@ components:
             - type: 'null'
       required:
         - applied
-    MemberSubscriptionConfirmation:
-      type: object
-      properties:
-        applied:
-          type: boolean
-        confirmation:
-          oneOf:
-            - $ref: '#/components/schemas/PortalSession'
-            - type: 'null'
-      required:
-        - applied
     MemberSubscriptionList:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/MemberSubscription'
-      required:
-        - data
     OpenBackendPortalSessionPayload:
       type: object
       properties:
@@ -11790,6 +12096,7 @@ components:
       type: object
       properties:
         id:
+          description: 'The order number, the same as `reference`: what the buyer is shown, drawn at random.'
           type: string
         reference:
           type: string
@@ -11832,6 +12139,11 @@ components:
         total_shown:
           type: string
         note:
+          type:
+            - string
+            - 'null'
+        payment_url:
+          description: "Where to send the signed-in member to finish paying for this order, on the site's own address: a page that sends them on to the provider page the payment was started on. Null on a guest's order (that page opens only with the order's own token, which no API answer carries), when there is nothing to pay there (the order is not waiting for its money, or no payment is in flight on a provider page), and once that provider page has expired. Where the provider gave the page no expiry, it is named until the order itself stops waiting."
           type:
             - string
             - 'null'
@@ -11887,10 +12199,12 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         product:
           type:
             - string
             - 'null'
+          format: uuid
         quantity:
           type: integer
         currency:
@@ -11919,7 +12233,9 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         reference:
+          description: 'The key starter content finds the page by; not its `id`.'
           type: string
         name:
           type:
@@ -11946,10 +12262,11 @@ components:
             - string
             - 'null'
         parent:
-          description: 'The `reference` of the page this one sits under, or null at the top.'
+          description: 'The `id` of the page this one sits under, or null at the top.'
           type:
             - string
             - 'null'
+          format: uuid
         status:
           type:
             - integer
@@ -12060,6 +12377,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         type:
           type: string
         title:
@@ -12153,13 +12471,13 @@ components:
         - retired
     ProductFeatureValueList:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/ProductFeatureValue'
-      required:
-        - data
     ProductFeed:
       type: object
       properties:
@@ -12256,6 +12574,7 @@ components:
       properties:
         endpoint_id:
           type: string
+          format: uuid
         reason:
           type: string
       required:
@@ -12305,8 +12624,12 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         type:
           type: string
+          enum:
+            - credit
+            - cashback
         state:
           type: string
         value:
@@ -12342,22 +12665,24 @@ components:
         - earned_at
     ReferralRewardPage:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/ReferralReward'
         next_cursor:
-          type:
-            - string
-            - 'null'
-      required:
-        - data
+          type: string
+          description: 'Pass as `cursor` for the next page. Absent on the last page.'
     ReferralTerms:
       type: object
       properties:
         type:
           type: string
+          enum:
+            - credit
+            - cashback
         value:
           type: integer
         currency:
@@ -12366,11 +12691,19 @@ components:
         - type
         - value
         - currency
+    ResumeMeSubscriptionPayload:
+      type: object
+      properties:
+        return_url:
+          type: string
+      required:
+        - return_url
     ReturnTarget:
       type: object
       properties:
         id:
           type: string
+          format: uuid
         url:
           type: string
         created_at:
@@ -12382,13 +12715,13 @@ components:
         - created_at
     ReturnTargetList:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/ReturnTarget'
-      required:
-        - data
     Role:
       type: object
       properties:
@@ -12409,28 +12742,15 @@ components:
       required:
         - key
         - retired
-    RoleHolderPage:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/RolesHeld'
-        next_cursor:
-          type:
-            - string
-            - 'null'
-      required:
-        - data
     RoleList:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/Role'
-      required:
-        - data
     RolesHeld:
       type: object
       properties:
@@ -12443,13 +12763,27 @@ components:
       required:
         - subject
         - roles
+    RolesHeldPage:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolesHeld'
+        next_cursor:
+          type: string
+          description: 'Pass as `cursor` for the next page. Absent on the last page.'
     Seat:
       type: object
       properties:
         id:
           type: string
+          format: uuid
         pool:
           type: string
+          format: uuid
         member:
           type: string
         label:
@@ -12472,6 +12806,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         product:
           type:
             - string
@@ -12497,13 +12832,13 @@ components:
         - seats
     SeatPoolList:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/SeatPool'
-      required:
-        - data
     StartBackendCheckoutSessionPayload:
       type: object
       properties:
@@ -12616,7 +12951,8 @@ components:
         categories:
           type: array
           items:
-            type: integer
+            type: string
+            format: uuid
       required:
         - title
         - content
@@ -12804,7 +13140,7 @@ components:
         may_still_bill:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/SubscriptionSource'
       required:
         - store
         - store_product_id
@@ -12815,10 +13151,14 @@ components:
       properties:
         outcome:
           type: string
+          enum:
+            - recorded
+            - unclaimed
         subscription_id:
           type:
             - string
             - 'null'
+          format: uuid
         status:
           type:
             - string
@@ -12842,6 +13182,8 @@ components:
             - null
       required:
         - outcome
+        - subscription_id
+        - status
         - kind
         - environment
     StoreReturnTargetPayload:
@@ -12944,17 +13286,22 @@ components:
       required:
         - store
         - initiation
-    SubscriptionStillBilling:
+    SubscriptionSource:
       type: object
       properties:
         billed_by:
           type: string
+          enum:
+            - site
+            - app_store
+            - google_play
         manage_url:
           type:
             - string
             - 'null'
         subscription_id:
           type: string
+          format: uuid
       required:
         - billed_by
         - manage_url
@@ -12969,7 +13316,7 @@ components:
             properties:
               mutation_id: { type: string, maxLength: 100 }
               op: { type: string, enum: [upsert, delete] }
-              id: { type: [string, 'null'] }
+              id: { type: [string, 'null'], format: uuid }
               client_updated_at: { type: string, format: date-time }
               attributes: { type: object, additionalProperties: true }
             required:
@@ -12989,6 +13336,7 @@ components:
           type:
             - string
             - 'null'
+          format: uuid
         applied:
           type: boolean
         reason:
@@ -13033,6 +13381,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         status:
           type: string
         current_period_end:
@@ -13107,7 +13456,8 @@ components:
         categories:
           type: array
           items:
-            type: integer
+            type: string
+            format: uuid
     UpdateMeAddressPayload:
       type: object
       properties:
@@ -13187,6 +13537,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         name:
           type:
             - string
@@ -13337,22 +13688,22 @@ components:
         - failed_at
     WebhookDeliveryPage:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/WebhookDelivery'
         next_cursor:
-          type:
-            - string
-            - 'null'
-      required:
-        - data
+          type: string
+          description: 'Pass as `cursor` for the next page. Absent on the last page.'
     WebhookEndpoint:
       type: object
       properties:
         id:
           type: string
+          format: uuid
         url:
           type: string
         event_types:
@@ -13392,22 +13743,22 @@ components:
         - is_active
     WebhookEndpointPage:
       type: object
+      required:
+        - data
       properties:
         data:
           type: array
           items:
             $ref: '#/components/schemas/WebhookEndpoint'
         next_cursor:
-          type:
-            - string
-            - 'null'
-      required:
-        - data
+          type: string
+          description: 'Pass as `cursor` for the next page. Absent on the last page.'
     WebhookEndpointRotation:
       type: object
       properties:
         id:
           type: string
+          format: uuid
         url:
           type: string
         event_types:
@@ -13442,6 +13793,7 @@ components:
           format: date-time
         rotation_id:
           type: string
+          format: uuid
         secret:
           type: string
       required:
@@ -13456,6 +13808,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         url:
           type: string
         event_types:

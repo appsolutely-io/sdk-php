@@ -18,7 +18,7 @@ final readonly class FormEntry implements SchemaModel
     /**
      * @param string|null $form the slug of the form it was submitted to, null once the form is gone
      * @param array<array-key, mixed>|null $data the values submitted, keyed by field name
-     * @param bool $isSpam whether the site judged it spam; the wire carries `1` or `0`
+     * @param bool $isSpam whether the site judged it spam
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
@@ -49,7 +49,7 @@ final readonly class FormEntry implements SchemaModel
             email: $json->nullableString('email'),
             mobile: $json->nullableString('mobile'),
             data: $json->nullableMap('data'),
-            isSpam: $json->int('is_spam') !== 0,
+            isSpam: $json->bool('is_spam'),
             submittedAt: $json->time('submitted_at'),
             createdAt: $json->nullableTime('created_at'),
             updatedAt: $json->nullableTime('updated_at'),

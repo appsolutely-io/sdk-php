@@ -26,8 +26,8 @@ final readonly class Order implements SchemaModel
      * @param string $currency ISO 4217
      * @param bool $taxIncluded whether `$taxAmount` is already part of the other amounts, rather than added to them to reach the total
      * @param string $totalShown what the buyer was told `$totalAmount` is: `final` for the whole charge, `before_provider_tax` for an amount a payment provider then added its own tax to, `priced_by_provider` for a price sent to a provider that ran its own checkout; only on `final` is it what the buyer paid
-     * @param DateTimeImmutable|null $updatedAt null when the site holds no update time for the order
      * @param list<OrderLine> $items
+     * @param string|null $paymentUrl where to send the signed-in member to finish paying an order still awaiting payment, on the site's own address
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
@@ -49,8 +49,9 @@ final readonly class Order implements SchemaModel
         public string $totalShown,
         public ?string $note,
         public ?DateTimeImmutable $createdAt,
-        public ?DateTimeImmutable $updatedAt,
+        public DateTimeImmutable $updatedAt,
         public array $items,
+        public ?string $paymentUrl = null,
         public array $extra = [],
     ) {}
 
@@ -76,8 +77,9 @@ final readonly class Order implements SchemaModel
             totalShown: $json->string('total_shown'),
             note: $json->nullableString('note'),
             createdAt: $json->nullableTime('created_at'),
-            updatedAt: $json->nullableTime('updated_at'),
+            updatedAt: $json->time('updated_at'),
             items: array_map(OrderLine::from(...), $json->objects('items')),
+            paymentUrl: $json->nullableString('payment_url'),
             extra: $json->extra(),
         );
     }

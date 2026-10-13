@@ -7,6 +7,23 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `Order::$paymentUrl`: where to send the signed-in member to finish paying an order the site still awaits payment for, or null.
+- `StorePurchaseTransaction::OUTCOME_RECORDED` and `StorePurchaseTransaction::OUTCOME_UNCLAIMED`, now that the document names a transaction's outcomes as a closed set.
+- `ReferralTerms::TYPE_CREDIT` and `ReferralTerms::TYPE_CASHBACK`, now that the document names a referral's reward types as a closed set.
+- `Testing\FakeClient` challenges an arranged `insufficient-scope` `403` as the site does, with `WWW-Authenticate: Bearer error="insufficient_scope", scope="…"` naming its `required` scope, so `ForbiddenException::$challenge` reads in a test what it reads against a site.
+
+### Changed
+
+- **BREAKING:** the client is held to the Site API document of the site software release after v0.24.0 (`Contract::REVISION`), and needs a site at least that new. Every record's `id` the site sends is now an opaque string (a UUID, an order's order number, a member's account subject) rather than a database key; the models already read ids as strings, but an id stored from an older site no longer finds its record, and an offline client pulls its sync feeds again from the start.
+- **BREAKING:** `FormEntry::$isSpam` is read from the JSON boolean the site now sends; an older site's `0` or `1` is refused as an `UnexpectedResponseException`.
+- **BREAKING:** `Model\SubscriptionStillBilling` is renamed `Model\SubscriptionSource`, the document's name for it, and names who bills it with `BILLED_BY_SITE`, `BILLED_BY_APP_STORE` and `BILLED_BY_GOOGLE_PLAY`. `StorePurchaseIntent::$mayStillBill` is a list of `SubscriptionSource` rather than of strings: the site always sent objects there, so an intent naming a subscription still billed elsewhere was refused.
+- **BREAKING:** `me()->subscriptions()->resume($id, $returnUrl)` sends the address the site brings the member back to after confirming, which the site requires, and answers a `KeyedResult<MemberSubscriptionChange>`; `Model\MemberSubscriptionConfirmation` is removed.
+- **BREAKING:** `me()->subscriptions()->change()` takes an optional `$returnUrl` before `$idempotencyKey`, so a key passed by position is now passed by name, and reads a change handed to the member to confirm, which the site answers `202`.
+- **BREAKING:** `Order::$updatedAt` and `ReferralReward::$earnedAt` are never null, as the document has always declared them: the site now stamps both on every answer and refuses to send one without, so an answer lacking either is an `UnexpectedResponseException` rather than a null to check.
+- **BREAKING:** `RefundEvent::$refund` is a `Model\Refund`, the refund the site now delivers on `refund.requested` and `refund.processed`: its UUID `id`, `reference` (the refund number), `order` (the order number), `payment` (the reference `order.paid` gave the payment), `amount` in minor units, `currency`, `status` (`Refund::STATUS_*`), `createdAt`, `updatedAt` and `refundedAt`. `Model\RecordReference`, which read the old `{id, type}` and nothing else, is removed; a delivery recorded by an older site and redelivered still carries that shape and is refused as an `UnexpectedPayloadException`.
+
 ## [0.1.0] - 2026-10-13
 
 ### Added

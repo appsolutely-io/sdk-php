@@ -13,7 +13,7 @@ Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://git
 
 ## Compatibility
 
-The client is written and tested against the Site API document of the site software v0.24.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
+The client is written and tested against the Site API document of the site software v0.25.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
 
 The document's `v1` is stable for the life of the version: the site adds paths and fields to it but never removes or retypes one, and a breaking change arrives as a new version while `v1` keeps serving. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
 
@@ -330,8 +330,9 @@ $member->me()->checkoutSessions()->create([['product' => 'team', 'quantity' => 1
 $member->me()->portalSessions()->create($returnUrl);
 $member->me()->storePurchases()->intent('google_play', 'team');
 $member->me()->subscriptions()->list();                     // one page, no cursor
-$member->me()->subscriptions()->change($subscriptionId, quantity: 3)->value->applied;   // or ->confirmation, the visit that confirms it
+$member->me()->subscriptions()->change($subscriptionId, quantity: 3, returnUrl: $returnUrl)->value->applied;   // or ->confirmation, the visit that confirms it
 $member->me()->subscriptions()->cancel($subscriptionId);
+$member->me()->subscriptions()->resume($subscriptionId, $returnUrl);   // takes a cancellation back
 
 $member->sync()->addresses()->pull($cursor);                 // and ->push(), and ->orders()->pull()
 ```
@@ -379,7 +380,7 @@ foreach ($client->api()->raw()->paginate('/api/v1/orders', ['sort' => 'updated_a
 
 ### Writes that must happen once
 
-Creating an article, filing a member's address and redelivering a webhook accept an `Idempotency-Key`, and their methods always send one: yours (1 to 255 printable ASCII characters, spaces included, one per operation) or a fresh UUID v4, sent as a quoted Structured Field String (RFC 9651) as the Idempotency-Key draft defines it. The same key goes with every retry, so a retry after a lost answer is answered with the first answer instead of creating a second record, and the result says which key was sent and whether the answer was replayed:
+Every write the site keys accepts an `Idempotency-Key`, and its method always sends one: creating an article, filing a member's address, redelivering a webhook, starting a checkout or a visit to the billing pages, cancelling, changing or resuming a member's subscription, attaching or advancing a test clock, and creating a webhook endpoint or starting its secret rotation. The key is yours (1 to 255 printable ASCII characters, spaces included, one per operation) or a fresh UUID v4, sent as a quoted Structured Field String (RFC 9651) as the Idempotency-Key draft defines it. The same key goes with every retry, so a retry after a lost answer is answered with the first answer, its status and body, instead of acting a second time (a replayed billing visit carries a fresh single-use `url` for the same visit), and the result says which key was sent and whether the answer was replayed:
 
 ```php
 $filed = $member->me()->addresses()->create($address, idempotencyKey: $formSubmissionId);
@@ -429,7 +430,7 @@ $call->token;             // FakeClient::ADMINISTRATOR_TOKEN, a member's token, 
 $fake->calls();           // every call, in order
 ```
 
-`client()` is a real `Client` whose HTTP client answers from the arrangement, so an arranged body is read into the same models as a site's answer, a refusal becomes the same `ApiException` subclass, and an answer that breaks the document fails the same way. Answers to one operation are given in the order arranged, and the last one keeps answering. `answer()` takes the operation's success status unless you pass another, and headers such as `Idempotent-Replayed: true`; `refuse()` takes a problem type (`validation-failed`, or a full URI), a status, a title, an optional detail (left out when empty, as the site leaves it out), and the problem's extension members, which may not reuse a standard member (`type`, `title`, `status`, `detail`, `instance`); a `401` carries the site's `WWW-Authenticate: Bearer` challenge unless you pass another. `forMember($token)` calls as a member. Calls are not retried, so a refusal is thrown at once. A call with no answer arranged, or to a path that is no operation of the document, throws `Exception\UnarrangedCallException`, a `LogicException`. Sign-in through `oidc()` is not faked.
+`client()` is a real `Client` whose HTTP client answers from the arrangement, so an arranged body is read into the same models as a site's answer, a refusal becomes the same `ApiException` subclass, and an answer that breaks the document fails the same way. Answers to one operation are given in the order arranged, and the last one keeps answering. `answer()` takes the operation's success status unless you pass another, and headers such as `Idempotent-Replayed: true`; `refuse()` takes a problem type (`validation-failed`, or a full URI), a status, a title, an optional detail (left out when empty, as the site leaves it out), and the problem's extension members, which may not reuse a standard member (`type`, `title`, `status`, `detail`, `instance`); a `401` carries the site's `WWW-Authenticate: Bearer` challenge, and an `insufficient-scope` `403` the challenge naming its `required` scope, unless you pass another. `forMember($token)` calls as a member. Calls are not retried, so a refusal is thrown at once. A call with no answer arranged, or to a path that is no operation of the document, throws `Exception\UnarrangedCallException`, a `LogicException`. Sign-in through `oidc()` is not faked.
 
 ## Verifying webhook deliveries
 
@@ -496,7 +497,7 @@ match (true) {
 | `OrderEvent` | `order.completed`, `order.shipped`, `order.cancelled`, `order.status_updated`, `order.expired`, `order.revived`, `order.payment_arrived_late` | `$order` |
 | `OrderPaidEvent` | `order.paid` | `$order`, `$payment`, `$subject` |
 | `PaymentReturnedEvent` | `order.refunded`, `payment.refunded`, `payment.reversed` | `$order`, `$payment` |
-| `RefundEvent` | `refund.requested`, `refund.processed` | `$refund` (its reference) |
+| `RefundEvent` | `refund.requested`, `refund.processed` | `$refund`, a `Model\Refund`: its order number, the payment's reference, the amount and its `status` |
 | `ReferralRewardIssuedEvent` | `referral.reward_issued` | `$subject`, `$referralCode`, `$paymentReference`, `$reward` |
 | `SubscriptionEvent` | `subscription.*` | `$subscription`, and `$period` on `started` and `renewed` |
 | `AccountEvent` | `account.suspended`, `account.reinstated`, `account.erased`, `account.entitlements_changed`, `account.email_changed` | `$state` |

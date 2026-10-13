@@ -11,7 +11,6 @@ use Appsolutely\Sdk\Api\Operation;
 use Appsolutely\Sdk\Api\Page;
 use Appsolutely\Sdk\Model\MemberSubscription;
 use Appsolutely\Sdk\Model\MemberSubscriptionChange;
-use Appsolutely\Sdk\Model\MemberSubscriptionConfirmation;
 
 /**
  * The member's own subscriptions, as the member manages them.
@@ -49,12 +48,13 @@ final readonly class Subscriptions
      * Takes back a cancellation not yet in force, or asks the member to
      * confirm it on the site's billing pages.
      *
-     * @return KeyedResult<MemberSubscriptionConfirmation>
+     * @param string $returnUrl where the site sends the member back to after they confirm it, one of the site's return addresses
+     * @return KeyedResult<MemberSubscriptionChange>
      */
     #[Endpoint(Operation::ResumeMeSubscription)]
-    public function resume(string $id, ?string $idempotencyKey = null): KeyedResult
+    public function resume(string $id, string $returnUrl, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::ResumeMeSubscription, MemberSubscriptionConfirmation::class, ['subscription' => $id], [], $idempotencyKey);
+        return $this->caller->keyed(Operation::ResumeMeSubscription, MemberSubscriptionChange::class, ['subscription' => $id], ['return_url' => $returnUrl], $idempotencyKey);
     }
 
     /**
@@ -63,11 +63,12 @@ final readonly class Subscriptions
      *
      * @param string|null $sku the slug of the plan to renew on
      * @param positive-int|null $quantity the units to renew at
+     * @param string|null $returnUrl where the site sends the member back to when the change is theirs to confirm, one of the site's return addresses
      * @return KeyedResult<MemberSubscriptionChange>
      */
     #[Endpoint(Operation::ChangeMeSubscription)]
-    public function change(string $id, ?string $sku = null, ?int $quantity = null, ?string $idempotencyKey = null): KeyedResult
+    public function change(string $id, ?string $sku = null, ?int $quantity = null, ?string $returnUrl = null, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::ChangeMeSubscription, MemberSubscriptionChange::class, ['subscription' => $id], ['sku' => $sku, 'quantity' => $quantity], $idempotencyKey);
+        return $this->caller->keyed(Operation::ChangeMeSubscription, MemberSubscriptionChange::class, ['subscription' => $id], ['sku' => $sku, 'quantity' => $quantity, 'return_url' => $returnUrl], $idempotencyKey);
     }
 }

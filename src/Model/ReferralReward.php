@@ -39,7 +39,7 @@ final readonly class ReferralReward implements SchemaModel
         #[\SensitiveParameter]
         public ?string $code,
         public ?DateTimeImmutable $expiresAt,
-        public ?DateTimeImmutable $earnedAt,
+        public DateTimeImmutable $earnedAt,
         #[\SensitiveParameter]
         public array $extra = [],
     ) {}
@@ -56,7 +56,7 @@ final readonly class ReferralReward implements SchemaModel
             holdUntil: $json->nullableTime('hold_until'),
             code: $json->nullableString('code'),
             expiresAt: $json->nullableTime('expires_at'),
-            earnedAt: $json->nullableTime('earned_at'),
+            earnedAt: $json->time('earned_at'),
             extra: $json->extra(),
         );
     }

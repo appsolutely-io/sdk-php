@@ -17,7 +17,7 @@ final readonly class StorePurchaseIntent implements SchemaModel
      * @param string $storeProductId the product's id in the store
      * @param string $accountToken the token to pass as the store purchase's account identifier, which ties the purchase to the member
      * @param string|null $replacesPurchaseToken on Google Play, the purchase the new one replaces
-     * @param list<string> $mayStillBill the stores or the site still billing another subscription of the member's
+     * @param list<SubscriptionSource> $mayStillBill the member's subscriptions another party still bills, which this purchase does not stop
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
@@ -37,7 +37,7 @@ final readonly class StorePurchaseIntent implements SchemaModel
             storeProductId: $json->string('store_product_id'),
             accountToken: $json->string('account_token'),
             replacesPurchaseToken: $json->nullableString('replaces_purchase_token'),
-            mayStillBill: $json->strings('may_still_bill'),
+            mayStillBill: array_map(SubscriptionSource::from(...), $json->objects('may_still_bill')),
             extra: $json->extra(),
         );
     }

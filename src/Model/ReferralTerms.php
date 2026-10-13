@@ -12,7 +12,12 @@ final readonly class ReferralTerms implements SchemaModel
     /** @internal */
     public const string SCHEMA = 'ReferralTerms';
 
+    public const string TYPE_CREDIT = 'credit';
+
+    public const string TYPE_CASHBACK = 'cashback';
+
     /**
+     * @param string $type one of the TYPE_ constants
      * @param int $value in the minor units of $currency
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */

@@ -37,7 +37,7 @@ final readonly class CheckoutSession implements SchemaModel
      * @param list<CheckoutSessionLine> $lines
      * @param string|null $promotionCode the code the checkout was started with
      * @param string|null $orderReference the reference of the order the checkout placed, or null before it placed one
-     * @param list<SubscriptionStillBilling> $mayStillBill subscriptions another party still bills, which this purchase does not stop; empty unless the site found some
+     * @param list<SubscriptionSource> $mayStillBill subscriptions another party still bills, which this purchase does not stop; empty unless the site found some
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
@@ -71,7 +71,7 @@ final readonly class CheckoutSession implements SchemaModel
             successUrl: $json->string('success_url'),
             cancelUrl: $json->string('cancel_url'),
             orderReference: $json->nullableObject('order')?->string('reference'),
-            mayStillBill: $mayStillBillList === null ? [] : array_map(SubscriptionStillBilling::from(...), $mayStillBillList),
+            mayStillBill: $mayStillBillList === null ? [] : array_map(SubscriptionSource::from(...), $mayStillBillList),
             extra: $json->extra(),
         );
     }
