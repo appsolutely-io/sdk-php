@@ -11,6 +11,7 @@ use Appsolutely\Sdk\Model\Refund;
 use Appsolutely\Sdk\Model\Subscription;
 use Appsolutely\Sdk\Tests\Support\FrozenClock;
 use Appsolutely\Sdk\Tests\Support\SiteFixture;
+use Appsolutely\Sdk\Webhooks\Event;
 use Appsolutely\Sdk\Webhooks\Events\AccountEvent;
 use Appsolutely\Sdk\Webhooks\Events\ArticleEvent;
 use Appsolutely\Sdk\Webhooks\Events\FormSubmittedEvent;
@@ -618,6 +619,12 @@ final class TypedEventTest extends TestCase
         );
         sort($families);
         self::assertSame($expected, $families);
+    }
+
+    public function testTheEnvelopeNamesWhetherRealMoneyIsBehindTheEvent(): void
+    {
+        self::assertSame(Event::MODE_PRODUCTION, self::deliver(EventType::WEBHOOK_PING, '{"subscription_id":"s_1"}')->envelope->mode);
+        self::assertSame(Event::MODE_TEST, self::deliver(EventType::WEBHOOK_PING, '{"subscription_id":"s_1"}', 'test')->envelope->mode);
     }
 
     public function testAnUnknownTypeIsAGenericEventWithItsDataStillReadable(): void
