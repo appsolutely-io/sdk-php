@@ -94,13 +94,15 @@ final class ResourceContractTest extends TestCase
     public function testEveryMethodIsOnTheClientOfItsOperationsAudience(): void
     {
         foreach (self::endpoints() as $endpoint) {
-            $expected = match ($endpoint['operation']->audience()) {
-                Audience::Anyone, Audience::Administrator => [AdministratorApi::class],
-                Audience::Member => [MemberApi::class],
-                Audience::Backend => [BackendApi::class],
-            };
+            $audiences = $endpoint['operation']->audiences();
+            $expected = [];
+            foreach ([AdministratorApi::class => [Audience::Anyone, Audience::Administrator], MemberApi::class => [Audience::Member], BackendApi::class => [Audience::Backend]] as $root => $served) {
+                if (array_intersect(array_map(static fn(Audience $audience): string => $audience->name, $served), array_map(static fn(Audience $audience): string => $audience->name, $audiences)) !== []) {
+                    $expected[] = $root;
+                }
+            }
 
-            self::assertSame($expected, $endpoint['roots'], sprintf('%s calls %s, an operation for %s, from %s.', $endpoint['method'], $endpoint['operation']->value, $endpoint['operation']->audience()->name, $endpoint['roots'] === [] ? 'no client' : implode(' and ', $endpoint['roots'])));
+            self::assertSame($expected, $endpoint['roots'], sprintf('%s calls %s, an operation for %s, from %s.', $endpoint['method'], $endpoint['operation']->value, implode(' and ', array_map(static fn(Audience $audience): string => $audience->name, $audiences)), $endpoint['roots'] === [] ? 'no client' : implode(' and ', $endpoint['roots'])));
         }
     }
 
@@ -294,9 +296,24 @@ final class ResourceContractTest extends TestCase
             }
         }
 
+        // A model that wraps another read from the same object, as a listed
+        // account state wraps the account's state, may leave a value's
+        // constant to the wrapped model, which the caller reads it through.
+        $named = $constants;
+        foreach ((new ReflectionClass($class))->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+            $type = $property->getType();
+            if ($type instanceof ReflectionNamedType && !$type->isBuiltin() && is_subclass_of($type->getName(), SchemaModel::class)) {
+                foreach ((new ReflectionClass($type->getName()))->getConstants() as $name => $value) {
+                    if (is_string($value) && !isset($named[$name])) {
+                        $named[$name] = $value;
+                    }
+                }
+            }
+        }
+
         $missing = [];
         foreach ($enumerated as $name => $value) {
-            if (($constants[$name] ?? null) !== $value) {
+            if (($named[$name] ?? null) !== $value) {
                 $missing[] = sprintf('%s = \'%s\'', $name, $value);
             }
         }
@@ -514,6 +531,11 @@ final class ResourceContractTest extends TestCase
         self::assertCount(1, $answered, sprintf('%s answers %s, a page whose items name no schema.', $id, $documented));
 
         $answer = $answered !== [$documented] ? ['data' => [self::sampleOf($answered[0])]] : self::sampleOf($documented);
+        if ($endpoint['operation']->isCursorList()) {
+            // Every request is answered with the sample: one that names a
+            // next page would name the same page again, which a walk refuses.
+            unset($answer['next_cursor']);
+        }
         if (in_array($documented, SyncPush::SCHEMAS, true)) {
             // The document leaves a push result's record an open object; the
             // site sends the resource's record, as the matching pull does.
@@ -609,7 +631,11 @@ final class ResourceContractTest extends TestCase
      */
     private static function drive(array $endpoint, bool $optional, ?array $answer = null): array
     {
-        $site = new class ($endpoint['operation']->successStatus(), $answer) implements ClientInterface {
+        // A list whose page carries more than its items and cursor, such as
+        // where the next walk starts, is answered with a sample of those.
+        $schema = $endpoint['operation']->isCursorList() ? self::successSchema($endpoint['operation']->value) : null;
+        $page = $schema === null ? [] : array_diff_key(self::sampleOf($schema), ['data' => true, 'next_cursor' => true]);
+        $site = new class ($endpoint['operation']->successStatus(), $answer, $page) implements ClientInterface {
             /** @var list<list<string>> */
             public array $queries = [];
 
@@ -621,8 +647,9 @@ final class ResourceContractTest extends TestCase
 
             /**
              * @param array<array-key, mixed>|null $answer
+             * @param array<array-key, mixed> $page what every page of a list carries beside its items and cursor
              */
-            public function __construct(private readonly int $status, private readonly ?array $answer) {}
+            public function __construct(private readonly int $status, private readonly ?array $answer, private readonly array $page) {}
 
             public function sendRequest(RequestInterface $request): ResponseInterface
             {
@@ -648,7 +675,7 @@ final class ResourceContractTest extends TestCase
                 foreach ($query === '' ? [] : explode('&', $query) as $pair) {
                     $names[] = rawurldecode(explode('=', $pair, 2)[0]);
                 }
-                $page = $this->answer ?? ($this->queries === [] ? ['data' => [], 'next_cursor' => 'next-page'] : ['data' => []]);
+                $page = $this->answer ?? ($this->queries === [] ? [...$this->page, 'data' => [], 'next_cursor' => 'next-page'] : [...$this->page, 'data' => []]);
                 $this->queries[] = $names;
                 $this->lines[] = $request->getMethod() . ' ' . $path;
                 $body = (string) $request->getBody();

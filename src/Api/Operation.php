@@ -236,7 +236,21 @@ enum Operation: string
         return $path;
     }
 
-    public function audience(): Audience
+    /**
+     * Whose credentials the site answers it for: one audience for most, and
+     * both the administrator and the backend for the catalogue reads.
+     *
+     * @return non-empty-list<Audience>
+     */
+    public function audiences(): array
+    {
+        return match ($this) {
+            self::ListProducts, self::GetProduct => [Audience::Administrator, Audience::Backend],
+            default => [$this->soleAudience()],
+        };
+    }
+
+    private function soleAudience(): Audience
     {
         return match ($this) {
             self::GetApiVersion, self::GetOpenApiDocument, self::RequestMagicLink, self::TokenMagicLink => Audience::Anyone,

@@ -10,6 +10,8 @@ use Appsolutely\Sdk\Api\Operation;
 use Appsolutely\Sdk\Api\Paginator;
 use Appsolutely\Sdk\Api\SiteApi;
 use Appsolutely\Sdk\Model\AccountState;
+use Appsolutely\Sdk\Model\ListedAccountStatePage;
+use DateTimeInterface;
 
 /**
  * The state of every account the site handed the app a name for, in the
@@ -21,12 +23,34 @@ final readonly class AccountStates
     public function __construct(private Caller $caller) {}
 
     /**
-     * @return Paginator<AccountState>
+     * One walk through the accounts, a page at a time, ordered by when each
+     * account's entitlements last changed: every account without
+     * `$changedSince`, otherwise only those changed at or after it. Each
+     * item is a whole page, so the walk's `nextChangedSince` is read beside
+     * its states:
+     *
+     *     foreach ($backend->accountStates()->list($since) as $page) {
+     *         foreach ($page->states as $listed) { ... $listed->state ... }
+     *         $since = $page->nextChangedSince;
+     *     }
+     *
+     * A change made while a walk runs may be met by it or only by the next
+     * one; the site advises a full walk without `$changedSince` now and then
+     * (daily, say), which lists everyone.
+     *
+     * @param DateTimeInterface|null $changedSince the previous walk's `nextChangedSince`; sent in UTC to the second
+     * @return Paginator<ListedAccountStatePage>
      */
     #[Endpoint(Operation::ListBackendEntitlements)]
-    public function list(int $limit = SiteApi::DEFAULT_LIMIT): Paginator
+    public function list(?DateTimeInterface $changedSince = null, int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::ListBackendEntitlements, AccountState::class, [], $limit);
+        return $this->caller->pages(
+            Operation::ListBackendEntitlements,
+            ListedAccountStatePage::class,
+            ['changed_since' => $changedSince],
+            $limit,
+            static fn(ListedAccountStatePage $page): ?string => $page->nextCursor,
+        );
     }
 
     /**

@@ -10,6 +10,7 @@ use Appsolutely\Sdk\Model\Fields;
 use Appsolutely\Sdk\Model\SchemaModel;
 use Appsolutely\Sdk\Model\SyncPull;
 use Appsolutely\Sdk\Model\SyncPush;
+use Closure;
 use DateTimeInterface;
 use DateTimeZone;
 use LogicException;
@@ -147,6 +148,37 @@ final readonly class Caller
     }
 
     /**
+     * A cursor list whose pages carry more than their items, such as where
+     * the next walk starts: each page is read whole as the page model and is
+     * the one item the Paginator gives for it.
+     *
+     * @template P of SchemaModel
+     *
+     * @param class-string<P> $page the model of a whole page, which names its schema
+     * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query the list's filters, sent with every page
+     * @param Closure(P): (string|null) $nextCursor the cursor a page names for the next one
+     * @param array<string, string> $path
+     * @return Paginator<P>
+     */
+    public function pages(Operation $operation, string $page, #[\SensitiveParameter] array $query, int $limit, Closure $nextCursor, array $path = []): Paginator
+    {
+        $this->assertAudience($operation);
+        if (!$operation->isCursorList()) {
+            throw new LogicException(sprintf('%s is not a cursor list.', $operation->value));
+        }
+        $query = self::query($query);
+        SiteApi::assertPaging($query, $limit);
+        $url = $operation->path($path);
+
+        return new Paginator(function (?string $cursor) use ($operation, $page, $query, $limit, $nextCursor, $url): Page {
+            $response = $this->api->get($url, [...$query, 'limit' => $limit, 'cursor' => $cursor]);
+            $read = $page::from(Fields::of(self::objectOf($response, $operation), $page::SCHEMA));
+
+            return new Page([$read], $nextCursor($read), $response);
+        });
+    }
+
+    /**
      * A write sent with an Idempotency-Key, and the model it answered.
      *
      * @template T of SchemaModel
@@ -242,8 +274,8 @@ final readonly class Caller
 
     private function assertAudience(Operation $operation): void
     {
-        if ($operation->audience() !== $this->audience) {
-            throw new LogicException(sprintf('%s is called by %s, not %s.', $operation->value, $operation->audience()->name, $this->audience->name));
+        if (!in_array($this->audience, $operation->audiences(), true)) {
+            throw new LogicException(sprintf('%s is called by %s, not %s.', $operation->value, implode(' or ', array_map(static fn(Audience $audience): string => $audience->name, $operation->audiences())), $this->audience->name));
         }
     }
 

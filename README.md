@@ -13,7 +13,7 @@ Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://git
 
 ## Compatibility
 
-The client is written and tested against the Site API document of the site software v0.25.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
+The client is written and tested against the Site API document of the site software v0.26.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
 
 The document's `v1` is stable for the life of the version: the site adds paths and fields to it but never removes or retypes one, and a breaking change arrives as a new version while `v1` keeps serving. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
 
@@ -194,7 +194,8 @@ try {
 }
 
 $page = $api->pages()->get($pageId);            // Model\ContentPage, so it is not mistaken for Api\Page
-$product = $api->products()->get($productId);   // $product->prices: one ProductPrice per currency
+$product = $api->products()->get($productId);   // $product->prices: one ProductPrice per currency, the lowest of its skus
+$product->skuPrices;                            // one ProductSkuPrice per sku and currency, with the interval a subscription sku renews in
 ```
 
 ### Orders, form entries, account states and webhook deliveries
@@ -271,10 +272,18 @@ final class LaravelTokenLock implements TokenLock
 ```php
 $backend = $client->backend();
 
-$backend->client();                                           // the machine client: its mode, site and scopes
+$backend->client();                                           // the machine client: its mode, site, scopes and storeCurrency
 
 $state = $backend->accountStates()->get($subject);           // AccountState::STATUS_UNKNOWN for a subject never handed out
-foreach ($backend->accountStates()->list() as $state) { /* every account the app was given a name for */ }
+
+// Reconcile by walks: each item is a page, and the walk's nextChangedSince
+// is where the next one starts. Without $since it lists every account.
+foreach ($backend->accountStates()->list($since) as $page) {
+    foreach ($page->states as $listed) { /* $listed->state is the AccountState a delivery carries */ }
+    $since = $page->nextChangedSince;                        // keep it for the next walk
+}
+
+$backend->products()->get($productId)->skuPrices;            // the catalogue, with the catalogue:read scope
 
 $checkout = $backend->checkoutSessions()->create($subject, [['product' => 'team', 'quantity' => 5]], $successUrl, $cancelUrl);
 $checkout->value->url;                                       // send the member here

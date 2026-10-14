@@ -20,13 +20,16 @@ trait SchemaReads
      * so a document that changes, to agree with the site or otherwise, fails
      * until the entry is dropped or rewritten.
      *
-     * The document leaves an account's `totals` an open object; the site
-     * sends a quantity per key. It leaves a subscription's `pending_period` an
+     * The document leaves an account's `totals` an open object, listed or
+     * not; the site sends a quantity per key. It leaves a subscription's `pending_period` an
      * open object or null; the site sends the period's start and where its
      * payment stands.
      */
     private const array AS_THE_SITE_SENDS = [
         'AccountState' => [
+            'totals' => ['document' => ['type' => 'object', 'additionalProperties' => true], 'site' => ['seats' => 3]],
+        ],
+        'ListedAccountState' => [
             'totals' => ['document' => ['type' => 'object', 'additionalProperties' => true], 'site' => ['seats' => 3]],
         ],
         'AccountSubscription' => [

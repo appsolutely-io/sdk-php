@@ -7,6 +7,19 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING:** the client is held to the Site API document of the site software v0.26.0 (`Contract::REVISION`), and needs a site at least that new: a product's `sku_prices` and the backend client's `store_currency` are required, so an answer or a `product.*` delivery from an older site is refused as an `UnexpectedResponseException` or an `UnexpectedPayloadException`.
+- **BREAKING:** `backend()->accountStates()->list()` walks the accounts as the site now lists them, ordered by when each one's entitlements last changed, and gives a `Paginator<ListedAccountStatePage>`: each item is a whole page, whose `$states` are `ListedAccountState`s (the `AccountState` and its `entitlementsChangedAt`) and whose `$nextChangedSince` is where the next walk starts. `$limit` moves to the second parameter. A cursor kept from an older site is refused as `invalid-cursor`; start the walk again.
+- **BREAKING:** `Operation::audience()` is replaced by `Operation::audiences()`, since the catalogue reads answer both the administrator and the backend.
+
+### Added
+
+- `Client::backend()->products()`: the site's backend reads the catalogue (`list()` and `get()`) with its own token and the `catalogue:read` scope, the same operations the administrator calls. `Operation::audiences()` lists every audience an operation is answered for.
+- `Product::$skuPrices`, a `ProductSkuPrice` per active sku and currency: the sku's identifier, `price`, `originalPrice`, and the `interval` (`ProductSkuPrice::INTERVAL_MONTH` or `INTERVAL_YEAR`) and `intervalCount` a subscription sku renews on, both null for a sku sold once.
+- `BackendClient::$storeCurrency`: the ISO 4217 currency every checkout on the site is priced and paid in.
+- `backend()->accountStates()->list()` takes `$changedSince`, to list only the accounts whose entitlements changed at or after it.
+
 ## [0.2.0] - 2026-10-14
 
 ### Added
