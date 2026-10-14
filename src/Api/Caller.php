@@ -251,7 +251,8 @@ final readonly class Caller
     /**
      * The query of a sync pull: the cursor to resume from, and a page size
      * the site bounds itself (100 by default, up to 500 unless the site is
-     * configured otherwise), so only one below 1 is refused here.
+     * configured otherwise), so only one below 1 is refused here; one above
+     * the site's maximum is refused by the site as `validation-failed`.
      *
      * @return array{cursor: string|null, limit: int|null}
      */
