@@ -22,7 +22,7 @@ final readonly class FormSubmittedEvent extends TypedEvent
     public function __construct(
         Event $envelope,
         public FormEntry $entry,
-        public ?string $formName,
+        public string $formName,
     ) {
         parent::__construct($envelope);
     }
@@ -35,7 +35,7 @@ final readonly class FormSubmittedEvent extends TypedEvent
         return new self(
             $envelope,
             FormEntry::from($data->except('form_name')),
-            $data->nullableString('form_name'),
+            $data->string('form_name'),
         );
     }
 }

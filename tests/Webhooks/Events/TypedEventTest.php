@@ -301,6 +301,14 @@ final class TypedEventTest extends TestCase
         self::assertSame('Contact', $event->formName);
     }
 
+    public function testAFormSubmissionWithoutItsFormsNameIsRefused(): void
+    {
+        $this->expectException(UnexpectedPayloadException::class);
+        $this->expectExceptionMessage('data.form_name is missing');
+
+        self::deliver(EventType::FORM_SUBMITTED, SiteFixture::json('form-entry'));
+    }
+
     private static function assertTheOrder(Order $order, string $status): void
     {
         self::assertSame('SO-20261008-0042', $order->id);

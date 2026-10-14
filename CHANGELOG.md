@@ -15,6 +15,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING (for a caller branching on the status or the type):** the site refuses a magic-link exchange that still needs the member's second factor as `403` `second-factor-required` (a `ForbiddenException`, no longer an `UnauthenticatedException` with a challenge), and one locked out after too many codes as `429` `rate-limited` (a `RateLimitedException` whose `retryAfter` says when to ask again).
 - **BREAKING (for a caller passing a large `$limit`):** a sync pull with a limit above the site's maximum, 500 unless it is configured otherwise, is refused as a `ValidationFailedException`; the site used to cut it to the maximum, which read like the end of the changes.
 - **BREAKING (for a `subscription.renewed` subscriber):** `SubscriptionEvent::$period` is read as the document describes each type: required on `subscription.renewed`, whose delivery without it is refused as an `UnexpectedPayloadException`; optional on `subscription.started`; and never on any other type, where a `period` stays in `$subscription->extra`.
+- **BREAKING (for a `form.submitted` subscriber):** `FormSubmittedEvent::$formName` is a `string`, never null, as the document describes it; a delivery without it is refused as an `UnexpectedPayloadException`.
 - **BREAKING:** `Operation::audience()` is replaced by `Operation::audiences()`, since the catalogue reads answer both the administrator and the backend.
 
 ### Added
