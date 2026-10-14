@@ -87,7 +87,24 @@ final class Document
     }
 
     /**
-     * The schema a `$ref` points at, or the value itself.
+     * Every webhook the document describes, keyed by event type.
+     *
+     * @return array<string, array<array-key, mixed>>
+     */
+    public static function webhooks(): array
+    {
+        $webhooks = [];
+        foreach (self::map(self::get()['webhooks'] ?? null) as $type => $webhook) {
+            $webhooks[(string) $type] = self::map($webhook);
+        }
+
+        return $webhooks;
+    }
+
+    /**
+     * The schema a `$ref` points at, or the value itself, with an `allOf`
+     * merged into one object schema: the properties of every part, and
+     * every part's required members.
      *
      * @param array<array-key, mixed> $value
      * @return array<array-key, mixed>
@@ -95,14 +112,30 @@ final class Document
     public static function resolve(array $value): array
     {
         $ref = $value['$ref'] ?? null;
-        if (!is_string($ref)) {
+        if (is_string($ref)) {
+            if (!str_starts_with($ref, '#/components/schemas/')) {
+                throw new RuntimeException(sprintf('Unsupported reference "%s".', $ref));
+            }
+            $value = self::schema(substr($ref, strlen('#/components/schemas/')));
+        }
+        if (!isset($value['allOf'])) {
             return $value;
         }
-        if (!str_starts_with($ref, '#/components/schemas/')) {
-            throw new RuntimeException(sprintf('Unsupported reference "%s".', $ref));
-        }
 
-        return self::schema(substr($ref, strlen('#/components/schemas/')));
+        $merged = $value;
+        unset($merged['allOf']);
+        $properties = self::map($merged['properties'] ?? null);
+        $required = self::list($merged['required'] ?? []);
+        foreach (self::list($value['allOf']) as $part) {
+            $part = self::resolve(self::map($part));
+            $properties = [...$properties, ...self::map($part['properties'] ?? null)];
+            $required = [...$required, ...self::list($part['required'] ?? [])];
+            $merged['type'] ??= $part['type'] ?? null;
+        }
+        $merged['properties'] = $properties;
+        $merged['required'] = array_values(array_unique($required, SORT_REGULAR));
+
+        return $merged;
     }
 
     /**

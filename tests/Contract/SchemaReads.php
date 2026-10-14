@@ -325,6 +325,16 @@ trait SchemaReads
         if ($name !== null) {
             return self::sampleOf($name);
         }
+        if (isset($schema['allOf'])) {
+            // Each part is sampled on its own, so a part that is a named
+            // schema is sampled with its fields as the site sends them.
+            $sample = [];
+            foreach (Document::list($schema['allOf']) as $part) {
+                $sample = [...$sample, ...Document::map(self::sample(Document::map($part)))];
+            }
+
+            return $sample;
+        }
         $schema = self::nonNull(Document::resolve($schema));
         $type = $schema['type'] ?? (isset($schema['properties']) ? 'object' : null);
         if (is_array($type)) {
