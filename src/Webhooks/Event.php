@@ -13,7 +13,14 @@ use DateTimeImmutable;
  */
 final readonly class Event
 {
+    /** Real money is behind the event. */
+    public const string MODE_PRODUCTION = 'production';
+
+    /** Test money is behind the event; an endpoint is sent only its own mode. */
+    public const string MODE_TEST = 'test';
+
     /**
+     * @param string $mode one of the MODE_ constants
      * @param array<array-key, mixed> $data
      */
     public function __construct(

@@ -7,6 +7,31 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING:** `me()->subscriptions()->change($id, $returnUrl, $sku, $quantity)` takes the return address second and requires it, as `resume()` does: the site now refuses a change without `return_url`, since whether the member must confirm it on the site is not known beforehand. Arguments passed by position after `$id` move.
+- **BREAKING:** the client is held to the Site API document of the site software v0.27.0 (`Contract::REVISION`), and needs a site at least that new: a product's `sku_prices` and the backend client's `store_currency` are required, so an answer or a `product.*` delivery from an older site is refused as an `UnexpectedResponseException` or an `UnexpectedPayloadException`.
+- **BREAKING:** `backend()->accountStates()->list()` walks the accounts as the site now lists them, ordered by when each one's entitlements last changed, and gives a `Paginator<ListedAccountStatePage>`: each item is a whole page, whose `$states` are `ListedAccountState`s (the `AccountState` and its `entitlementsChangedAt`) and whose `$nextChangedSince` is where the next walk starts. `$limit` moves to the second parameter. A cursor kept from an older site is refused as `invalid-cursor`; start the walk again.
+- **BREAKING (for a caller branching on the status or the type):** the site refuses a magic-link exchange that still needs the member's second factor as `403` `second-factor-required` (a `ForbiddenException`, no longer an `UnauthenticatedException` with a challenge), and one locked out after too many codes as `429` `rate-limited` (a `RateLimitedException` whose `retryAfter` says when to ask again).
+- **BREAKING (for a caller passing a large `$limit`):** a sync pull with a limit above the site's maximum, 500 unless it is configured otherwise, is refused as a `ValidationFailedException`; the site used to cut it to the maximum, which read like the end of the changes.
+- **BREAKING (for a `subscription.renewed` subscriber):** `SubscriptionEvent::$period` is read as the document describes each type: required on `subscription.renewed`, whose delivery without it is refused as an `UnexpectedPayloadException`; optional on `subscription.started`; and never on any other type, where a `period` stays in `$subscription->extra`.
+- **BREAKING (for a `form.submitted` subscriber):** `FormSubmittedEvent::$formName` is a `string`, never null, as the document describes it; a delivery without it is refused as an `UnexpectedPayloadException`.
+- **BREAKING:** `Operation::audience()` is replaced by `Operation::audiences()`, since the catalogue reads answer both the administrator and the backend.
+
+### Added
+
+- `Client::backend()->products()`: the site's backend reads the catalogue (`list()` and `get()`) with its own token and the `catalogue:read` scope, the same operations the administrator calls. `Operation::audiences()` lists every audience an operation is answered for.
+- `Product::$skuPrices`, a `ProductSkuPrice` per active sku and currency: the sku's identifier, `price`, `originalPrice`, and the `interval` (`ProductSkuPrice::INTERVAL_MONTH` or `INTERVAL_YEAR`) and `intervalCount` a subscription sku renews on, both null for a sku sold once.
+- `BackendClient::$storeCurrency`: the ISO 4217 currency every checkout on the site is priced and paid in.
+- `backend()->accountStates()->list()` takes `$changedSince`, to list only the accounts whose entitlements changed at or after it.
+- `Webhooks\Event::MODE_PRODUCTION` and `Event::MODE_TEST`, the values an envelope's `mode` takes.
+- A `subscription-awaiting-payment` refusal of a checkout or a store purchase intent names, beside the waiting `order`, where the signed-in member pays it: `ConflictException::extension('payment_url')`, null when there is nothing to pay on a page.
+- A checkout line, from the backend or the member, may name the sku it buys as `sku`, by the identifier the product lists it under in `skuPrices`; a product sold as several skus needs one. `CheckoutSessionLine::$sku` reads it back, null for a line that named none.
+
+### Fixed
+
+- `oidc()->revoke('')` is refused as an `InvalidArgumentValueException` before anything is sent: RFC 7009 requires the token, and the site now refuses a revocation without one as `invalid_request` rather than answering it as revoked.
+
 ## [0.2.0] - 2026-10-14
 
 ### Added

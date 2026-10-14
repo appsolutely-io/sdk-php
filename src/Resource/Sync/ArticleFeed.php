@@ -26,6 +26,7 @@ final readonly class ArticleFeed
      * tombstone since: pull again from the start.
      *
      * @param string|null $cursor the nextCursor of the previous pull, unchanged
+     * @param int|null $limit the most changes, at least 1 to answer, the site's default when null; one above the site's maximum (500 unless configured otherwise) is refused as a ValidationFailedException, not cut short
      * @return SyncPull<Article>
      */
     #[Endpoint(Operation::PullSyncArticle)]

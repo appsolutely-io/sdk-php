@@ -6,9 +6,12 @@ namespace Appsolutely\Sdk\Tests\Resource;
 
 use Appsolutely\Sdk\Api\BackendApi;
 use Appsolutely\Sdk\Api\MemberApi;
+use Appsolutely\Sdk\Exception\ConflictException;
 use Appsolutely\Sdk\Model\EntitlementTerm;
+use Appsolutely\Sdk\Model\ProductSkuPrice;
 use Appsolutely\Sdk\Model\SubscriptionSource;
 use Appsolutely\Sdk\Tests\Support\SiteFixture;
+use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -87,6 +90,32 @@ final class BackendTest extends TestCase
         self::assertSame('mug', $result->value->lines[0]->product);
         self::assertNull($result->value->orderReference);
         self::assertSame(SubscriptionSource::BILLED_BY_APP_STORE, $result->value->mayStillBill[0]->billedBy);
+    }
+
+    public function testACheckoutLineMayNameTheSkuItBuys(): void
+    {
+        $site = (new SiteRecorder())->json([...self::checkout(), 'lines' => [['product' => 'team', 'quantity' => 3, 'sku' => 'team-yearly'], ['product' => 'mug', 'quantity' => 1]]], 201);
+
+        $result = self::backend($site)->checkoutSessions()->create('member-sub', [['product' => 'team', 'quantity' => 3, 'sku' => 'team-yearly'], ['product' => 'mug', 'quantity' => 1]], 'https://app.example.com/thanks', 'https://app.example.com/cart');
+
+        self::assertSame([['product' => 'team', 'quantity' => 3, 'sku' => 'team-yearly'], ['product' => 'mug', 'quantity' => 1]], $site->body()['lines'] ?? null);
+        self::assertSame('team-yearly', $result->value->lines[0]->sku);
+        self::assertNull($result->value->lines[1]->sku);
+        self::assertSame([], $result->value->lines[0]->extra);
+    }
+
+    public function testAPurchaseRefusedForAWaitingOrderSaysWhereItIsPaid(): void
+    {
+        $site = (new SiteRecorder())->problem(409, 'subscription-awaiting-payment', ['order' => 'SO-20261008-0042', 'payment_url' => 'https://site.example.com/orders/SO-20261008-0042/pay']);
+
+        try {
+            self::backend($site)->checkoutSessions()->create('member-sub', [['product' => 'team', 'quantity' => 1]], 'https://app.example.com/thanks', 'https://app.example.com/cart');
+            self::fail('The refusal was not thrown.');
+        } catch (ConflictException $exception) {
+            self::assertTrue($exception->hasType('subscription-awaiting-payment'));
+            self::assertSame('SO-20261008-0042', $exception->extension('order'));
+            self::assertSame('https://site.example.com/orders/SO-20261008-0042/pay', $exception->extension('payment_url'));
+        }
     }
 
     public function testAMembersCheckoutNamesNoSubject(): void
@@ -201,11 +230,63 @@ final class BackendTest extends TestCase
         self::assertSame(EntitlementTerm::SOURCE_PLAN, $state->entitlements[0]->breakdown[0]->source ?? null);
     }
 
+    public function testTheAccountStatesWalkStartsFromAMomentAndNamesWhereTheNextOneStarts(): void
+    {
+        /** @var array<string, mixed> $state */
+        $state = json_decode(SiteFixture::json('account-state'), true, 512, JSON_THROW_ON_ERROR);
+        $site = (new SiteRecorder())
+            ->json(['data' => [[...$state, 'entitlements_changed_at' => '2026-10-08T12:00:00Z']], 'next_cursor' => 'c2', 'next_changed_since' => '2026-10-08T12:30:00Z'])
+            ->json(['data' => [], 'next_changed_since' => '2026-10-08T12:30:00Z']);
+
+        $pages = iterator_to_array(self::backend($site)->accountStates()->list(new DateTimeImmutable('2026-10-08T13:00:00+01:00'), 50), false);
+
+        self::assertSame('GET /api/v1/entitlements?changed_since=2026-10-08T12%3A00%3A00Z&limit=50', $site->line());
+        self::assertSame('GET /api/v1/entitlements?changed_since=2026-10-08T12%3A00%3A00Z&limit=50&cursor=c2', $site->line(1));
+        self::assertCount(2, $pages);
+        self::assertSame('c2', $pages[0]->nextCursor);
+        self::assertNull($pages[1]->nextCursor);
+        self::assertSame('2026-10-08T12:30:00+00:00', $pages[0]->nextChangedSince->format(DATE_ATOM));
+        self::assertCount(1, $pages[0]->states);
+        self::assertSame(42, $pages[0]->states[0]->state->sequence);
+        self::assertSame([], $pages[0]->states[0]->state->extra);
+        self::assertSame('2026-10-08T12:00:00+00:00', $pages[0]->states[0]->entitlementsChangedAt->format(DATE_ATOM));
+    }
+
+    public function testAWalkWithoutAMomentListsEveryone(): void
+    {
+        $site = (new SiteRecorder())->json(['data' => [], 'next_changed_since' => '2026-10-08T12:30:00Z']);
+
+        iterator_to_array(self::backend($site)->accountStates()->list());
+
+        self::assertSame('GET /api/v1/entitlements?limit=25', $site->line());
+    }
+
+    public function testTheBackendReadsTheCatalogueWithItsOwnToken(): void
+    {
+        $site = (new SiteRecorder())->json(SiteFixture::record('product'));
+
+        $product = self::backend($site)->products()->get('team-plan');
+
+        self::assertSame('GET /api/v1/products/team-plan', $site->line());
+        self::assertSame('Bearer machine-token', $site->request()->getHeaderLine('Authorization'));
+        self::assertSame('team-yearly', $product->skuPrices[1]->sku);
+        self::assertSame(ProductSkuPrice::INTERVAL_YEAR, $product->skuPrices[1]->interval);
+        self::assertSame(1, $product->skuPrices[1]->intervalCount);
+        self::assertSame(22800, $product->skuPrices[1]->originalPrice);
+    }
+
+    public function testTheBackendClientNamesTheCurrencyCheckoutChargesIn(): void
+    {
+        $site = (new SiteRecorder())->json(['client_id' => 'machine', 'mode' => 'production', 'site' => 'shop', 'scopes' => ['catalogue:read'], 'store_currency' => 'EUR']);
+
+        self::assertSame('EUR', self::backend($site)->client()->storeCurrency);
+    }
+
     public function testAMemberChangesASubscriptionByPlanOrQuantity(): void
     {
         $site = (new SiteRecorder())->json(['applied' => false, 'subscription' => null, 'confirmation' => ['id' => 'ps_1', 'url' => 'https://site.example.com/billing/ps_1', 'status' => 'open', 'expires_at' => '2026-10-08T13:00:00Z', 'mode' => 'production', 'return_url' => 'https://app.example.com/account']]);
 
-        $change = self::member($site)->me()->subscriptions()->change('9', quantity: 5, returnUrl: 'https://app.example.com/account')->value;
+        $change = self::member($site)->me()->subscriptions()->change('9', 'https://app.example.com/account', quantity: 5)->value;
 
         self::assertSame('POST /api/v1/me/subscriptions/9/changes', $site->line());
         self::assertSame(['sku' => null, 'quantity' => 5, 'return_url' => 'https://app.example.com/account'], $site->body());
@@ -217,9 +298,9 @@ final class BackendTest extends TestCase
     {
         $site = (new SiteRecorder())->json(['applied' => false, 'subscription' => null, 'confirmation' => ['id' => 'ps_1', 'url' => 'https://site.example.com/billing/ps_1', 'status' => 'open', 'expires_at' => '2026-10-08T13:00:00Z', 'mode' => 'production', 'return_url' => 'https://app.example.com/account']], 202);
 
-        $change = self::member($site)->me()->subscriptions()->change('9', sku: 'team')->value;
+        $change = self::member($site)->me()->subscriptions()->change('9', 'https://app.example.com/account', 'team')->value;
 
-        self::assertSame(['sku' => 'team', 'quantity' => null, 'return_url' => null], $site->body());
+        self::assertSame(['sku' => 'team', 'quantity' => null, 'return_url' => 'https://app.example.com/account'], $site->body());
         self::assertSame('https://site.example.com/billing/ps_1', $change->confirmation?->url);
     }
 

@@ -48,7 +48,7 @@ final class OperationCatalogueTest extends TestCase
         self::assertSame(self::successStatuses($documented['operation']), $statuses, $id);
         self::assertSame(self::takesIdempotencyKey($documented['parameters']), $operation->takesIdempotencyKey(), $id);
         self::assertSame(self::isCursorList($documented), $operation->isCursorList(), $id);
-        self::assertSame(self::audience($documented), $operation->audience(), $id);
+        self::assertSame(self::audiences($documented), $operation->audiences(), $id);
     }
 
     public function testEveryCaseIsADocumentedOperation(): void
@@ -143,27 +143,36 @@ final class OperationCatalogueTest extends TestCase
     }
 
     /**
-     * Anyone when the operation names no security requirement; the backend
-     * when a requirement names the backend's scheme; otherwise the member for
-     * the member's own routes (`/api/v1/me`, and the sync resources named
-     * `me-*`) and the administrator for the rest, as the site mounts them in
-     * two audience groups under the same bearer scheme.
+     * Anyone when the operation names no security requirement; otherwise one
+     * audience per requirement, in the document's order: the backend for a
+     * requirement naming the backend's scheme, and for the bearer scheme the
+     * member on the member's own routes (`/api/v1/me`, and the sync resources
+     * named `me-*`) and the administrator on the rest, as the site mounts
+     * them in two audience groups under the same bearer scheme. An operation
+     * that lists both the bearer and the backend scheme answers either.
      *
      * @param array{method: string, path: string, operation: array<array-key, mixed>, parameters: list<array<array-key, mixed>>} $documented
+     * @return list<Audience>
      */
-    private static function audience(array $documented): Audience
+    private static function audiences(array $documented): array
     {
         $security = Document::map($documented['operation']['security'] ?? Document::get()['security'] ?? []);
         if ($security === []) {
-            return Audience::Anyone;
+            return [Audience::Anyone];
         }
 
+        $audiences = [];
         foreach ($security as $requirement) {
-            if (array_key_exists(self::BACKEND_SCHEME, Document::map($requirement))) {
-                return Audience::Backend;
+            $audience = match (true) {
+                array_key_exists(self::BACKEND_SCHEME, Document::map($requirement)) => Audience::Backend,
+                preg_match('#^/api/v1/(me(/|$)|sync/me-)#', $documented['path']) === 1 => Audience::Member,
+                default => Audience::Administrator,
+            };
+            if (!in_array($audience, $audiences, true)) {
+                $audiences[] = $audience;
             }
         }
 
-        return preg_match('#^/api/v1/(me(/|$)|sync/me-)#', $documented['path']) === 1 ? Audience::Member : Audience::Administrator;
+        return $audiences;
     }
 }

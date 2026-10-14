@@ -21,6 +21,7 @@ final readonly class BackendClient implements SchemaModel
      * @param string $mode one of the MODE_ constants: the money its calls act on
      * @param string $site the site the client belongs to
      * @param list<string> $scopes what the token may do
+     * @param string $storeCurrency the ISO 4217 currency every checkout on the site is priced and paid in, so prices can be shown in it before a purchase starts
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
@@ -28,6 +29,7 @@ final readonly class BackendClient implements SchemaModel
         public string $mode,
         public string $site,
         public array $scopes,
+        public string $storeCurrency,
         public array $extra = [],
     ) {}
 
@@ -39,6 +41,7 @@ final readonly class BackendClient implements SchemaModel
             mode: $json->string('mode'),
             site: $json->string('site'),
             scopes: $json->strings('scopes'),
+            storeCurrency: $json->string('store_currency'),
             extra: $json->extra(),
         );
     }

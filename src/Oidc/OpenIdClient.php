@@ -316,9 +316,14 @@ final readonly class OpenIdClient
      * Revokes an access or refresh token (RFC 7009). The provider answers
      * success for a token it does not know, so this does not say the token
      * existed.
+     *
+     * @param string $token the token to revoke; RFC 7009 section 2.1 requires one, so an empty one is refused before anything is sent
      */
     public function revoke(#[\SensitiveParameter] string $token, ?string $tokenTypeHint = null): void
     {
+        if ($token === '') {
+            throw new InvalidArgumentValueException('A revocation needs the token to revoke.');
+        }
         $endpoint = $this->metadata()->revocationEndpoint
             ?? throw new DiscoveryException('The provider publishes no revocation_endpoint.');
 

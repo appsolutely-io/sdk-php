@@ -18,6 +18,7 @@ use Appsolutely\Sdk\Resource\Backend\Seats;
 use Appsolutely\Sdk\Resource\Backend\StorePurchases;
 use Appsolutely\Sdk\Resource\Backend\TestClocks;
 use Appsolutely\Sdk\Resource\Backend\WebhookEndpoints;
+use Appsolutely\Sdk\Resource\Products;
 
 /**
  * The Site API as the site's own backend: the calls answered for the token
@@ -57,6 +58,14 @@ final readonly class BackendApi
     public function accountStates(): AccountStates
     {
         return new AccountStates($this->backend);
+    }
+
+    /**
+     * The site's product catalogue, read with the `catalogue:read` scope.
+     */
+    public function products(): Products
+    {
+        return new Products($this->backend);
     }
 
     public function webhookEndpoints(): WebhookEndpoints

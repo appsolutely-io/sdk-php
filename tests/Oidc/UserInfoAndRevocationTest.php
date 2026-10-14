@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Oidc;
 
+use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
 use Appsolutely\Sdk\Exception\OAuthException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
@@ -58,6 +59,24 @@ final class UserInfoAndRevocationTest extends TestCase
         $sent = $provider->requestsTo('POST', FakeProvider::ISSUER . '/oauth/revoke')[0];
         self::assertStringStartsWith('Basic ', $sent->getHeaderLine('Authorization'));
         self::assertSame(['token' => 'rt-1', 'token_type_hint' => 'refresh_token'], FakeProvider::form($sent));
+    }
+
+    /**
+     * RFC 7009 section 2.1 requires the token, and the site refuses a
+     * revocation without one as `invalid_request`: an empty one is refused
+     * before anything is sent, rather than read as revoked.
+     */
+    public function testAnEmptyTokenIsRefusedBeforeAnythingIsSent(): void
+    {
+        $provider = new FakeProvider();
+        $provider->revoke = fn(): ResponseInterface => $provider->factory->createResponse(200);
+
+        try {
+            $provider->oidc()->revoke('');
+            self::fail('No exception was thrown.');
+        } catch (InvalidArgumentValueException) {
+            self::assertSame([], $provider->requestsTo('POST', FakeProvider::ISSUER . '/oauth/revoke'));
+        }
     }
 
     public function testARevocationErrorBecomesAnOAuthException(): void

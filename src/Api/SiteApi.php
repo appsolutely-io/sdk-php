@@ -225,9 +225,14 @@ final readonly class SiteApi
     }
 
     /**
+     * Refuses a page size out of the site's bounds, and a query that sets
+     * the page size or the cursor itself.
+     *
+     * @internal
+     *
      * @param array<string, string|int|bool|list<string>|null> $query
      */
-    private static function assertPaging(#[\SensitiveParameter] array $query, int $limit): void
+    public static function assertPaging(#[\SensitiveParameter] array $query, int $limit): void
     {
         if ($limit < self::MIN_LIMIT || $limit > self::MAX_LIMIT) {
             throw new InvalidArgumentValueException(sprintf('The page limit must be between %d and %d, got %d.', self::MIN_LIMIT, self::MAX_LIMIT, $limit));

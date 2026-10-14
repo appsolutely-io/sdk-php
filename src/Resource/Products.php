@@ -12,11 +12,12 @@ use Appsolutely\Sdk\Api\SiteApi;
 use Appsolutely\Sdk\Model\Product;
 
 /**
- * The site's product catalogue, as the administrator.
+ * The site's product catalogue, read as the administrator or as the site's
+ * own backend.
  */
 final readonly class Products
 {
-    /** @internal obtain it from Client::api()->products() */
+    /** @internal obtain it from Client::api()->products() or Client::backend()->products() */
     public function __construct(private Caller $caller) {}
 
     /**

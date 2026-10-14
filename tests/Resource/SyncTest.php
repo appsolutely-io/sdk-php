@@ -6,6 +6,7 @@ namespace Appsolutely\Sdk\Tests\Resource;
 
 use Appsolutely\Sdk\Exception\ApiException;
 use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
+use Appsolutely\Sdk\Exception\ValidationFailedException;
 use Appsolutely\Sdk\Model\Article;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -110,6 +111,24 @@ final class SyncTest extends TestCase
         } catch (ApiException $exception) {
             self::assertTrue($exception->hasType('cursor-expired'));
         }
+    }
+
+    /**
+     * The site bounds a pull itself, 500 unless it is configured otherwise,
+     * so a larger limit is sent as given and the site's refusal is thrown:
+     * it is no longer cut short, which read like the end of the changes.
+     */
+    public function testALimitAboveTheSitesMaximumIsTheSitesRefusal(): void
+    {
+        $site = (new SiteRecorder())->problem(422, 'validation-failed', ['errors' => ['limit' => ['The limit may not be greater than 500.']]]);
+
+        try {
+            $site->provider->client()->api()->sync()->orders()->pull(limit: 501);
+            self::fail('The refusal was not thrown.');
+        } catch (ValidationFailedException $exception) {
+            self::assertSame(['limit' => ['The limit may not be greater than 500.']], $exception->errors);
+        }
+        self::assertSame('GET /api/v1/sync/orders?limit=501', $site->line());
     }
 
     /**

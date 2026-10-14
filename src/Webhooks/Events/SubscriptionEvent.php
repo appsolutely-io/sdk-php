@@ -30,8 +30,9 @@ final readonly class SubscriptionEvent extends TypedEvent
     ];
 
     /**
-     * @param SubscriptionPeriod|null $period the period the member is now in, sent with
-     *                                        `subscription.started` and `subscription.renewed`
+     * @param SubscriptionPeriod|null $period the period the member is now in: always on
+     *                                        `subscription.renewed`, on `subscription.started`
+     *                                        when the start opened one, null on every other type
      */
     public function __construct(
         Event $envelope,
@@ -46,11 +47,15 @@ final readonly class SubscriptionEvent extends TypedEvent
      */
     public static function read(Event $envelope, #[\SensitiveParameter] Fields $data): self
     {
-        $period = $data->nullableObject('period');
+        $period = match ($envelope->type) {
+            EventType::SUBSCRIPTION_RENEWED => $data->object('period'),
+            EventType::SUBSCRIPTION_STARTED => $data->nullableObject('period'),
+            default => null,
+        };
 
         return new self(
             $envelope,
-            Subscription::from($data->except('period')),
+            Subscription::from(in_array($envelope->type, [EventType::SUBSCRIPTION_STARTED, EventType::SUBSCRIPTION_RENEWED], true) ? $data->except('period') : $data),
             $period === null ? null : SubscriptionPeriod::from($period),
         );
     }

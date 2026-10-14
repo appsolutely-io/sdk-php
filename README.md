@@ -13,9 +13,9 @@ Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://git
 
 ## Compatibility
 
-The client is written and tested against the Site API document of the site software v0.25.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
+The client is written and tested against the Site API document of the site software v0.27.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
 
-The document's `v1` is stable for the life of the version: the site adds paths and fields to it but never removes or retypes one, and a breaking change arrives as a new version while `v1` keeps serving. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
+While the site software is below 1.0.0, a minor release of it may change a path of the document's `v1` in a breaking way, and its changelog opens each such entry with `BREAKING`; this client follows such a change in a release of its own, marked the same way in its changelog. Otherwise the site adds paths and fields but never removes or retypes one. From the site software's 1.0.0, a breaking change is announced as deprecated a release ahead and arrives in a new major release. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
 
 - **A newer site** answers everything this client calls. Fields it adds stay readable in each model's `$extra`, an enumerated value it adds reads as the plain string it is (the model's constants name only the values this client knows), and an operation it adds is reachable through the untyped calls of `api()->raw()` until a release of the client types it.
 - **An older site** lacks what was added after it. Calling an operation it does not have is refused with an `Exception\ApiException` (a `NotFoundException` for a path it does not have), and an answer without a field this client requires throws an `Exception\UnexpectedResponseException` naming the schema and the field rather than reading a wrong value. Keep the site at least at the version above.
@@ -194,7 +194,8 @@ try {
 }
 
 $page = $api->pages()->get($pageId);            // Model\ContentPage, so it is not mistaken for Api\Page
-$product = $api->products()->get($productId);   // $product->prices: one ProductPrice per currency
+$product = $api->products()->get($productId);   // $product->prices: one ProductPrice per currency, the lowest of its skus
+$product->skuPrices;                            // one ProductSkuPrice per sku and currency, with the interval a subscription sku renews in
 ```
 
 ### Orders, form entries, account states and webhook deliveries
@@ -269,15 +270,31 @@ final class LaravelTokenLock implements TokenLock
 ```
 
 ```php
+use Appsolutely\Sdk\Exception\ConflictException;
+
 $backend = $client->backend();
 
-$backend->client();                                           // the machine client: its mode, site and scopes
+$backend->client();                                           // the machine client: its mode, site, scopes and storeCurrency
 
 $state = $backend->accountStates()->get($subject);           // AccountState::STATUS_UNKNOWN for a subject never handed out
-foreach ($backend->accountStates()->list() as $state) { /* every account the app was given a name for */ }
 
-$checkout = $backend->checkoutSessions()->create($subject, [['product' => 'team', 'quantity' => 5]], $successUrl, $cancelUrl);
-$checkout->value->url;                                       // send the member here
+// Reconcile by walks: each item is a page, and the walk's nextChangedSince
+// is where the next one starts. Without $since it lists every account.
+foreach ($backend->accountStates()->list($since) as $page) {
+    foreach ($page->states as $listed) { /* $listed->state is the AccountState a delivery carries */ }
+    $since = $page->nextChangedSince;                        // keep it for the next walk
+}
+
+$backend->products()->get($productId)->skuPrices;            // the catalogue, with the catalogue:read scope
+
+try {
+    $checkout = $backend->checkoutSessions()->create($subject, [['product' => 'team', 'quantity' => 5, 'sku' => 'team-yearly']], $successUrl, $cancelUrl);
+    $checkout->value->url;                                   // send the member here
+} catch (ConflictException $exception) {
+    if ($exception->hasType('subscription-awaiting-payment')) {
+        $exception->extension('payment_url');                // where the member pays the order already waiting, or null
+    }
+}
 $backend->portalSessions()->create($subject, $returnUrl)->value->url;
 $backend->returnTargets()->create('https://app.example.com/thanks');   // the addresses those may send the member back to
 
@@ -330,7 +347,7 @@ $member->me()->checkoutSessions()->create([['product' => 'team', 'quantity' => 1
 $member->me()->portalSessions()->create($returnUrl);
 $member->me()->storePurchases()->intent('google_play', 'team');
 $member->me()->subscriptions()->list();                     // one page, no cursor
-$member->me()->subscriptions()->change($subscriptionId, quantity: 3, returnUrl: $returnUrl)->value->applied;   // or ->confirmation, the visit that confirms it
+$member->me()->subscriptions()->change($subscriptionId, $returnUrl, quantity: 3)->value->applied;   // or ->confirmation, the visit that confirms it
 $member->me()->subscriptions()->cancel($subscriptionId);
 $member->me()->subscriptions()->resume($subscriptionId, $returnUrl);   // takes a cancellation back
 
@@ -342,12 +359,21 @@ $member->sync()->addresses()->pull($cursor);                 // and ->push(), an
 The version record, the API document and the magic-link sign-in are open to anyone, so the client sends them without a credential even when it holds the administrator token:
 
 ```php
+use Appsolutely\Sdk\Exception\ForbiddenException;
+use Appsolutely\Sdk\Exception\RateLimitedException;
+
 $version = $client->api()->version();         // ->status, ->deprecatedAt, ->sunsetAt, ->successor
 $document = $client->api()->openApiDocument();
 
 $client->api()->magicLink()->request($email, ['me:read', 'me:write'], 'Ada\'s phone', $codeChallenge);
-$token = $client->api()->magicLink()->exchange($link, $codeVerifier);
-$member = $client->forMember($token->token);
+try {
+    $token = $client->api()->magicLink()->exchange($link, $codeVerifier, code: $code);
+    $member = $client->forMember($token->token);
+} catch (ForbiddenException $exception) {
+    // second-factor-required: ask for the member's code and exchange the same link again
+} catch (RateLimitedException $exception) {
+    // rate-limited after too many codes: ask again in $exception->retryAfter seconds
+}
 ```
 
 ### Lists, answers and refusals
@@ -471,7 +497,7 @@ Answer with a 2xx within a few seconds and queue slow work: an attempt that time
 
 ### Typed events
 
-`TypedEvent::from()` reads a verified envelope's `data` into typed, read-only properties: one class per family of event types that share a payload.
+`TypedEvent::from()` reads a verified envelope's `data` into typed, read-only properties: one class per family of event types that share a payload. The package's contract tests hold every family to the payload schema the site's API document gives each event type in its `webhooks` section, and `EventType` to the types it lists.
 
 ```php
 use Appsolutely\Sdk\Webhooks\EventType;
@@ -499,7 +525,7 @@ match (true) {
 | `PaymentReturnedEvent` | `order.refunded`, `payment.refunded`, `payment.reversed` | `$order`, `$payment` |
 | `RefundEvent` | `refund.requested`, `refund.processed` | `$refund`, a `Model\Refund`: its order number, the payment's reference, the amount and its `status` |
 | `ReferralRewardIssuedEvent` | `referral.reward_issued` | `$subject`, `$referralCode`, `$paymentReference`, `$reward` |
-| `SubscriptionEvent` | `subscription.*` | `$subscription`, and `$period` on `started` and `renewed` |
+| `SubscriptionEvent` | `subscription.*` | `$subscription`, and `$period`: always on `renewed`, on `started` when the start opened one, null otherwise |
 | `AccountEvent` | `account.suspended`, `account.reinstated`, `account.erased`, `account.entitlements_changed`, `account.email_changed` | `$state` |
 | `RoleAssignmentChangedEvent` | `role.assignment_changed` | `$subject`, `$role`, `$change`, `$cause`, `$roles`, `$sequence` |
 | `PingEvent` | `webhook.ping` | `$subscriptionId` |

@@ -22,7 +22,8 @@ final readonly class Product implements SchemaModel
      * @param int|null $price in the store currency, `$currency`; null when the product has no price there
      * @param int|null $originalPrice in the minor units of `$currency`
      * @param string|null $currency the store currency, null when `$price` is
-     * @param list<ProductPrice> $prices one per currency the product is sold in
+     * @param list<ProductPrice> $prices one per currency the product is sold in, each the lowest of its skus there
+     * @param list<ProductSkuPrice> $skuPrices every active sku's price in force, one per sku and currency, in the order the product lists its skus and then by currency
      * @param int $status 1 when active, 0 when not
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
@@ -39,6 +40,7 @@ final readonly class Product implements SchemaModel
         public ?int $originalPrice,
         public ?string $currency,
         public array $prices,
+        public array $skuPrices,
         public int $status,
         public ?int $sort,
         public DateTimeImmutable $publishedAt,
@@ -64,6 +66,7 @@ final readonly class Product implements SchemaModel
             originalPrice: $json->nullableInt('original_price'),
             currency: $json->nullableString('currency'),
             prices: array_map(ProductPrice::from(...), $json->objects('prices')),
+            skuPrices: array_map(ProductSkuPrice::from(...), $json->objects('sku_prices')),
             status: $json->int('status'),
             sort: $json->nullableInt('sort'),
             publishedAt: $json->time('published_at'),
