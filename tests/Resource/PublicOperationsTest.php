@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Resource;
 
+use Appsolutely\Sdk\Exception\ForbiddenException;
+use Appsolutely\Sdk\Exception\RateLimitedException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Exception\ValidationFailedException;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
@@ -106,6 +108,42 @@ final class PublicOperationsTest extends TestCase
         } catch (ValidationFailedException $exception) {
             self::assertSame(['link' => ['The link has expired.']], $exception->errors);
         }
+    }
+
+    /**
+     * The link is a valid credential and only a step is missing, so the site
+     * refuses without a bearer challenge, as a 403.
+     */
+    public function testAnExchangeStillNeedingTheSecondFactorIsForbidden(): void
+    {
+        $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->problem(403, 'second-factor-required'));
+
+        try {
+            $provider->client()->api()->magicLink()->exchange('https://site.example.com/magic/abc', 'verifier');
+            self::fail('The refusal was not thrown.');
+        } catch (ForbiddenException $exception) {
+            self::assertTrue($exception->hasType('second-factor-required'));
+            self::assertNull($exception->challenge);
+        }
+    }
+
+    /**
+     * Too many second-factor codes lock the member out for a while: the
+     * site says when to try again, and the exchange, which spends the link,
+     * is not sent again on its own.
+     */
+    public function testAnExchangeLockedOutOfCodesSaysWhenToTryAgainAndIsNotRetried(): void
+    {
+        $provider = self::answering(static fn(FakeProvider $provider): ResponseInterface => $provider->problem(429, 'rate-limited', headers: ['Retry-After' => '30']));
+
+        try {
+            $provider->client()->api()->magicLink()->exchange('https://site.example.com/magic/abc', 'verifier', code: '000000');
+            self::fail('The refusal was not thrown.');
+        } catch (RateLimitedException $exception) {
+            self::assertTrue($exception->hasType('rate-limited'));
+            self::assertSame(30, $exception->retryAfter);
+        }
+        self::assertCount(1, $provider->siteRequests());
     }
 
     public function testAnAnswerMissingARequiredFieldIsRefused(): void

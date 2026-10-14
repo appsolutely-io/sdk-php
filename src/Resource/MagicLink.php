@@ -40,6 +40,13 @@ final readonly class MagicLink
     /**
      * Exchanges the link the app was opened with for a member token.
      *
+     * A member with a second factor who sent no code, or a wrong one, is
+     * refused as a ForbiddenException of type `second-factor-required`: ask
+     * for the code and exchange the same link again. Too many codes lock the
+     * member out for a while, refused as a RateLimitedException of type
+     * `rate-limited` whose `retryAfter` says when to ask again. Neither is
+     * sent again by the client on its own.
+     *
      * @param string $code the second-factor code, when the member has one
      * @param string $recoveryCode a recovery code, in place of the second-factor code
      * @param bool|null $lostSecondFactor true when the member reports their second factor lost
