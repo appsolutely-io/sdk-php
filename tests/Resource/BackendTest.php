@@ -271,7 +271,7 @@ final class BackendTest extends TestCase
     {
         $site = (new SiteRecorder())->json(['applied' => false, 'subscription' => null, 'confirmation' => ['id' => 'ps_1', 'url' => 'https://site.example.com/billing/ps_1', 'status' => 'open', 'expires_at' => '2026-10-08T13:00:00Z', 'mode' => 'production', 'return_url' => 'https://app.example.com/account']]);
 
-        $change = self::member($site)->me()->subscriptions()->change('9', quantity: 5, returnUrl: 'https://app.example.com/account')->value;
+        $change = self::member($site)->me()->subscriptions()->change('9', 'https://app.example.com/account', quantity: 5)->value;
 
         self::assertSame('POST /api/v1/me/subscriptions/9/changes', $site->line());
         self::assertSame(['sku' => null, 'quantity' => 5, 'return_url' => 'https://app.example.com/account'], $site->body());
@@ -283,9 +283,9 @@ final class BackendTest extends TestCase
     {
         $site = (new SiteRecorder())->json(['applied' => false, 'subscription' => null, 'confirmation' => ['id' => 'ps_1', 'url' => 'https://site.example.com/billing/ps_1', 'status' => 'open', 'expires_at' => '2026-10-08T13:00:00Z', 'mode' => 'production', 'return_url' => 'https://app.example.com/account']], 202);
 
-        $change = self::member($site)->me()->subscriptions()->change('9', sku: 'team')->value;
+        $change = self::member($site)->me()->subscriptions()->change('9', 'https://app.example.com/account', 'team')->value;
 
-        self::assertSame(['sku' => 'team', 'quantity' => null, 'return_url' => null], $site->body());
+        self::assertSame(['sku' => 'team', 'quantity' => null, 'return_url' => 'https://app.example.com/account'], $site->body());
         self::assertSame('https://site.example.com/billing/ps_1', $change->confirmation?->url);
     }
 

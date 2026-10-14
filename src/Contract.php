@@ -18,7 +18,7 @@ final class Contract
      * the contract test reads. Written by `composer pin-contract`, together
      * with the copy of that document; never edit it by hand.
      */
-    public const string REVISION = 'f013280f2869c643625446b18efd1684d22b862f';
+    public const string REVISION = 'edc43859284f162ba60e0ef162dee829c12fb81b';
 
     /**
      * REVISION's release in the site software: its version tag (`v0.24.0`),
@@ -27,7 +27,7 @@ final class Contract
      * tag precedes it. Written by `composer pin-contract` with REVISION;
      * never edit it by hand.
      */
-    public const string RELEASE = 'v0.26.0';
+    public const string RELEASE = 'v0.26.0-95-gedc43859284f162ba60e0ef162dee829c12fb81b';
 
     private function __construct() {}
 }

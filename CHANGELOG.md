@@ -9,7 +9,8 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **BREAKING:** the client is held to the Site API document of the site software v0.26.0 (`Contract::REVISION`), and needs a site at least that new: a product's `sku_prices` and the backend client's `store_currency` are required, so an answer or a `product.*` delivery from an older site is refused as an `UnexpectedResponseException` or an `UnexpectedPayloadException`.
+- **BREAKING:** `me()->subscriptions()->change($id, $returnUrl, $sku, $quantity)` takes the return address second and requires it, as `resume()` does: the site now refuses a change without `return_url`, since whether the member must confirm it on the site is not known beforehand. Arguments passed by position after `$id` move.
+- **BREAKING:** the client is held to the Site API document of the site software release after v0.26.0 (`Contract::REVISION`), and needs a site at least that new: a product's `sku_prices` and the backend client's `store_currency` are required, so an answer or a `product.*` delivery from an older site is refused as an `UnexpectedResponseException` or an `UnexpectedPayloadException`.
 - **BREAKING:** `backend()->accountStates()->list()` walks the accounts as the site now lists them, ordered by when each one's entitlements last changed, and gives a `Paginator<ListedAccountStatePage>`: each item is a whole page, whose `$states` are `ListedAccountState`s (the `AccountState` and its `entitlementsChangedAt`) and whose `$nextChangedSince` is where the next walk starts. `$limit` moves to the second parameter. A cursor kept from an older site is refused as `invalid-cursor`; start the walk again.
 - **BREAKING:** `Operation::audience()` is replaced by `Operation::audiences()`, since the catalogue reads answer both the administrator and the backend.
 

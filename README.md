@@ -13,9 +13,9 @@ Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://git
 
 ## Compatibility
 
-The client is written and tested against the Site API document of the site software v0.26.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
+The client is written and tested against the Site API document of the site software v0.26.0-95-gedc43859284f162ba60e0ef162dee829c12fb81b, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
 
-The document's `v1` is stable for the life of the version: the site adds paths and fields to it but never removes or retypes one, and a breaking change arrives as a new version while `v1` keeps serving. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
+While the site software is below 1.0.0, a minor release of it may change a path of the document's `v1` in a breaking way, and its changelog opens each such entry with `BREAKING`; this client follows such a change in a release of its own, marked the same way in its changelog. Otherwise the site adds paths and fields but never removes or retypes one. From the site software's 1.0.0, a breaking change is announced as deprecated a release ahead and arrives in a new major release. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
 
 - **A newer site** answers everything this client calls. Fields it adds stay readable in each model's `$extra`, an enumerated value it adds reads as the plain string it is (the model's constants name only the values this client knows), and an operation it adds is reachable through the untyped calls of `api()->raw()` until a release of the client types it.
 - **An older site** lacks what was added after it. Calling an operation it does not have is refused with an `Exception\ApiException` (a `NotFoundException` for a path it does not have), and an answer without a field this client requires throws an `Exception\UnexpectedResponseException` naming the schema and the field rather than reading a wrong value. Keep the site at least at the version above.
@@ -339,7 +339,7 @@ $member->me()->checkoutSessions()->create([['product' => 'team', 'quantity' => 1
 $member->me()->portalSessions()->create($returnUrl);
 $member->me()->storePurchases()->intent('google_play', 'team');
 $member->me()->subscriptions()->list();                     // one page, no cursor
-$member->me()->subscriptions()->change($subscriptionId, quantity: 3, returnUrl: $returnUrl)->value->applied;   // or ->confirmation, the visit that confirms it
+$member->me()->subscriptions()->change($subscriptionId, $returnUrl, quantity: 3)->value->applied;   // or ->confirmation, the visit that confirms it
 $member->me()->subscriptions()->cancel($subscriptionId);
 $member->me()->subscriptions()->resume($subscriptionId, $returnUrl);   // takes a cancellation back
 

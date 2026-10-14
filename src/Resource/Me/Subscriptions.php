@@ -59,15 +59,18 @@ final readonly class Subscriptions
 
     /**
      * Renews the subscription on another plan, or at another quantity: name
-     * one of the two.
+     * one of the two. The site applies it at once, or hands it to the member
+     * to confirm on its billing pages (a dearer change, or one on another
+     * billing interval); which one is not known beforehand, so the return
+     * address is always sent.
      *
+     * @param string $returnUrl where the site sends the member back to when the change is theirs to confirm, one of the site's return addresses
      * @param string|null $sku the slug of the plan to renew on
      * @param positive-int|null $quantity the units to renew at
-     * @param string|null $returnUrl where the site sends the member back to when the change is theirs to confirm, one of the site's return addresses
      * @return KeyedResult<MemberSubscriptionChange>
      */
     #[Endpoint(Operation::ChangeMeSubscription)]
-    public function change(string $id, ?string $sku = null, ?int $quantity = null, ?string $returnUrl = null, ?string $idempotencyKey = null): KeyedResult
+    public function change(string $id, string $returnUrl, ?string $sku = null, ?int $quantity = null, ?string $idempotencyKey = null): KeyedResult
     {
         return $this->caller->keyed(Operation::ChangeMeSubscription, MemberSubscriptionChange::class, ['subscription' => $id], ['sku' => $sku, 'quantity' => $quantity, 'return_url' => $returnUrl], $idempotencyKey);
     }
