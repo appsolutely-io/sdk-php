@@ -22,6 +22,10 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `backend()->accountStates()->list()` takes `$changedSince`, to list only the accounts whose entitlements changed at or after it.
 - A checkout line, from the backend or the member, may name the sku it buys as `sku`, by the identifier the product lists it under in `skuPrices`; a product sold as several skus needs one. `CheckoutSessionLine::$sku` reads it back, null for a line that named none.
 
+### Fixed
+
+- `oidc()->revoke('')` is refused as an `InvalidArgumentValueException` before anything is sent: RFC 7009 requires the token, and the site now refuses a revocation without one as `invalid_request` rather than answering it as revoked.
+
 ## [0.2.0] - 2026-10-14
 
 ### Added
