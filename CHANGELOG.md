@@ -7,6 +7,8 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-14
+
 ### Changed
 
 - **BREAKING:** `me()->subscriptions()->change($id, $returnUrl, $sku, $quantity)` takes the return address second and requires it, as `resume()` does: the site now refuses a change without `return_url`, since whether the member must confirm it on the site is not known beforehand. Arguments passed by position after `$id` move.
