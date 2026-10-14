@@ -48,7 +48,7 @@ final readonly class Seats
     /**
      * The payer's pools and their seats, in one page that never has a cursor.
      *
-     * @param string $payer the payer's public name
+     * @param string $payer the paying member's account subject, the OIDC `sub` the app already knows them by
      * @return Page<SeatPool>
      */
     #[Endpoint(Operation::ListSeatPools)]

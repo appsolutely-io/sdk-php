@@ -359,12 +359,21 @@ $member->sync()->addresses()->pull($cursor);                 // and ->push(), an
 The version record, the API document and the magic-link sign-in are open to anyone, so the client sends them without a credential even when it holds the administrator token:
 
 ```php
+use Appsolutely\Sdk\Exception\ForbiddenException;
+use Appsolutely\Sdk\Exception\RateLimitedException;
+
 $version = $client->api()->version();         // ->status, ->deprecatedAt, ->sunsetAt, ->successor
 $document = $client->api()->openApiDocument();
 
 $client->api()->magicLink()->request($email, ['me:read', 'me:write'], 'Ada\'s phone', $codeChallenge);
-$token = $client->api()->magicLink()->exchange($link, $codeVerifier);
-$member = $client->forMember($token->token);
+try {
+    $token = $client->api()->magicLink()->exchange($link, $codeVerifier, code: $code);
+    $member = $client->forMember($token->token);
+} catch (ForbiddenException $exception) {
+    // second-factor-required: ask for the member's code and exchange the same link again
+} catch (RateLimitedException $exception) {
+    // rate-limited after too many codes: ask again in $exception->retryAfter seconds
+}
 ```
 
 ### Lists, answers and refusals
@@ -488,7 +497,7 @@ Answer with a 2xx within a few seconds and queue slow work: an attempt that time
 
 ### Typed events
 
-`TypedEvent::from()` reads a verified envelope's `data` into typed, read-only properties: one class per family of event types that share a payload.
+`TypedEvent::from()` reads a verified envelope's `data` into typed, read-only properties: one class per family of event types that share a payload. The package's contract tests hold every family to the payload schema the site's API document gives each event type in its `webhooks` section, and `EventType` to the types it lists.
 
 ```php
 use Appsolutely\Sdk\Webhooks\EventType;
@@ -516,7 +525,7 @@ match (true) {
 | `PaymentReturnedEvent` | `order.refunded`, `payment.refunded`, `payment.reversed` | `$order`, `$payment` |
 | `RefundEvent` | `refund.requested`, `refund.processed` | `$refund`, a `Model\Refund`: its order number, the payment's reference, the amount and its `status` |
 | `ReferralRewardIssuedEvent` | `referral.reward_issued` | `$subject`, `$referralCode`, `$paymentReference`, `$reward` |
-| `SubscriptionEvent` | `subscription.*` | `$subscription`, and `$period` on `started` and `renewed` |
+| `SubscriptionEvent` | `subscription.*` | `$subscription`, and `$period`: always on `renewed`, on `started` when the start opened one, null otherwise |
 | `AccountEvent` | `account.suspended`, `account.reinstated`, `account.erased`, `account.entitlements_changed`, `account.email_changed` | `$state` |
 | `RoleAssignmentChangedEvent` | `role.assignment_changed` | `$subject`, `$role`, `$change`, `$cause`, `$roles`, `$sequence` |
 | `PingEvent` | `webhook.ping` | `$subscriptionId` |
