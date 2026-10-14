@@ -481,7 +481,8 @@ final class TypedEventTest extends TestCase
      */
     public static function subscriptionTypes(): iterable
     {
-        return self::each(SubscriptionEvent::TYPES);
+        // A renewal always carries the period it renewed into.
+        return self::each(array_values(array_diff(SubscriptionEvent::TYPES, [EventType::SUBSCRIPTION_RENEWED])));
     }
 
     #[DataProvider('subscriptionTypes')]
@@ -526,6 +527,28 @@ final class TypedEventTest extends TestCase
         self::assertSame('2026-10-08T00:00:00+00:00', $event->period->start->format(DATE_RFC3339));
         self::assertSame('2026-11-08T00:00:00+00:00', $event->period->end->format(DATE_RFC3339));
         self::assertSame([], $event->subscription->extra);
+    }
+
+    public function testARenewalWithoutThePeriodItRenewedIntoIsRefused(): void
+    {
+        $this->expectException(UnexpectedPayloadException::class);
+        $this->expectExceptionMessage('data.period is missing');
+
+        self::deliver(EventType::SUBSCRIPTION_RENEWED, SiteFixture::json('subscription'));
+    }
+
+    /**
+     * Only a start and a renewal carry a period: on any other type a
+     * `period` is not one the site documents, and stays readable as the
+     * subscription's extra rather than being read as the member's period.
+     */
+    public function testOnlyAStartOrARenewalIsReadForAPeriod(): void
+    {
+        $event = self::deliver(EventType::SUBSCRIPTION_PAYMENT_DUE, SiteFixture::json('subscription-period'));
+
+        self::assertInstanceOf(SubscriptionEvent::class, $event);
+        self::assertNull($event->period);
+        self::assertSame(['start' => '2026-10-08T00:00:00Z', 'end' => '2026-11-08T00:00:00Z'], $event->subscription->extra['period'] ?? null);
     }
 
     public function testAPeriodAwaitingAnAnswerHasAStartAndAStatusButNoEnd(): void
