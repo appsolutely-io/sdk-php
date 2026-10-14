@@ -21,6 +21,12 @@ final readonly class StorePurchases
     /**
      * What to pass the store's purchase sheet to buy a product.
      *
+     * A member whose plan order is still waiting for its payment is refused
+     * as a ConflictException of type `subscription-awaiting-payment`:
+     * `extension('order')` names the waiting order and
+     * `extension('payment_url')` where to send the signed-in member to pay
+     * it, null when there is nothing to pay on a page.
+     *
      * @param 'app_store'|'google_play' $store
      * @param string $product the product's slug
      * @param string|null $sku the plan's slug, for a product with several

@@ -270,6 +270,8 @@ final class LaravelTokenLock implements TokenLock
 ```
 
 ```php
+use Appsolutely\Sdk\Exception\ConflictException;
+
 $backend = $client->backend();
 
 $backend->client();                                           // the machine client: its mode, site, scopes and storeCurrency
@@ -285,8 +287,14 @@ foreach ($backend->accountStates()->list($since) as $page) {
 
 $backend->products()->get($productId)->skuPrices;            // the catalogue, with the catalogue:read scope
 
-$checkout = $backend->checkoutSessions()->create($subject, [['product' => 'team', 'quantity' => 5, 'sku' => 'team-yearly']], $successUrl, $cancelUrl);
-$checkout->value->url;                                       // send the member here
+try {
+    $checkout = $backend->checkoutSessions()->create($subject, [['product' => 'team', 'quantity' => 5, 'sku' => 'team-yearly']], $successUrl, $cancelUrl);
+    $checkout->value->url;                                   // send the member here
+} catch (ConflictException $exception) {
+    if ($exception->hasType('subscription-awaiting-payment')) {
+        $exception->extension('payment_url');                // where the member pays the order already waiting, or null
+    }
+}
 $backend->portalSessions()->create($subject, $returnUrl)->value->url;
 $backend->returnTargets()->create('https://app.example.com/thanks');   // the addresses those may send the member back to
 

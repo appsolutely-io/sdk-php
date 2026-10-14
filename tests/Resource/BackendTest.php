@@ -6,6 +6,7 @@ namespace Appsolutely\Sdk\Tests\Resource;
 
 use Appsolutely\Sdk\Api\BackendApi;
 use Appsolutely\Sdk\Api\MemberApi;
+use Appsolutely\Sdk\Exception\ConflictException;
 use Appsolutely\Sdk\Model\EntitlementTerm;
 use Appsolutely\Sdk\Model\ProductSkuPrice;
 use Appsolutely\Sdk\Model\SubscriptionSource;
@@ -101,6 +102,20 @@ final class BackendTest extends TestCase
         self::assertSame('team-yearly', $result->value->lines[0]->sku);
         self::assertNull($result->value->lines[1]->sku);
         self::assertSame([], $result->value->lines[0]->extra);
+    }
+
+    public function testAPurchaseRefusedForAWaitingOrderSaysWhereItIsPaid(): void
+    {
+        $site = (new SiteRecorder())->problem(409, 'subscription-awaiting-payment', ['order' => 'SO-20261008-0042', 'payment_url' => 'https://site.example.com/orders/SO-20261008-0042/pay']);
+
+        try {
+            self::backend($site)->checkoutSessions()->create('member-sub', [['product' => 'team', 'quantity' => 1]], 'https://app.example.com/thanks', 'https://app.example.com/cart');
+            self::fail('The refusal was not thrown.');
+        } catch (ConflictException $exception) {
+            self::assertTrue($exception->hasType('subscription-awaiting-payment'));
+            self::assertSame('SO-20261008-0042', $exception->extension('order'));
+            self::assertSame('https://site.example.com/orders/SO-20261008-0042/pay', $exception->extension('payment_url'));
+        }
     }
 
     public function testAMembersCheckoutNamesNoSubject(): void
