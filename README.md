@@ -285,7 +285,7 @@ foreach ($backend->accountStates()->list($since) as $page) {
 
 $backend->products()->get($productId)->skuPrices;            // the catalogue, with the catalogue:read scope
 
-$checkout = $backend->checkoutSessions()->create($subject, [['product' => 'team', 'quantity' => 5]], $successUrl, $cancelUrl);
+$checkout = $backend->checkoutSessions()->create($subject, [['product' => 'team', 'quantity' => 5, 'sku' => 'team-yearly']], $successUrl, $cancelUrl);
 $checkout->value->url;                                       // send the member here
 $backend->portalSessions()->create($subject, $returnUrl)->value->url;
 $backend->returnTargets()->create('https://app.example.com/thanks');   // the addresses those may send the member back to

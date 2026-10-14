@@ -22,7 +22,7 @@ final readonly class CheckoutSessions
      * Starts a checkout once, however often the call is retried; a retry
      * with the same key answers the checkout it started.
      *
-     * @param non-empty-list<array{product: string, quantity: int<1, 1000>}> $lines each product by slug, and how many
+     * @param non-empty-list<array{product: string, quantity: int<1, 1000>, sku?: non-empty-string}> $lines each product by slug, how many, and optionally the sku to buy by the identifier the product lists it under in `skuPrices`; a product sold as several skus needs one
      * @param string $successUrl where the member is sent once paid: one of the app's return targets
      * @param string $cancelUrl where the member is sent on leaving: one of the app's return targets
      * @return KeyedResult<CheckoutSession>

@@ -91,6 +91,18 @@ final class BackendTest extends TestCase
         self::assertSame(SubscriptionSource::BILLED_BY_APP_STORE, $result->value->mayStillBill[0]->billedBy);
     }
 
+    public function testACheckoutLineMayNameTheSkuItBuys(): void
+    {
+        $site = (new SiteRecorder())->json([...self::checkout(), 'lines' => [['product' => 'team', 'quantity' => 3, 'sku' => 'team-yearly'], ['product' => 'mug', 'quantity' => 1]]], 201);
+
+        $result = self::backend($site)->checkoutSessions()->create('member-sub', [['product' => 'team', 'quantity' => 3, 'sku' => 'team-yearly'], ['product' => 'mug', 'quantity' => 1]], 'https://app.example.com/thanks', 'https://app.example.com/cart');
+
+        self::assertSame([['product' => 'team', 'quantity' => 3, 'sku' => 'team-yearly'], ['product' => 'mug', 'quantity' => 1]], $site->body()['lines'] ?? null);
+        self::assertSame('team-yearly', $result->value->lines[0]->sku);
+        self::assertNull($result->value->lines[1]->sku);
+        self::assertSame([], $result->value->lines[0]->extra);
+    }
+
     public function testAMembersCheckoutNamesNoSubject(): void
     {
         $site = (new SiteRecorder())->json([...self::checkout(), 'order' => ['reference' => 'SO-1']]);

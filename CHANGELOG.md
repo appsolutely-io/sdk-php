@@ -19,6 +19,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Product::$skuPrices`, a `ProductSkuPrice` per active sku and currency: the sku's identifier, `price`, `originalPrice`, and the `interval` (`ProductSkuPrice::INTERVAL_MONTH` or `INTERVAL_YEAR`) and `intervalCount` a subscription sku renews on, both null for a sku sold once.
 - `BackendClient::$storeCurrency`: the ISO 4217 currency every checkout on the site is priced and paid in.
 - `backend()->accountStates()->list()` takes `$changedSince`, to list only the accounts whose entitlements changed at or after it.
+- A checkout line, from the backend or the member, may name the sku it buys as `sku`, by the identifier the product lists it under in `skuPrices`; a product sold as several skus needs one. `CheckoutSessionLine::$sku` reads it back, null for a line that named none.
 
 ## [0.2.0] - 2026-10-14
 
