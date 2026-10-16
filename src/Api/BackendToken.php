@@ -60,7 +60,8 @@ final readonly class BackendToken
      */
     public const int DEFAULT_LIFETIME = 300;
 
-    private const string KEY_PREFIX = 'appsolutely.backend.token.';
+    /** Where the site backend's token is kept in the cache. */
+    public const string KEY_PREFIX = 'appsolutely.backend.token.';
 
     private string $key;
 
@@ -86,10 +87,11 @@ final readonly class BackendToken
         private ?TokenLock $lock = null,
         ?LoggerInterface $logger = null,
         ?Closure $random = null,
+        string $keyPrefix = self::KEY_PREFIX,
     ) {
         // Lengths first, so no two (issuer, client, scopes) join to one string.
         $scope = implode(' ', $scopes);
-        $this->key = self::KEY_PREFIX . hash('sha256', strlen($issuer) . ':' . $issuer . strlen($clientId) . ':' . $clientId . $scope);
+        $this->key = $keyPrefix . hash('sha256', strlen($issuer) . ':' . $issuer . strlen($clientId) . ':' . $clientId . $scope);
         $this->logger = $logger ?? new NullLogger();
         $this->random = $random ?? static fn(): float => random_int(0, 1_000_000) / 1_000_000;
     }

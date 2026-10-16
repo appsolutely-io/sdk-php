@@ -7,6 +7,11 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `Admin\AdminClient` and `Admin\AdminConfig`: the site's Administrator API (`/api/admin/v1`) called with an administrator credential, an OAuth client holding `admin:*` scopes. Its token is asked for by the client-credentials grant, cached apart from the backend's, and asked for once more on `invalid-token`; a missing scope is a `ForbiddenException` and is neither renewed nor retried. `raw()` offers the untyped calls and refuses any path outside `/api/admin/v1/` before sending.
+- `composer pin-contract` also pins `docs/api/admin-openapi.yaml`, at the same commit as the Site API document, into `tests/Contract/admin-openapi.yaml`.
+
 ## [0.4.0] - 2026-10-16
 
 ### Added
