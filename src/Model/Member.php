@@ -15,6 +15,7 @@ final readonly class Member implements SchemaModel
     public const string SCHEMA = 'Member';
 
     /**
+     * @param MemberTerms $terms the site's current terms and whether this member has accepted them
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
@@ -24,6 +25,7 @@ final readonly class Member implements SchemaModel
         public ?DateTimeImmutable $emailVerifiedAt,
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt,
+        public MemberTerms $terms,
         public array $extra = [],
     ) {}
 
@@ -37,6 +39,7 @@ final readonly class Member implements SchemaModel
             emailVerifiedAt: $json->nullableTime('email_verified_at'),
             createdAt: $json->nullableTime('created_at'),
             updatedAt: $json->nullableTime('updated_at'),
+            terms: MemberTerms::from($json->object('terms')),
             extra: $json->extra(),
         );
     }
