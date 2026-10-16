@@ -279,7 +279,7 @@ final readonly class SiteApi
             $headers[Header::IDEMPOTENCY_KEY] = self::structuredFieldString($idempotencyKey);
         }
         if ($ifMatch !== null) {
-            self::assertHeaderValue('If-Match', $ifMatch);
+            self::assertHeaderValue(Header::IF_MATCH, $ifMatch);
             $headers[Header::IF_MATCH] = $ifMatch;
         }
         $encoded = $body === null ? null : self::encode($body);

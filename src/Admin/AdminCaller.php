@@ -30,7 +30,7 @@ final readonly class AdminCaller
      * @param array<string, string|null> $query the list's sort and order
      * @return Paginator<T>
      */
-    public function list(AdminOperation $operation, string $model, array $query, int $limit): Paginator
+    public function list(AdminOperation $operation, string $model, #[\SensitiveParameter] array $query, int $limit): Paginator
     {
         self::assertIs($operation->isList(), $operation, 'a list');
 

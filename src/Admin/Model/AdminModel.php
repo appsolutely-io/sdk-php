@@ -18,5 +18,5 @@ interface AdminModel
     /**
      * @internal
      */
-    public static function from(Fields $json): static;
+    public static function from(#[\SensitiveParameter] Fields $json): static;
 }
