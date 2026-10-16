@@ -10,6 +10,9 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `Admin\AdminClient` and `Admin\AdminConfig`: the site's Administrator API (`/api/admin/v1`) called with an administrator credential, an OAuth client holding `admin:*` scopes. Its token is asked for by the client-credentials grant, cached apart from the backend's, and asked for once more on `invalid-token`; a missing scope is a `ForbiddenException` and is neither renewed nor retried. `raw()` offers the untyped calls and refuses any path outside `/api/admin/v1/` before sending.
+- Typed Administrator API operations on `AdminClient`, held to the pinned Administrator API document by `AdminOperation` and its contract tests: `articles()` (list, get, create, update, delete), `pages()`, `products()`, `orders()` and `formEntries()` (list, get), and `webhookDeliveries()` (list, get, redeliver). Records are read into `Admin\Model` classes; a read answers `Admin\Versioned`, the record with its `ETag`, and an update or a delete is sent over that version as `If-Match`.
+- `SiteApi::put()`, `patch()` and `delete()` take an optional `ifMatch`, and `ApiResponse::etag()` reads an answer's version.
+- `Testing\FakeAdminClient` and `Testing\RecordedAdminCall`, the Administrator API in memory for an integrator's tests.
 - `composer pin-contract` also pins `docs/api/admin-openapi.yaml`, at the same commit as the Site API document, into `tests/Contract/admin-openapi.yaml`.
 
 ## [0.4.0] - 2026-10-16
