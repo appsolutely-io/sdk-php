@@ -13,17 +13,6 @@ namespace Appsolutely\Sdk\Tests\Contract;
 trait SchemaReads
 {
     /**
-     * Fields the pinned document types otherwise than the site sends them,
-     * where the model follows the site: sampled as the site sends them. Each
-     * names what the document declares (its description aside), and the
-     * override applies only while the document still declares exactly that,
-     * so a document that changes, to agree with the site or otherwise, fails
-     * until the entry is dropped or rewritten.
-     *
-     * The document leaves a subscription's `pending_period` an open object or
-     * null; the site sends the period's start and where its payment stands.
-     */
-    /**
      * The pinned document the schemas are read from; a test of another
      * document's models names that document's class.
      *
@@ -34,11 +23,16 @@ trait SchemaReads
         return Document::class;
     }
 
-    private const array AS_THE_SITE_SENDS = [
-        'AccountSubscription' => [
-            'pending_period' => ['document' => ['type' => ['object', 'null'], 'additionalProperties' => true], 'site' => ['start' => '2026-05-01T00:00:00Z', 'status' => 'pending']],
-        ],
-    ];
+    /**
+     * The fields sampled as the site sends them, for the document this test
+     * reads; a test of another document names its own.
+     *
+     * @return array<string, array<string, array{document: array<array-key, mixed>, site: mixed}>>
+     */
+    protected static function asTheSiteSends(): array
+    {
+        return SiteApiOverrides::AS_THE_SITE_SENDS;
+    }
 
     /**
      * @param list<string> $reads
@@ -175,7 +169,7 @@ trait SchemaReads
     }
 
     /**
-     * Whether a node is the declaration of a field AS_THE_SITE_SENDS samples
+     * Whether a node is the declaration of a field asTheSiteSends() samples
      * otherwise than the document, which checks that it still declares it so.
      *
      * @param array<array-key, mixed> $node
@@ -184,7 +178,7 @@ trait SchemaReads
     {
         unset($node['description']);
 
-        foreach (self::AS_THE_SITE_SENDS as $fields) {
+        foreach (static::asTheSiteSends() as $fields) {
             foreach ($fields as $override) {
                 if (static::document()::map($override['document']) === $node) {
                     return true;
@@ -288,14 +282,14 @@ trait SchemaReads
     /**
      * The fields of a schema to sample as the site sends them. Whether the
      * document still declares what each override was written against is
-     * the test of AS_THE_SITE_SENDS, not this.
+     * the test of the override list, not this.
      *
      * @return array<array-key, mixed>
      */
     private static function siteOverridesOf(string $name): array
     {
         $overrides = [];
-        foreach (static::document()::map(self::AS_THE_SITE_SENDS[$name] ?? null) as $field => $override) {
+        foreach (static::document()::map(static::asTheSiteSends()[$name] ?? null) as $field => $override) {
             $overrides[$field] = static::document()::map($override)['site'] ?? null;
         }
 

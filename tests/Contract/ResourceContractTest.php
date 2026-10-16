@@ -218,7 +218,7 @@ final class ResourceContractTest extends TestCase
      */
     public static function siteOverrides(): iterable
     {
-        foreach (self::AS_THE_SITE_SENDS as $schema => $fields) {
+        foreach (SiteApiOverrides::AS_THE_SITE_SENDS as $schema => $fields) {
             foreach (array_keys($fields) as $field) {
                 yield $schema . '.' . $field => [$schema, $field];
             }
@@ -228,7 +228,7 @@ final class ResourceContractTest extends TestCase
     #[DataProvider('siteOverrides')]
     public function testEachFieldSampledAsTheSiteSendsItIsStillDeclaredOtherwise(string $schema, string $field): void
     {
-        self::assertSame(Document::map(Document::map(self::AS_THE_SITE_SENDS[$schema][$field] ?? null)['document'] ?? null), self::declared($schema, $field), sprintf(
+        self::assertSame(Document::map(Document::map(SiteApiOverrides::AS_THE_SITE_SENDS[$schema][$field] ?? null)['document'] ?? null), self::declared($schema, $field), sprintf(
             'The pinned document now declares %s.%s otherwise than the override in AS_THE_SITE_SENDS was written against: drop the entry if the document agrees with what the site sends, or rewrite it.',
             $schema,
             $field,
