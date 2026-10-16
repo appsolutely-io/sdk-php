@@ -17,11 +17,11 @@ final readonly class Versioned
 {
     /**
      * @param T $record
-     * @param string|null $etag the version answered, to pass to an update or a delete; null when the site named none
+     * @param string $etag the version answered, to pass to an update or a delete; a read whose answer names none is refused as an UnexpectedResponseException
      */
     public function __construct(
         public mixed $record,
-        public ?string $etag,
+        public string $etag,
         public ApiResponse $response,
     ) {}
 }

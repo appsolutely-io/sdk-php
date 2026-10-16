@@ -48,6 +48,23 @@ final class FakeAdminClientTest extends TestCase
         self::assertSame('"v2"', $fake->lastCall(AdminOperation::DeleteArticle)->ifMatch);
     }
 
+    /**
+     * The site refuses an update or a delete that names no version, so the
+     * fake does too, with the problem the site sends.
+     */
+    public function testAWriteWithoutAVersionIsRefusedAsTheSiteRefusesIt(): void
+    {
+        $fake = (new FakeAdminClient())->answer(AdminOperation::DeleteArticle);
+
+        try {
+            $fake->client()->raw()->delete('/api/admin/v1/articles/a-1');
+            self::fail('The delete was answered.');
+        } catch (ApiException $exception) {
+            self::assertSame(428, $exception->status);
+            self::assertTrue($exception->hasType('precondition-required'));
+        }
+    }
+
     public function testAListIsPagedThroughTheArrangedPagesInOrder(): void
     {
         $fake = (new FakeAdminClient())

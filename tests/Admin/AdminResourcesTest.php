@@ -11,6 +11,7 @@ use Appsolutely\Sdk\Admin\Model\Order;
 use Appsolutely\Sdk\Api\RetryPolicy;
 use Appsolutely\Sdk\Exception\ApiException;
 use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
+use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Tests\Support\FakeProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
@@ -61,6 +62,20 @@ final class AdminResourcesTest extends TestCase
         self::assertSame('Launch', $read->record->title);
         self::assertSame('"v7"', $read->etag);
         self::assertSame(FakeProvider::BASE_URL . '/api/admin/v1/articles/' . self::ARTICLE['id'], (string) $this->provider->siteRequests()[0]->getUri());
+    }
+
+    /**
+     * Every read the document describes names its version; one that does not
+     * is no answer a later update could be made over.
+     */
+    public function testAReadWithoutAVersionIsRefusedAsUnexpected(): void
+    {
+        $this->answers = [$this->provider->json(self::ARTICLE)];
+
+        $this->expectException(UnexpectedResponseException::class);
+        $this->expectExceptionMessage('ETag');
+
+        $this->admin()->articles()->get(self::ARTICLE['id']);
     }
 
     public function testAnUpdateAndADeleteAreMadeOverTheVersionRead(): void
@@ -126,12 +141,26 @@ final class AdminResourcesTest extends TestCase
 
     public function testAnIdIsSentAsOneSegment(): void
     {
-        $this->answers = [$this->provider->json(['id' => 'ORD 1/2'], 200)];
+        $this->answers = [$this->provider->json(['id' => 'ORD 1'], 200, ['ETag' => '"v1"'])];
 
-        $order = $this->admin()->orders()->get('ORD 1/2')->record;
+        $order = $this->admin()->orders()->get('ORD 1')->record;
 
         self::assertInstanceOf(Order::class, $order);
-        self::assertSame(FakeProvider::BASE_URL . '/api/admin/v1/orders/ORD%201%2F2', (string) $this->provider->siteRequests()[0]->getUri());
+        self::assertSame(FakeProvider::BASE_URL . '/api/admin/v1/orders/ORD%201', (string) $this->provider->siteRequests()[0]->getUri());
+    }
+
+    /**
+     * A server decodes an encoded slash before routing, so an id holding one
+     * would name another path; it is refused before anything is sent.
+     */
+    public function testAnIdHoldingASlashIsRefused(): void
+    {
+        try {
+            $this->admin()->orders()->get('ORD 1/2');
+            self::fail('The id was sent.');
+        } catch (InvalidArgumentValueException) {
+            self::assertSame([], $this->provider->siteRequests());
+        }
     }
 
     public function testADotSegmentIsNoId(): void

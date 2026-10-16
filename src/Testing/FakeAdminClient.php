@@ -45,6 +45,9 @@ final class FakeAdminClient
 
     public const string ACCESS_TOKEN = 'fake-administrator-credential-token';
 
+    /** The version a read or an update answers when none is arranged, as the site always names one. */
+    public const string ETAG = '"fake-version"';
+
     /** The members RFC 9457 defines, which an extension member may not reuse. */
     private const array STANDARD_MEMBERS = ['type', 'title', 'status', 'detail', 'instance'];
 
@@ -94,7 +97,7 @@ final class FakeAdminClient
      *
      * @param array<mixed>|null $body the JSON the site would answer, as the document shapes it (a list is `{data, next_cursor}`)
      * @param int|null $status the operation's success status when left out
-     * @param string|null $etag the version a read or an update answers in its ETag
+     * @param string|null $etag the version a read or an update answers in its ETag; ETAG when left out
      * @param array<string, string> $headers such as `Idempotent-Replayed: true` for a replayed write
      */
     public function answer(AdminOperation $operation, ?array $body = null, ?int $status = null, ?string $etag = null, #[\SensitiveParameter] array $headers = []): self
@@ -103,6 +106,7 @@ final class FakeAdminClient
         if ($status < 200 || $status > 299) {
             throw new LogicException(sprintf('An answer is a success; arrange a %d with refuse().', $status));
         }
+        $etag ??= $operation->method() === 'GET' && !$operation->isList() || $operation->method() === 'PATCH' ? self::ETAG : null;
         if ($etag !== null) {
             $headers[Header::ETAG] = $etag;
         }
@@ -217,6 +221,14 @@ final class FakeAdminClient
             $requestId,
             str_starts_with($authorization, 'Bearer ') ? substr($authorization, strlen('Bearer ')) : null,
         );
+
+        // The site refuses a write over no version before anything else.
+        if ($operation->requiresIfMatch() && $ifMatch === '') {
+            return $this->responses->createResponse(428)
+                ->withHeader(Header::REQUEST_ID, $requestId)
+                ->withHeader(Header::CONTENT_TYPE, MediaType::PROBLEM_JSON)
+                ->withBody($this->streams->createStream(json_encode(['type' => ApiException::TYPE_BASE . 'precondition-required', 'title' => 'Precondition required', 'status' => 428, 'detail' => 'Send the ETag of the version read in If-Match.'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)));
+        }
 
         $queue = $this->answers[$operation->value] ?? [];
         if ($queue === []) {

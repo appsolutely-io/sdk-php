@@ -116,7 +116,9 @@ final readonly class AdminCaller
      */
     private static function versioned(ApiResponse $response, AdminOperation $operation, string $model): Versioned
     {
-        return new Versioned($model::from(Fields::of(self::objectOf($response, $operation), $model::SCHEMA)), $response->etag(), $response);
+        $etag = $response->etag() ?? throw new UnexpectedResponseException(sprintf('%s answered %d without an ETag, the version an update or a delete is made over.', $operation->value, $response->status), $response->status);
+
+        return new Versioned($model::from(Fields::of(self::objectOf($response, $operation), $model::SCHEMA)), $etag, $response);
     }
 
     /**
