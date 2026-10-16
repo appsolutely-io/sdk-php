@@ -10,14 +10,14 @@ use RecursiveIteratorIterator;
 use SplFileInfo;
 
 /**
- * Every problem type the client branches on is one the pinned Site API
- * document names: a slug spelled differently from the site's never matches,
+ * Every problem type the client branches on is one a pinned document (the
+ * Site API's or the Administrator API's) names: a slug spelled differently from the site's never matches,
  * and the branch it guards (a retry, a token renewal) silently never runs.
  */
 final class ProblemTypeSlugsTest extends TestCase
 {
     private const string SOURCE = __DIR__ . '/../../src';
-    private const string DOCUMENT = __DIR__ . '/../Contract/openapi.yaml';
+    private const array DOCUMENTS = [__DIR__ . '/../Contract/openapi.yaml', __DIR__ . '/../Contract/admin-openapi.yaml'];
 
     public function testEverySlugTheClientBranchesOnIsInTheDocument(): void
     {
@@ -38,13 +38,14 @@ final class ProblemTypeSlugsTest extends TestCase
     }
 
     /**
-     * Every slug the document names, each read to its end.
+     * Every slug the pinned documents name, each read to its end.
      *
      * @return list<string>
      */
     private static function documentedSlugs(): array
     {
-        preg_match_all('~https://appsolutely\.io/problems/([a-z0-9-]+)(?![a-z0-9-])~', (string) file_get_contents(self::DOCUMENT), $matches);
+        $documents = implode("\n", array_map(static fn(string $document): string => (string) file_get_contents($document), self::DOCUMENTS));
+        preg_match_all('~https://appsolutely\.io/problems/([a-z0-9-]+)(?![a-z0-9-])~', $documents, $matches);
 
         return array_values(array_unique($matches[1]));
     }

@@ -476,16 +476,33 @@ $admin = new AdminClient(new AdminConfig(
     cache: $cache,                                            // your application's PSR-16 cache
 ));
 
-$page = $admin->raw()->page('/api/admin/v1/articles', limit: 50);
-foreach ($admin->raw()->paginate('/api/admin/v1/orders') as $order) { /* array */ }
-$created = $admin->raw()->postIdempotent('/api/admin/v1/articles', ['title' => 'Launch', 'content' => '…']);
+foreach ($admin->articles()->list(sort: 'published_at', order: 'desc') as $article) { /* Admin\Model\Article */ }
+$read = $admin->articles()->get($articleId);                  // Admin\Versioned: ->record and ->etag
+$admin->articles()->update($articleId, $read->etag, ['title' => 'Launched']);
+$admin->articles()->delete($articleId, $read->etag);
+$created = $admin->articles()->create(['title' => 'Launch', 'content' => '…'], idempotencyKey: 'launch');
+
+$admin->pages()->get($pageId);
+$admin->products()->list();
+$admin->orders()->get($orderNumber);
+$admin->formEntries()->list();
+$admin->webhookDeliveries()->redeliver($deliveryId);
+
+$admin->raw()->get('/api/admin/v1/menus');                    // any other operation, untyped
 ```
+
+- **Typed operations.** Articles (list, read, create, update, delete), pages, products, orders and form entries (list, read), and webhook deliveries (list, read, redeliver) are typed, each named in `Admin\AdminOperation` and held by the contract tests to the pinned Administrator API document. A record's `status` (`Article::STATUS_PUBLISHED`, `STATUS_DRAFT`) and a form entry's `is_spam` are read as the integers the site sends.
+- **Versions.** A read answers the record with its `ETag`. An update or a delete is made only over that version, sent as `If-Match`; a record changed since is refused `412` `precondition-failed` rather than overwritten.
 
 - **The token.** It is asked for at the issuer's token endpoint by the client-credentials grant when first needed, kept in the cache until shortly before it expires (apart from the site backend's token), and asked for once more when the site answers `invalid-token`. A `TokenLock` in `AdminConfig` makes processes sharing the cache ask once.
 - **Refusals.** They read as the Site API's do. A scope the credential lacks is a `ForbiddenException` whose `type` is `insufficient-scope` and whose `extension('required')` names the scope; neither a new token nor another attempt would change it, so neither is made. With the Administrator API switched off the site answers `403` `admin-api-off`.
 - **Paths.** `raw()` calls only paths under `/api/admin/v1/`; any other path, or one climbing out of it with a dot segment, is refused with an `InvalidArgumentValueException` before anything is sent.
 
 The secret is never shown in a dump, and neither the `AdminConfig` nor the `AdminClient` is serialized.
+
+### Testing without a site
+
+`Testing\FakeAdminClient` answers the Administrator API in memory, as `FakeClient` does the Site API: arrange each operation's answer (`answer()`, `answerPage()`, `refuse()`), hand `client()` to the code under test, and read what it sent through `calls()` and `lastCall()`, the `If-Match` it sent included.
 
 ## Verifying webhook deliveries
 

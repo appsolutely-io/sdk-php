@@ -13,21 +13,26 @@ namespace Appsolutely\Sdk\Tests\Contract;
 trait SchemaReads
 {
     /**
-     * Fields the pinned document types otherwise than the site sends them,
-     * where the model follows the site: sampled as the site sends them. Each
-     * names what the document declares (its description aside), and the
-     * override applies only while the document still declares exactly that,
-     * so a document that changes, to agree with the site or otherwise, fails
-     * until the entry is dropped or rewritten.
+     * The pinned document the schemas are read from; a test of another
+     * document's models names that document's class.
      *
-     * The document leaves a subscription's `pending_period` an open object or
-     * null; the site sends the period's start and where its payment stands.
+     * @return class-string<Document>
      */
-    private const array AS_THE_SITE_SENDS = [
-        'AccountSubscription' => [
-            'pending_period' => ['document' => ['type' => ['object', 'null'], 'additionalProperties' => true], 'site' => ['start' => '2026-05-01T00:00:00Z', 'status' => 'pending']],
-        ],
-    ];
+    protected static function document(): string
+    {
+        return Document::class;
+    }
+
+    /**
+     * The fields sampled as the site sends them, for the document this test
+     * reads; a test of another document names its own.
+     *
+     * @return array<string, array<string, array{document: array<array-key, mixed>, site: mixed}>>
+     */
+    protected static function asTheSiteSends(): array
+    {
+        return SiteApiOverrides::AS_THE_SITE_SENDS;
+    }
 
     /**
      * @param list<string> $reads
@@ -35,10 +40,10 @@ trait SchemaReads
     private static function assertReadsMatch(string $schema, array $reads, string $class): void
     {
         foreach ($reads as $path) {
-            self::assertNotNull(self::schemaAt(Document::schema($schema), $path), sprintf('%s reads "%s", which the %s schema does not define.', $class, $path, $schema));
+            self::assertNotNull(self::schemaAt(static::document()::schema($schema), $path), sprintf('%s reads "%s", which the %s schema does not define.', $class, $path, $schema));
         }
 
-        foreach (self::requiredPaths(Document::schema($schema), '', $reads) as $required) {
+        foreach (self::requiredPaths(static::document()::schema($schema), '', $reads) as $required) {
             self::assertContains($required, $reads, sprintf('%s does not read "%s", which the %s schema requires.', $class, $required, $schema));
         }
     }
@@ -82,18 +87,18 @@ trait SchemaReads
     {
         $mismatches = [];
         foreach ($accessors as $path => $used) {
-            $parent = str_contains($path, '.') ? self::schemaAt(Document::schema($schema), substr($path, 0, (int) strrpos($path, '.'))) : Document::schema($schema);
-            $node = self::schemaAt(Document::schema($schema), $path);
+            $parent = str_contains($path, '.') ? self::schemaAt(static::document()::schema($schema), substr($path, 0, (int) strrpos($path, '.'))) : static::document()::schema($schema);
+            $node = self::schemaAt(static::document()::schema($schema), $path);
             if ($parent === null || $node === null || self::sampledAsTheSiteSends($parent) || self::sampledAsTheSiteSends($node)) {
                 continue;
             }
             $field = substr($path, (int) strrpos('.' . $path, '.'));
             $name = str_ends_with($field, '[]') ? substr($field, 0, -2) : $field;
-            $required = in_array($name, Document::list(self::nonNull(Document::resolve($parent))['required'] ?? []), true);
+            $required = in_array($name, static::document()::list(self::nonNull(static::document()::resolve($parent))['required'] ?? []), true);
             if (array_diff($used, ['any']) === []) {
                 continue;
             }
-            $declaration = Document::map(Document::map(self::nonNull(Document::resolve($parent))['properties'] ?? null)[$name] ?? null);
+            $declaration = static::document()::map(static::document()::map(self::nonNull(static::document()::resolve($parent))['properties'] ?? null)[$name] ?? null);
             $declared = self::declaredType($declaration, $schema . '.' . $path);
 
             foreach (array_unique($used) as $accessor) {
@@ -136,15 +141,15 @@ trait SchemaReads
     private static function declaredType(array $declaration, string $where): array
     {
         $nullable = false;
-        $alternatives = Document::list($declaration['oneOf'] ?? $declaration['anyOf'] ?? []);
+        $alternatives = static::document()::list($declaration['oneOf'] ?? $declaration['anyOf'] ?? []);
         if ($alternatives !== []) {
             foreach ($alternatives as $alternative) {
-                if ((Document::map($alternative)['type'] ?? null) === 'null') {
+                if ((static::document()::map($alternative)['type'] ?? null) === 'null') {
                     $nullable = true;
                 }
             }
         }
-        $node = self::nonNull(Document::resolve($declaration));
+        $node = self::nonNull(static::document()::resolve($declaration));
         $types = (array) ($node['type'] ?? (isset($node['properties']) || isset($node['additionalProperties']) ? 'object' : []));
         if (in_array('null', $types, true)) {
             $nullable = true;
@@ -154,7 +159,7 @@ trait SchemaReads
         $type = $types[0];
         self::assertIsString($type);
         if ($type === 'array') {
-            $items = self::declaredType(Document::map($node['items'] ?? null), $where . '[]');
+            $items = self::declaredType(static::document()::map($node['items'] ?? null), $where . '[]');
 
             return ['type' => $items['type'] . '[]', 'format' => null, 'nullable' => $nullable];
         }
@@ -164,7 +169,7 @@ trait SchemaReads
     }
 
     /**
-     * Whether a node is the declaration of a field AS_THE_SITE_SENDS samples
+     * Whether a node is the declaration of a field asTheSiteSends() samples
      * otherwise than the document, which checks that it still declares it so.
      *
      * @param array<array-key, mixed> $node
@@ -173,9 +178,9 @@ trait SchemaReads
     {
         unset($node['description']);
 
-        foreach (self::AS_THE_SITE_SENDS as $fields) {
+        foreach (static::asTheSiteSends() as $fields) {
             foreach ($fields as $override) {
-                if (Document::map($override['document']) === $node) {
+                if (static::document()::map($override['document']) === $node) {
                     return true;
                 }
             }
@@ -197,15 +202,15 @@ trait SchemaReads
         foreach (explode('.', $path) as $segment) {
             $list = str_ends_with($segment, '[]');
             $name = $list ? substr($segment, 0, -2) : $segment;
-            $properties = Document::map(self::nonNull(Document::resolve($node))['properties'] ?? null);
+            $properties = static::document()::map(self::nonNull(static::document()::resolve($node))['properties'] ?? null);
             if (!isset($properties[$name])) {
                 // Beneath a field sampled as the site sends it, the document
                 // declares nothing to hold a read to.
                 return self::sampledAsTheSiteSends($node) ? $node : null;
             }
-            $node = Document::map($properties[$name]);
+            $node = static::document()::map($properties[$name]);
             if ($list) {
-                $node = Document::map(self::nonNull(Document::resolve($node))['items'] ?? null);
+                $node = static::document()::map(self::nonNull(static::document()::resolve($node))['items'] ?? null);
             }
         }
 
@@ -222,24 +227,24 @@ trait SchemaReads
      */
     private static function requiredPaths(array $schema, string $prefix, array $reads): array
     {
-        $schema = self::nonNull(Document::resolve($schema));
-        $properties = Document::map($schema['properties'] ?? null);
+        $schema = self::nonNull(static::document()::resolve($schema));
+        $properties = static::document()::map($schema['properties'] ?? null);
         $paths = [];
-        foreach (Document::list($schema['required'] ?? []) as $name) {
+        foreach (static::document()::list($schema['required'] ?? []) as $name) {
             if (is_string($name)) {
                 $paths[] = $prefix . $name;
             }
         }
 
         foreach ($properties as $name => $property) {
-            $property = self::nonNull(Document::resolve(Document::map($property)));
+            $property = self::nonNull(static::document()::resolve(static::document()::map($property)));
             $isList = isset($property['items']);
             $path = $prefix . $name . ($isList ? '[]' : '');
             $entered = array_filter($reads, static fn(string $read): bool => str_starts_with($read, $path . '.'));
             if ($entered === []) {
                 continue;
             }
-            $paths = [...$paths, ...self::requiredPaths($isList ? Document::map($property['items']) : $property, $path . '.', $reads)];
+            $paths = [...$paths, ...self::requiredPaths($isList ? static::document()::map($property['items']) : $property, $path . '.', $reads)];
         }
 
         return $paths;
@@ -253,10 +258,10 @@ trait SchemaReads
      */
     private static function nonNull(array $schema): array
     {
-        foreach (Document::list($schema['oneOf'] ?? $schema['anyOf'] ?? []) as $alternative) {
-            $alternative = Document::map($alternative);
+        foreach (static::document()::list($schema['oneOf'] ?? $schema['anyOf'] ?? []) as $alternative) {
+            $alternative = static::document()::map($alternative);
             if (($alternative['type'] ?? null) !== 'null') {
-                return Document::resolve($alternative);
+                return static::document()::resolve($alternative);
             }
         }
 
@@ -271,21 +276,21 @@ trait SchemaReads
      */
     private static function sampleOf(string $name): array
     {
-        return [...Document::map(self::sample(Document::schema($name))), ...self::siteOverridesOf($name)];
+        return [...static::document()::map(self::sample(static::document()::schema($name))), ...self::siteOverridesOf($name)];
     }
 
     /**
      * The fields of a schema to sample as the site sends them. Whether the
      * document still declares what each override was written against is
-     * the test of AS_THE_SITE_SENDS, not this.
+     * the test of the override list, not this.
      *
      * @return array<array-key, mixed>
      */
     private static function siteOverridesOf(string $name): array
     {
         $overrides = [];
-        foreach (Document::map(self::AS_THE_SITE_SENDS[$name] ?? null) as $field => $override) {
-            $overrides[$field] = Document::map($override)['site'] ?? null;
+        foreach (static::document()::map(static::asTheSiteSends()[$name] ?? null) as $field => $override) {
+            $overrides[$field] = static::document()::map($override)['site'] ?? null;
         }
 
         return $overrides;
@@ -299,7 +304,7 @@ trait SchemaReads
      */
     private static function declared(string $schema, string $field): array
     {
-        $declared = Document::map(Document::map(Document::schema($schema)['properties'] ?? null)[$field] ?? null);
+        $declared = static::document()::map(static::document()::map(static::document()::schema($schema)['properties'] ?? null)[$field] ?? null);
         unset($declared['description']);
 
         return $declared;
@@ -313,7 +318,7 @@ trait SchemaReads
      */
     private static function sample(array $schema): mixed
     {
-        $name = Document::refName($schema);
+        $name = static::document()::refName($schema);
         if ($name !== null) {
             return self::sampleOf($name);
         }
@@ -321,28 +326,28 @@ trait SchemaReads
             // Each part is sampled on its own, so a part that is a named
             // schema is sampled with its fields as the site sends them.
             $sample = [];
-            foreach (Document::list($schema['allOf']) as $part) {
-                $sample = [...$sample, ...Document::map(self::sample(Document::map($part)))];
+            foreach (static::document()::list($schema['allOf']) as $part) {
+                $sample = [...$sample, ...static::document()::map(self::sample(static::document()::map($part)))];
             }
 
             return $sample;
         }
-        $schema = self::nonNull(Document::resolve($schema));
+        $schema = self::nonNull(static::document()::resolve($schema));
         $type = $schema['type'] ?? (isset($schema['properties']) ? 'object' : null);
         if (is_array($type)) {
             $type = array_values(array_filter($type, static fn(mixed $member): bool => $member !== 'null'))[0] ?? null;
         }
-        $enum = Document::list($schema['enum'] ?? []);
+        $enum = static::document()::list($schema['enum'] ?? []);
 
         return match ($type) {
             'string' => $enum[0] ?? (($schema['format'] ?? null) === 'date-time' ? '2026-10-08T12:34:56Z' : 'x'),
             'integer' => $enum[0] ?? 1,
             'number' => 1.5,
             'boolean' => true,
-            'array' => [self::sample(Document::map($schema['items'] ?? ['type' => 'string']))],
+            'array' => [self::sample(static::document()::map($schema['items'] ?? ['type' => 'string']))],
             'object' => isset($schema['properties'])
-                ? array_map(static fn(mixed $property): mixed => self::sample(Document::map($property)), Document::map($schema['properties']))
-                : ['key' => is_array($schema['additionalProperties'] ?? null) ? self::sample(Document::map($schema['additionalProperties'])) : 'value'],
+                ? array_map(static fn(mixed $property): mixed => self::sample(static::document()::map($property)), static::document()::map($schema['properties']))
+                : ['key' => is_array($schema['additionalProperties'] ?? null) ? self::sample(static::document()::map($schema['additionalProperties'])) : 'value'],
             default => 'x',
         };
     }
