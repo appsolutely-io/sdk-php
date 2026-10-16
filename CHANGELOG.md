@@ -31,6 +31,31 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING:** `Config`'s `apiToken` parameter and `Config::apiToken()`: the site issues no administrator token for the Site API. Arguments passed by position after `$clientSecret` move.
 - **BREAKING:** the administrator's Site API resources and their operations: `pages()`, `articles()`, `orders()`, `formEntries()`, `accountStates()` (the backend's `backend()->accountStates()` stays), `webhookDeliveries()` and the administrator sync feeds (`sync()`, with `Resource\Sync` and its article, form entry, order, page and product feeds), with `Model\WebhookDelivery` and `Audience::Administrator`. The Administrator API serves the same records through `AdminClient`; the sync feeds have no replacement.
 
+### Migrating administrator calls
+
+Replace the personal token with the administrator credential's client id, secret and scopes:
+
+```php
+use Appsolutely\Sdk\Admin\AdminClient;
+use Appsolutely\Sdk\Admin\AdminConfig;
+use Appsolutely\Sdk\Client;
+use Appsolutely\Sdk\Config;
+
+// Before
+$client = new Client(new Config(baseUrl: $baseUrl, apiToken: $apiToken));
+$pages = $client->api()->pages()->list();
+
+// After
+$admin = new AdminClient(new AdminConfig(
+    baseUrl: $baseUrl,
+    issuer: $issuer,
+    clientId: $administratorClientId,
+    clientSecret: $administratorClientSecret,
+    scopes: ['admin:pages:read'],
+));
+$pages = $admin->pages()->list();
+```
+
 ## [0.4.0] - 2026-10-16
 
 ### Added
