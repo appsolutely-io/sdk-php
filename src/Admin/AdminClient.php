@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Admin;
 
+use Appsolutely\Sdk\Admin\Resource\Articles;
+use Appsolutely\Sdk\Admin\Resource\FormEntries;
+use Appsolutely\Sdk\Admin\Resource\Orders;
+use Appsolutely\Sdk\Admin\Resource\Pages;
+use Appsolutely\Sdk\Admin\Resource\Products;
+use Appsolutely\Sdk\Admin\Resource\WebhookDeliveries;
 use Appsolutely\Sdk\Api\BackendToken;
 use Appsolutely\Sdk\Api\SiteApi;
 use Appsolutely\Sdk\Cache\InMemoryCache;
@@ -35,6 +41,8 @@ final readonly class AdminClient
 
     private SiteApi $api;
 
+    private AdminCaller $caller;
+
     public function __construct(AdminConfig $config)
     {
         $site = $config->site;
@@ -65,6 +73,37 @@ final readonly class AdminClient
 
         $this->api = (new SiteApi($http, $config->baseUrl, null, $clock, $site->retryPolicy, $logger))
             ->withBackendToken($token, self::BASE_PATH);
+        $this->caller = new AdminCaller($this->api);
+    }
+
+    public function articles(): Articles
+    {
+        return new Articles($this->caller);
+    }
+
+    public function pages(): Pages
+    {
+        return new Pages($this->caller);
+    }
+
+    public function products(): Products
+    {
+        return new Products($this->caller);
+    }
+
+    public function orders(): Orders
+    {
+        return new Orders($this->caller);
+    }
+
+    public function formEntries(): FormEntries
+    {
+        return new FormEntries($this->caller);
+    }
+
+    public function webhookDeliveries(): WebhookDeliveries
+    {
+        return new WebhookDeliveries($this->caller);
     }
 
     /**
