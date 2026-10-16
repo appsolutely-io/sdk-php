@@ -8,29 +8,33 @@ use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
 
 /**
- * The pinned Site API document, read for the contract tests.
+ * The pinned Site API document, read for the contract tests. A subclass
+ * names another pinned document in FILE and reads it the same way.
  */
-final class Document
+class Document
 {
+    /** The pinned document's file, beside this class. */
+    protected const string FILE = 'openapi.yaml';
+
     public const array METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'];
 
-    /** @var array<array-key, mixed>|null */
-    private static ?array $document = null;
+    /** @var array<class-string, array<array-key, mixed>> */
+    private static array $documents = [];
 
     /**
      * @return array<array-key, mixed>
      */
     public static function get(): array
     {
-        if (self::$document === null) {
-            $document = Yaml::parseFile(__DIR__ . '/openapi.yaml');
+        if (!isset(self::$documents[static::class])) {
+            $document = Yaml::parseFile(__DIR__ . '/' . static::FILE);
             if (!is_array($document)) {
-                throw new RuntimeException('The pinned document is not a YAML mapping.');
+                throw new RuntimeException(sprintf('The pinned document %s is not a YAML mapping.', static::FILE));
             }
-            self::$document = $document;
+            self::$documents[static::class] = $document;
         }
 
-        return self::$document;
+        return self::$documents[static::class];
     }
 
     /**
@@ -41,7 +45,7 @@ final class Document
     public static function operations(): array
     {
         $operations = [];
-        foreach (self::map(self::get()['paths'] ?? null) as $path => $item) {
+        foreach (self::map(static::get()['paths'] ?? null) as $path => $item) {
             $item = self::map($item);
             foreach ($item as $method => $operation) {
                 if (!in_array($method, self::METHODS, true)) {
@@ -54,7 +58,7 @@ final class Document
                 }
                 $parameters = [];
                 foreach ([...self::list($item['parameters'] ?? []), ...self::list($operation['parameters'] ?? [])] as $parameter) {
-                    $parameters[] = self::resolve(self::map($parameter));
+                    $parameters[] = static::resolve(self::map($parameter));
                 }
                 $operations[$id] = ['method' => strtoupper($method), 'path' => $path, 'operation' => $operation, 'parameters' => $parameters];
             }
@@ -70,7 +74,7 @@ final class Document
      */
     public static function schema(string $name): array
     {
-        $schemas = self::map(self::map(self::get()['components'] ?? null)['schemas'] ?? null);
+        $schemas = self::map(self::map(static::get()['components'] ?? null)['schemas'] ?? null);
         if (!isset($schemas[$name])) {
             throw new RuntimeException(sprintf('The document has no schema "%s".', $name));
         }
@@ -83,7 +87,7 @@ final class Document
      */
     public static function schemas(): array
     {
-        return self::map(self::map(self::get()['components'] ?? null)['schemas'] ?? null);
+        return self::map(self::map(static::get()['components'] ?? null)['schemas'] ?? null);
     }
 
     /**
@@ -94,7 +98,7 @@ final class Document
     public static function webhooks(): array
     {
         $webhooks = [];
-        foreach (self::map(self::get()['webhooks'] ?? null) as $type => $webhook) {
+        foreach (self::map(static::get()['webhooks'] ?? null) as $type => $webhook) {
             $webhooks[(string) $type] = self::map($webhook);
         }
 
@@ -116,7 +120,7 @@ final class Document
             if (!str_starts_with($ref, '#/components/schemas/')) {
                 throw new RuntimeException(sprintf('Unsupported reference "%s".', $ref));
             }
-            $value = self::schema(substr($ref, strlen('#/components/schemas/')));
+            $value = static::schema(substr($ref, strlen('#/components/schemas/')));
         }
         if (!isset($value['allOf'])) {
             return $value;
@@ -127,7 +131,7 @@ final class Document
         $properties = self::map($merged['properties'] ?? null);
         $required = self::list($merged['required'] ?? []);
         foreach (self::list($value['allOf']) as $part) {
-            $part = self::resolve(self::map($part));
+            $part = static::resolve(self::map($part));
             $properties = [...$properties, ...self::map($part['properties'] ?? null)];
             $required = [...$required, ...self::list($part['required'] ?? [])];
             $merged['type'] ??= $part['type'] ?? null;
