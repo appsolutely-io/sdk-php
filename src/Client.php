@@ -12,12 +12,8 @@ use Appsolutely\Sdk\Cache\InMemoryCache;
 use Appsolutely\Sdk\Clock\SystemClock;
 use Appsolutely\Sdk\Exception\InvalidConfigException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
-use Appsolutely\Sdk\Http\ClientTimeouts;
 use Appsolutely\Sdk\Http\HttpTransport;
 use Appsolutely\Sdk\Oidc\OpenIdClient;
-use Http\Discovery\Exception\NotFoundException;
-use Http\Discovery\Psr17FactoryDiscovery;
-use Http\Discovery\Psr18ClientDiscovery;
 use Psr\Log\NullLogger;
 
 /**
@@ -42,19 +38,7 @@ final readonly class Client
         $clock = $config->clock ?? new SystemClock();
         $logger = $config->logger ?? new NullLogger();
 
-        try {
-            $http = new HttpTransport(
-                $config->httpClient ?? ClientTimeouts::apply(Psr18ClientDiscovery::find(), $config->timeout, $config->connectTimeout, $logger),
-                $config->requestFactory ?? Psr17FactoryDiscovery::findRequestFactory(),
-                $config->streamFactory ?? Psr17FactoryDiscovery::findStreamFactory(),
-            );
-        } catch (NotFoundException $exception) {
-            throw new InvalidConfigException(
-                'No PSR-18 HTTP client or PSR-17 factory was passed in or found installed; require one, such as guzzlehttp/guzzle or symfony/http-client with nyholm/psr7.',
-                0,
-                $exception,
-            );
-        }
+        $http = HttpTransport::forConfig($config, $logger);
 
         $cache = $config->cache;
         if ($cache === null) {

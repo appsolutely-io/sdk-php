@@ -13,7 +13,7 @@ Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://git
 
 ## Compatibility
 
-The client is written and tested against the Site API document of the site software v0.30.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests.
+The client is written and tested against the Site API document of the site software v0.30.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests. `AdminClient` is held to the Administrator API document of the same commit.
 
 While the site software is below 1.0.0, a minor release of it may change a path of the document's `v1` in a breaking way, and its changelog opens each such entry with `BREAKING`; this client follows such a change in a release of its own, marked the same way in its changelog. Otherwise the site adds paths and fields but never removes or retypes one. From the site software's 1.0.0, a breaking change is announced as deprecated a release ahead and arrives in a new major release. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
 
@@ -458,6 +458,34 @@ $fake->calls();           // every call, in order
 ```
 
 `client()` is a real `Client` whose HTTP client answers from the arrangement, so an arranged body is read into the same models as a site's answer, a refusal becomes the same `ApiException` subclass, and an answer that breaks the document fails the same way. Answers to one operation are given in the order arranged, and the last one keeps answering. `answer()` takes the operation's success status unless you pass another, and headers such as `Idempotent-Replayed: true`; `refuse()` takes a problem type (`validation-failed`, or a full URI), a status, a title, an optional detail (left out when empty, as the site leaves it out), and the problem's extension members, which may not reuse a standard member (`type`, `title`, `status`, `detail`, `instance`); a `401` carries the site's `WWW-Authenticate: Bearer` challenge, and an `insufficient-scope` `403` the challenge naming its `required` scope, unless you pass another. `forMember($token)` calls as a member. Calls are not retried, so a refusal is thrown at once. A call with no answer arranged, or to a path that is no operation of the document, throws `Exception\UnarrangedCallException`, a `LogicException`. Sign-in through `oidc()` is not faked.
+
+## Calling the Administrator API
+
+An administrator's work (pages, articles, products, orders, form entries, webhook deliveries and the rest of the panel) is done through the site's Administrator API, `/api/admin/v1`, with an administrator credential: an OAuth client an administrator issues on the site with the `admin:*` scopes the job needs. The site's Administrator API must be switched on, and its OpenID provider too.
+
+```php
+use Appsolutely\Sdk\Admin\AdminClient;
+use Appsolutely\Sdk\Admin\AdminConfig;
+
+$admin = new AdminClient(new AdminConfig(
+    baseUrl: 'https://site.example.com',
+    issuer: 'https://site.example.com',
+    clientId: $credentialId,
+    clientSecret: $credentialSecret,
+    scopes: ['admin:articles:read', 'admin:articles:write'],
+    cache: $cache,                                            // your application's PSR-16 cache
+));
+
+$page = $admin->raw()->page('/api/admin/v1/articles', limit: 50);
+foreach ($admin->raw()->paginate('/api/admin/v1/orders') as $order) { /* array */ }
+$created = $admin->raw()->postIdempotent('/api/admin/v1/articles', ['title' => 'Launch', 'content' => '…']);
+```
+
+- **The token.** It is asked for at the issuer's token endpoint by the client-credentials grant when first needed, kept in the cache until shortly before it expires (apart from the site backend's token), and asked for once more when the site answers `invalid-token`. A `TokenLock` in `AdminConfig` makes processes sharing the cache ask once.
+- **Refusals.** They read as the Site API's do. A scope the credential lacks is a `ForbiddenException` whose `type` is `insufficient-scope` and whose `extension('required')` names the scope; neither a new token nor another attempt would change it, so neither is made. With the Administrator API switched off the site answers `403` `admin-api-off`.
+- **Paths.** `raw()` calls only paths under `/api/admin/v1/`; any other path, or one climbing out of it with a dot segment, is refused with an `InvalidArgumentValueException` before anything is sent.
+
+The secret is never shown in a dump, and neither the `AdminConfig` nor the `AdminClient` is serialized.
 
 ## Verifying webhook deliveries
 

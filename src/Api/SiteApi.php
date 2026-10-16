@@ -56,6 +56,7 @@ final readonly class SiteApi
         private RetryPolicy $retryPolicy,
         private LoggerInterface $logger,
         private ?BackendToken $backendToken = null,
+        private ?string $pathPrefix = null,
     ) {
         $this->origin = rtrim($baseUrl, '/');
     }
@@ -67,9 +68,9 @@ final readonly class SiteApi
      *
      * @internal used by Client::backend()
      */
-    public function withBackendToken(BackendToken $backendToken): self
+    public function withBackendToken(BackendToken $backendToken, ?string $pathPrefix = null): self
     {
-        return new self($this->http, $this->origin, null, $this->clock, $this->retryPolicy, $this->logger, $backendToken);
+        return new self($this->http, $this->origin, null, $this->clock, $this->retryPolicy, $this->logger, $backendToken, $pathPrefix);
     }
 
     /**
@@ -415,6 +416,14 @@ final readonly class SiteApi
     {
         if (!str_starts_with($path, '/') || str_starts_with($path, '//') || str_contains($path, '?') || str_contains($path, '#') || !SecureUrl::isUnambiguous($this->origin . $path)) {
             throw new InvalidArgumentValueException(sprintf('A Site API path is absolute, without a query, a fragment, whitespace or a backslash, such as "/api/v1/articles"; got "%s".', Untrusted::text($path, Untrusted::MAX_LONG_LENGTH)));
+        }
+
+        // A client held to one API sends nothing outside it. A dot segment,
+        // as written, percent-encoded or carrying a `;` parameter, would climb
+        // out of it once the server resolved it, and so would an encoded
+        // slash or backslash a server decodes before routing.
+        if ($this->pathPrefix !== null && (!str_starts_with($path, $this->pathPrefix) || preg_match('~(^|/)(\.|%2e){1,2}(;[^/]*)?(/|$)|%2f|%5c~i', $path) === 1)) {
+            throw new InvalidArgumentValueException(sprintf('This client calls only paths under "%s"; got "%s".', $this->pathPrefix, Untrusted::text($path, Untrusted::MAX_LONG_LENGTH)));
         }
 
         $pairs = [];
