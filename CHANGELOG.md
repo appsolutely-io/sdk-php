@@ -7,6 +7,8 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-16
+
 ### Added
 
 - `Member::$terms`, a `MemberTerms`: the site's `current` terms version, null when it asks for no acceptance, and whether the member has `accepted` it. A member who has not is asked to in the site's member area; the Site API stays open to them.
