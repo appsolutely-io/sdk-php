@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Testing;
 
-use Appsolutely\Sdk\Api\AdministratorApi;
+use Appsolutely\Sdk\Api\BackendApi;
 use Appsolutely\Sdk\Api\Operation;
+use Appsolutely\Sdk\Api\PublicApi;
 use Appsolutely\Sdk\Api\RetryPolicy;
 use Appsolutely\Sdk\Client;
 use Appsolutely\Sdk\Config;
@@ -29,23 +30,24 @@ use Psr\Http\Message\StreamFactoryInterface;
  * read the calls it made.
  *
  *     $fake = (new FakeClient())
- *         ->answer(Operation::GetArticle, ['id' => 'a-1', ...])
- *         ->refuse(Operation::CreateArticle, 'validation-failed', 422, 'The request did not pass validation.', members: ['errors' => [...]]);
+ *         ->answer(Operation::GetProduct, ['id' => 1, ...])
+ *         ->refuse(Operation::CreateCheckoutSession, 'validation-failed', 422, 'The request did not pass validation.', members: ['errors' => [...]]);
  *     $service = new MyService($fake->client());
  *     ...
- *     $fake->lastCall(Operation::CreateArticle)->body;
+ *     $fake->lastCall(Operation::CreateCheckoutSession)->body;
  *
  * client() is a real Client whose HTTP client answers in memory, so every
  * answer is read by the same code a site's answer is: the arranged body
  * goes through the same models, an arranged problem becomes the same
  * exception, and an answer that breaks the document fails the same way.
- * Calls are not retried, so a refusal is thrown at once. Sign-in through
- * oidc() is not faked. A test helper: not for production code.
+ * Calls are not retried, so a refusal is thrown at once. The backend's
+ * token is granted in memory as BACKEND_TOKEN; sign-in through oidc() is
+ * not faked. A test helper: not for production code.
  */
 final class FakeClient
 {
     public const string BASE_URL = 'https://site.test';
-    public const string ADMINISTRATOR_TOKEN = 'fake-administrator-token';
+    public const string BACKEND_TOKEN = 'fake-backend-token';
     public const string MEMBER_TOKEN = 'fake-member-token';
 
     /** The members RFC 9457 defines, which an extension member may not reuse. */
@@ -72,27 +74,33 @@ final class FakeClient
             issuer: self::BASE_URL,
             clientId: 'fake-client',
             clientSecret: 'fake-client-secret',
-            apiToken: self::ADMINISTRATOR_TOKEN,
             httpClient: new FakeSite($this->handle(...)),
             requestFactory: Psr17FactoryDiscovery::findRequestFactory(),
             streamFactory: $this->streams,
             clock: $clock,
             retryPolicy: RetryPolicy::none(),
+            backendClientId: 'fake-backend-client',
+            backendClientSecret: 'fake-backend-client-secret',
         ));
     }
 
     /**
-     * The client to hand to the code under test, holding the administrator
-     * token ADMINISTRATOR_TOKEN.
+     * The client to hand to the code under test, whose backend is granted
+     * the token BACKEND_TOKEN.
      */
     public function client(): Client
     {
         return $this->client;
     }
 
-    public function api(): AdministratorApi
+    public function api(): PublicApi
     {
         return $this->client->api();
+    }
+
+    public function backend(): BackendApi
+    {
+        return $this->client->backend();
     }
 
     public function forMember(#[\SensitiveParameter] string $accessToken = self::MEMBER_TOKEN): MemberClient
@@ -185,6 +193,28 @@ final class FakeClient
     private function handle(#[\SensitiveParameter] RequestInterface $request): ResponseInterface
     {
         $path = $request->getUri()->getPath();
+        // The backend asks the provider for its token first: the discovery
+        // document and the token endpoint are answered here, not recorded.
+        if ($request->getMethod() === 'GET' && $path === '/.well-known/openid-configuration') {
+            return $this->json([
+                'issuer' => self::BASE_URL,
+                'authorization_endpoint' => self::BASE_URL . '/oauth/authorize',
+                'token_endpoint' => self::BASE_URL . '/oauth/token',
+                'jwks_uri' => self::BASE_URL . '/oauth/jwks.json',
+                'response_types_supported' => ['code'],
+                'subject_types_supported' => ['public'],
+                'id_token_signing_alg_values_supported' => ['RS256'],
+                'token_endpoint_auth_methods_supported' => ['client_secret_basic', 'client_secret_post'],
+                'code_challenge_methods_supported' => ['S256'],
+            ]);
+        }
+        // Only the backend's client-credentials grant: a member's code
+        // exchange or refresh is sign-in, which this fake does not answer.
+        parse_str((string) $request->getBody(), $grant);
+        if ($request->getMethod() === 'POST' && $path === '/oauth/token' && ($grant['grant_type'] ?? null) === 'client_credentials') {
+            return $this->json(['access_token' => self::BACKEND_TOKEN, 'token_type' => 'Bearer', 'expires_in' => 3600]);
+        }
+
         [$operation, $parameters] = self::match($request->getMethod(), $path) ?? throw new UnarrangedCallException(sprintf(
             '%s %s is not an operation of the Site API document this client is pinned to.',
             $request->getMethod(),
@@ -238,6 +268,16 @@ final class FakeClient
         }
 
         return $response;
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function json(array $body): ResponseInterface
+    {
+        return $this->responses->createResponse(200)
+            ->withHeader(Header::CONTENT_TYPE, MediaType::JSON)
+            ->withBody($this->streams->createStream(json_encode($body, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)));
     }
 
     /**

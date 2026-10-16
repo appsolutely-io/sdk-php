@@ -21,13 +21,13 @@ final class CallerTest extends TestCase
     public function testAKeyedWriteWithAQueryIsRefusedBeforeAnythingIsSent(): void
     {
         $provider = new FakeProvider();
-        $caller = new Caller($provider->client()->api()->raw(), Audience::Administrator);
+        $caller = new Caller($provider->client()->api()->raw(), Audience::Backend);
 
         try {
-            $caller->send(Operation::CreateArticle, query: ['draft' => true], body: ['title' => 'Hello']);
+            $caller->send(Operation::CreateFulfilment, query: ['draft' => true], body: ['token' => 'Hello']);
             self::fail('A keyed write with a query was sent.');
         } catch (LogicException $exception) {
-            self::assertStringContainsString(Operation::CreateArticle->value, $exception->getMessage());
+            self::assertStringContainsString(Operation::CreateFulfilment->value, $exception->getMessage());
         }
 
         self::assertSame([], $provider->siteRequests());

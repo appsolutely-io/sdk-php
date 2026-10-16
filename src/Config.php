@@ -8,7 +8,6 @@ use Appsolutely\Sdk\Api\RetryPolicy;
 use Appsolutely\Sdk\Cache\TokenLock;
 use Appsolutely\Sdk\Exception\InvalidConfigException;
 use Appsolutely\Sdk\Exception\NotSerializableException;
-use Appsolutely\Sdk\Http\BearerToken;
 use Appsolutely\Sdk\Http\SecureUrl;
 use Appsolutely\Sdk\Oidc\ClientAuthentication;
 use Appsolutely\Sdk\Support\Untrusted;
@@ -22,8 +21,8 @@ use Psr\SimpleCache\CacheInterface;
 /**
  * Everything the client needs to talk to one site: where its API answers
  * and, as the integration needs them, the OpenID issuer its members sign in
- * with, the OAuth client that signs them in, the administrator token issued
- * on the site for server-side calls, and the site backend's machine client. A site hosted for you and one you host yourself answer
+ * with, the OAuth client that signs them in, and the site backend's machine
+ * client. A site hosted for you and one you host yourself answer
  * the same paths in the same shapes, so moving between them changes the base
  * URL, the issuer and the credentials, nothing else.
  *
@@ -63,11 +62,9 @@ final readonly class Config
     /**
      * @param string $baseUrl the site's origin, such as `https://shop.example.com`, which every API path is joined to
      * @param string|null $issuer the site's OpenID issuer, exactly as its discovery document names it; needed for
-     *                           member sign-in and for the backend client, not for administrator calls alone
+     *                           member sign-in and for the backend client
      * @param string|null $clientId the OAuth client that signs members in, with its secret; leave both out when
      *                              the integration never signs members in (Client::oidc() is then refused)
-     * @param string|null $apiToken the long-lived administrator token issued on the site, sent on server-side
-     *                              calls; without one, those calls go out without a credential
      * @param string|null $backendClientId the site backend's machine client, registered apart from the one that
      *                                     signs members in; with its secret, Client::backend() calls as it
      * @param list<string> $backendScopes the scopes to ask the backend's token for; none asks for every scope the
@@ -87,8 +84,6 @@ final readonly class Config
         public ?string $clientId = null,
         #[\SensitiveParameter]
         private ?string $clientSecret = null,
-        #[\SensitiveParameter]
-        private ?string $apiToken = null,
         public ?ClientInterface $httpClient = null,
         public ?RequestFactoryInterface $requestFactory = null,
         public ?StreamFactoryInterface $streamFactory = null,
@@ -122,10 +117,6 @@ final readonly class Config
 
         if (($clientId === null) !== ($clientSecret === null)) {
             throw new InvalidConfigException('The member sign-in client id and secret go together: give both, or neither.');
-        }
-
-        if ($apiToken !== null && !BearerToken::isSendable($apiToken)) {
-            throw new InvalidConfigException('The administrator API token must be a non-empty run of printable ASCII characters without spaces.');
         }
 
         if (($backendClientId === null) !== ($backendClientSecret === null)) {
@@ -170,14 +161,6 @@ final readonly class Config
     }
 
     /**
-     * @internal read by the client to authenticate its calls; not a way to get the token back out
-     */
-    public function apiToken(): ?string
-    {
-        return $this->apiToken;
-    }
-
-    /**
      * @internal read by the client to authenticate its backend; not a way to get the secret back out
      */
     public function backendClientSecret(): ?string
@@ -200,7 +183,6 @@ final readonly class Config
             'issuer' => $this->issuer,
             'clientId' => $this->clientId,
             'clientSecret' => '[redacted]',
-            'apiToken' => $this->apiToken === null ? null : '[redacted]',
             'httpClient' => $this->httpClient,
             'requestFactory' => $this->requestFactory,
             'streamFactory' => $this->streamFactory,
@@ -231,7 +213,7 @@ final readonly class Config
      */
     public function __serialize(): array
     {
-        throw new NotSerializableException('A Config holds the client secret and the administrator token and is not serialized; build it again from its settings.');
+        throw new NotSerializableException('A Config holds the client secrets and is not serialized; build it again from its settings.');
     }
 
     /**
@@ -239,7 +221,7 @@ final readonly class Config
      */
     public function __unserialize(array $data): void
     {
-        throw new NotSerializableException('A Config holds the client secret and the administrator token and is not unserialized; build it again from its settings.');
+        throw new NotSerializableException('A Config holds the client secrets and is not unserialized; build it again from its settings.');
     }
 
     private static function assertIssuer(string $url): void

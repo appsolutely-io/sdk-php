@@ -28,7 +28,6 @@ final class FakeProvider
     public const string ISSUER = 'https://login.example.com';
     public const string CLIENT_ID = 'client-123';
     public const string CLIENT_SECRET = 's3cret/with+chars';
-    public const string API_TOKEN = '7|admin-token-value';
     public const string BACKEND_CLIENT_ID = 'backend-456';
     public const string BACKEND_CLIENT_SECRET = 'b4ckend/s3cret+chars';
 
@@ -104,7 +103,6 @@ final class FakeProvider
             issuer: self::ISSUER,
             clientId: self::CLIENT_ID,
             clientSecret: self::CLIENT_SECRET,
-            apiToken: self::API_TOKEN,
             httpClient: $this->http,
             requestFactory: $this->factory,
             streamFactory: $this->factory,
@@ -117,14 +115,13 @@ final class FakeProvider
         );
     }
 
-    public function client(?string $apiToken = self::API_TOKEN, ?RetryPolicy $retryPolicy = null, ?LoggerInterface $logger = null): Client
+    public function client(?RetryPolicy $retryPolicy = null, ?LoggerInterface $logger = null): Client
     {
         return new Client(new Config(
             baseUrl: self::BASE_URL,
             issuer: self::ISSUER,
             clientId: self::CLIENT_ID,
             clientSecret: self::CLIENT_SECRET,
-            apiToken: $apiToken,
             httpClient: $this->http,
             requestFactory: $this->factory,
             streamFactory: $this->factory,

@@ -12,10 +12,11 @@ use Appsolutely\Sdk\Exception\UnarrangedCallException;
 use Appsolutely\Sdk\Exception\UnauthenticatedException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Exception\ValidationFailedException;
-use Appsolutely\Sdk\Model\Article;
+use Appsolutely\Sdk\Model\Product;
 use Appsolutely\Sdk\Testing\FakeClient;
-use Appsolutely\Sdk\Tests\Resource\ContentTest;
 use Appsolutely\Sdk\Tests\Resource\MemberTest;
+use Appsolutely\Sdk\Tests\Resource\OrdersTest;
+use Appsolutely\Sdk\Tests\Resource\ProductsTest;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -29,40 +30,41 @@ final class FakeClientTest extends TestCase
 {
     public function testAnArrangedAnswerIsReadIntoTheModelAndTheCallIsRecorded(): void
     {
-        $fake = (new FakeClient())->answer(Operation::GetArticle, ContentTest::article('art-1'));
+        $fake = (new FakeClient())->answer(Operation::GetProduct, ProductsTest::product('prod-1'));
 
-        $article = $fake->client()->api()->articles()->get('art-1');
+        $product = $fake->client()->backend()->products()->get('prod-1');
 
-        self::assertSame('art-1', $article->id);
-        self::assertSame('2026-10-01T09:00:00+00:00', $article->publishedAt->format(DATE_ATOM));
-        $call = $fake->lastCall(Operation::GetArticle);
-        self::assertSame(['id' => 'art-1'], $call->pathParameters);
+        self::assertSame('prod-1', $product->id);
+        self::assertSame(1900, $product->price);
+        $call = $fake->lastCall(Operation::GetProduct);
+        self::assertSame(['id' => 'prod-1'], $call->pathParameters);
         self::assertSame([], $call->query);
         self::assertNull($call->body);
-        self::assertSame(FakeClient::ADMINISTRATOR_TOKEN, $call->token);
+        self::assertSame(FakeClient::BACKEND_TOKEN, $call->token);
+        self::assertCount(1, $fake->calls());
     }
 
     public function testAWriteRecordsItsBodyAndItsKey(): void
     {
-        $fake = (new FakeClient())->answer(Operation::CreateArticle, ContentTest::article('art-9'));
+        $fake = (new FakeClient())->answer(Operation::CreateFulfilment, self::fulfilment('tok-9'));
 
-        $created = $fake->api()->articles()->create(['title' => 'Hello', 'content' => 'Hi'], idempotencyKey: 'import-42');
-        $fake->answer(Operation::CreateArticle, ContentTest::article('art-10'));
-        $fake->api()->articles()->create(['title' => 'Again', 'content' => 'Hi']);
+        $fulfilled = $fake->backend()->fulfilments()->create('tok-9', 'LICENCE-1', 'email', idempotencyKey: 'import-42');
+        $fake->answer(Operation::CreateFulfilment, self::fulfilment('tok-10'));
+        $fake->backend()->fulfilments()->create('tok-10', 'LICENCE-2');
 
-        self::assertSame('art-9', $created->value->id);
-        self::assertFalse($created->replayed);
-        [$first, $second] = $fake->calls(Operation::CreateArticle);
-        self::assertSame(['title' => 'Hello', 'content' => 'Hi'], $first->body);
+        self::assertSame('tok-9', $fulfilled->value->token);
+        self::assertFalse($fulfilled->replayed);
+        [$first, $second] = $fake->calls(Operation::CreateFulfilment);
+        self::assertSame(['token' => 'tok-9', 'delivery_payload' => 'LICENCE-1', 'channel' => 'email'], $first->body);
         self::assertSame('import-42', $first->idempotencyKey);
         self::assertMatchesRegularExpression('/^[0-9a-f-]{36}$/D', (string) $second->idempotencyKey);
     }
 
     public function testAReplayIsArrangedWithItsHeader(): void
     {
-        $fake = (new FakeClient())->answer(Operation::CreateArticle, ContentTest::article(), headers: ['Idempotent-Replayed' => 'true']);
+        $fake = (new FakeClient())->answer(Operation::CreateFulfilment, self::fulfilment(), headers: ['Idempotent-Replayed' => 'true']);
 
-        self::assertTrue($fake->api()->articles()->create(['title' => 'Hello', 'content' => 'Hi'])->replayed);
+        self::assertTrue($fake->backend()->fulfilments()->create('tok-1', 'LICENCE-1')->replayed);
     }
 
     public function testAMemberCallCarriesTheMembersToken(): void
@@ -89,47 +91,47 @@ final class FakeClientTest extends TestCase
     public function testAListIsPagedThroughTheArrangedPagesInOrder(): void
     {
         $fake = (new FakeClient())
-            ->answerPage(Operation::ListArticles, [ContentTest::article('a')], nextCursor: 'c2')
-            ->answerPage(Operation::ListArticles, [ContentTest::article('b')]);
+            ->answerPage(Operation::ListProducts, [ProductsTest::product('a')], nextCursor: 'c2')
+            ->answerPage(Operation::ListProducts, [ProductsTest::product('b')]);
 
-        $ids = array_map(static fn(Article $article): string => $article->id, iterator_to_array($fake->api()->articles()->list(), false));
+        $ids = array_map(static fn(Product $product): string => $product->id, iterator_to_array($fake->backend()->products()->list(), false));
 
         self::assertSame(['a', 'b'], $ids);
-        self::assertSame('c2', $fake->calls(Operation::ListArticles)[1]->query['cursor'] ?? null);
+        self::assertSame('c2', $fake->calls(Operation::ListProducts)[1]->query['cursor'] ?? null);
     }
 
     public function testTheLastArrangedAnswerKeepsAnswering(): void
     {
-        $fake = (new FakeClient())->answer(Operation::GetProduct, ContentTest::product('p-1'));
+        $fake = (new FakeClient())->answer(Operation::GetProduct, ProductsTest::product('p-1'));
 
-        $fake->api()->products()->get('p-1');
-        $fake->api()->products()->get('p-1');
+        $fake->backend()->products()->get('p-1');
+        $fake->backend()->products()->get('p-1');
 
         self::assertCount(2, $fake->calls(Operation::GetProduct));
     }
 
     public function testARefusalIsThrownAsTheSitesProblemWouldBe(): void
     {
-        $fake = (new FakeClient())->refuse(Operation::UpdateArticle, 'validation-failed', 422, 'The request did not pass validation.', detail: 'The title is too long.', members: ['errors' => ['title' => ['Too long.']]]);
+        $fake = (new FakeClient())->refuse(Operation::UpdateMeAddress, 'validation-failed', 422, 'The request did not pass validation.', detail: 'The city is too long.', members: ['errors' => ['city' => ['Too long.']]]);
 
         try {
-            $fake->api()->articles()->update('art-1', ['title' => str_repeat('x', 300)]);
+            $fake->forMember()->api()->me()->addresses()->update('addr-1', ['city' => str_repeat('x', 300)]);
             self::fail('The refusal was not thrown.');
         } catch (ValidationFailedException $exception) {
             self::assertSame('https://appsolutely.io/problems/validation-failed', $exception->type);
             self::assertSame('The request did not pass validation.', $exception->title);
-            self::assertSame('The title is too long.', $exception->detail);
-            self::assertSame(['title' => ['Too long.']], $exception->errors);
-            self::assertSame($fake->lastCall(Operation::UpdateArticle)->requestId, $exception->requestId);
+            self::assertSame('The city is too long.', $exception->detail);
+            self::assertSame(['city' => ['Too long.']], $exception->errors);
+            self::assertSame($fake->lastCall(Operation::UpdateMeAddress)->requestId, $exception->requestId);
         }
     }
 
     public function testAnEmptyDetailIsLeftOutAsTheSiteLeavesItOut(): void
     {
-        $fake = (new FakeClient())->refuse(Operation::GetOrder, 'not-found', 404, 'Not found.', detail: '');
+        $fake = (new FakeClient())->refuse(Operation::GetMeOrder, 'not-found', 404, 'Not found.', detail: '');
 
         try {
-            $fake->api()->orders()->get('ord-1');
+            $fake->forMember()->api()->me()->orders()->get('ord-1');
             self::fail('The refusal was not thrown.');
         } catch (NotFoundException $exception) {
             self::assertArrayNotHasKey('detail', $exception->problem);
@@ -153,17 +155,17 @@ final class FakeClientTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage($member);
 
-        (new FakeClient())->refuse(Operation::GetOrder, 'not-found', 404, 'Not found.', members: [$member => 'x']);
+        (new FakeClient())->refuse(Operation::GetMeOrder, 'not-found', 404, 'Not found.', members: [$member => 'x']);
     }
 
     public function testARefused401CarriesTheBearerChallengeTheSiteSends(): void
     {
         $fake = (new FakeClient())
-            ->refuse(Operation::GetOrder, 'unauthenticated', 401, 'Unauthenticated.')
+            ->refuse(Operation::GetMeOrder, 'unauthenticated', 401, 'Unauthenticated.')
             ->refuse(Operation::GetApiVersion, 'unauthenticated', 401, 'Unauthenticated.');
 
         try {
-            $fake->api()->orders()->get('ord-1');
+            $fake->forMember()->api()->me()->orders()->get('ord-1');
             self::fail('The refusal was not thrown.');
         } catch (UnauthenticatedException $exception) {
             self::assertSame('Bearer error="invalid_token"', $exception->challenge);
@@ -180,11 +182,11 @@ final class FakeClientTest extends TestCase
     public function testAMissingScopeCarriesTheChallengeNamingItAndOtherForbiddensNone(): void
     {
         $fake = (new FakeClient())
-            ->refuse(Operation::GetOrder, 'insufficient-scope', 403, 'Forbidden.', members: ['required' => 'orders:read', 'granted' => ['articles:read']])
+            ->refuse(Operation::GetMeOrder, 'insufficient-scope', 403, 'Forbidden.', members: ['required' => 'orders:read', 'granted' => ['profile']])
             ->refuse(Operation::GetApiVersion, 'forbidden', 403, 'Forbidden.');
 
         try {
-            $fake->api()->orders()->get('ord-1');
+            $fake->forMember()->api()->me()->orders()->get('ord-1');
             self::fail('The refusal was not thrown.');
         } catch (ForbiddenException $exception) {
             self::assertSame('Bearer error="insufficient_scope", scope="orders:read"', $exception->challenge);
@@ -200,10 +202,10 @@ final class FakeClientTest extends TestCase
 
     public function testAnArrangedChallengeIsKept(): void
     {
-        $fake = (new FakeClient())->refuse(Operation::GetOrder, 'unauthenticated', 401, 'Unauthenticated.', headers: ['www-authenticate' => 'Bearer realm="site"']);
+        $fake = (new FakeClient())->refuse(Operation::GetMeOrder, 'unauthenticated', 401, 'Unauthenticated.', headers: ['www-authenticate' => 'Bearer realm="site"']);
 
         try {
-            $fake->api()->orders()->get('ord-1');
+            $fake->forMember()->api()->me()->orders()->get('ord-1');
             self::fail('The refusal was not thrown.');
         } catch (UnauthenticatedException $exception) {
             self::assertSame('Bearer realm="site"', $exception->challenge);
@@ -212,10 +214,10 @@ final class FakeClientTest extends TestCase
 
     public function testARefusalIsNotRetried(): void
     {
-        $fake = (new FakeClient())->refuse(Operation::GetOrder, 'rate-limited', 429, 'Too many requests.', headers: ['Retry-After' => '1']);
+        $fake = (new FakeClient())->refuse(Operation::GetMeOrder, 'rate-limited', 429, 'Too many requests.', headers: ['Retry-After' => '1']);
 
         try {
-            $fake->api()->orders()->get('ord-1');
+            $fake->forMember()->api()->me()->orders()->get('ord-1');
             self::fail('The refusal was not thrown.');
         } catch (RateLimitedException $exception) {
             self::assertSame(1, $exception->retryAfter);
@@ -227,7 +229,7 @@ final class FakeClientTest extends TestCase
     {
         $fake = (new FakeClient())
             ->refuse(Operation::GetMeOrder, 'not-found', 404, 'Not found.')
-            ->answer(Operation::GetMeOrder, \Appsolutely\Sdk\Tests\Resource\RecordsTest::order('ord-2'));
+            ->answer(Operation::GetMeOrder, OrdersTest::order('ord-2'));
         $orders = $fake->forMember()->api()->me()->orders();
 
         try {
@@ -240,12 +242,12 @@ final class FakeClientTest extends TestCase
 
     public function testAnAnswerThatBreaksTheSchemaFailsAsARealOneWould(): void
     {
-        $fake = (new FakeClient())->answer(Operation::GetArticle, ['id' => 'art-1']);
+        $fake = (new FakeClient())->answer(Operation::GetProduct, ['id' => 'prod-1']);
 
         $this->expectException(UnexpectedResponseException::class);
-        $this->expectExceptionMessage('"title"');
+        $this->expectExceptionMessage('"type"');
 
-        $fake->api()->articles()->get('art-1');
+        $fake->backend()->products()->get('prod-1');
     }
 
     public function testACallWithNoArrangedAnswerFailsNamingTheOperation(): void
@@ -253,12 +255,12 @@ final class FakeClientTest extends TestCase
         $fake = new FakeClient();
 
         try {
-            $fake->api()->pages()->get('page-1');
+            $fake->backend()->products()->get('prod-1');
             self::fail('The call was answered.');
         } catch (UnarrangedCallException $exception) {
-            self::assertStringContainsString('getPage', $exception->getMessage());
+            self::assertStringContainsString('getProduct', $exception->getMessage());
         }
-        self::assertSame(Operation::GetPage, $fake->calls()[0]->operation);
+        self::assertSame(Operation::GetProduct, $fake->calls()[0]->operation);
     }
 
     public function testARawCallOutsideTheDocumentFails(): void
@@ -278,6 +280,24 @@ final class FakeClientTest extends TestCase
         self::assertSame([], $fake->calls());
         $this->expectException(\LogicException::class);
         $fake->lastCall(Operation::GetMe);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function fulfilment(string $token = 'tok-1'): array
+    {
+        return ['token' => $token, 'status' => 'delivered', 'delivered_at' => '2026-10-08T12:00:00Z'];
+    }
+
+    public function testAMembersSignInIsNotAnsweredWithTheBackendsToken(): void
+    {
+        $fake = new FakeClient();
+
+        $this->expectException(UnarrangedCallException::class);
+
+        $oidc = $fake->client()->oidc();
+        $oidc->exchangeCode('member-code', $oidc->authorizationUrl('https://app.test/callback'));
     }
 
     public function testAMemberSyncPushIsAnsweredAndRecorded(): void

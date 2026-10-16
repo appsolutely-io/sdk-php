@@ -26,20 +26,6 @@ final class AdminModelContractTest extends TestCase
 {
     use SchemaReads;
 
-    /**
-     * Fields the pinned document types otherwise than the site sends them,
-     * where the models follow the site. A record's `status` and a form
-     * entry's `is_spam` are integer-backed on the site (1 or 0) and sent as
-     * JSON integers; the document declares them strings while enumerating
-     * the integers.
-     */
-    private const array ADMIN_AS_THE_SITE_SENDS = [
-        'Article' => ['status' => ['document' => ['type' => 'string', 'enum' => [1, 0]], 'site' => 1]],
-        'Page' => ['status' => ['document' => ['type' => 'string', 'enum' => [1, 0]], 'site' => 1]],
-        'Product' => ['status' => ['document' => ['type' => 'string', 'enum' => [1, 0]], 'site' => 1]],
-        'FormEntry' => ['is_spam' => ['document' => ['type' => ['string', 'null'], 'enum' => [0, 1]], 'site' => 0]],
-    ];
-
     /** @var list<class-string<AdminModel>> */
     private const array MODELS = [Article::class, Page::class, Product::class, Order::class, FormEntry::class, WebhookDelivery::class];
 
@@ -109,21 +95,6 @@ final class AdminModelContractTest extends TestCase
     }
 
     /**
-     * Each field sampled as the site sends it is one the document still
-     * declares exactly as the entry was written against: a document that
-     * comes to agree with the site, or changes otherwise, fails until the
-     * entry is dropped or rewritten.
-     */
-    public function testEachFieldSampledAsTheSiteSendsItIsStillDeclaredOtherwise(): void
-    {
-        foreach (self::ADMIN_AS_THE_SITE_SENDS as $schema => $fields) {
-            foreach ($fields as $field => $override) {
-                self::assertSame($override['document'], self::declared($schema, $field), sprintf('The pinned Administrator API document now declares %s.%s otherwise; drop or rewrite its entry.', $schema, $field));
-            }
-        }
-    }
-
-    /**
      * @return class-string<Document>
      */
     protected static function document(): string
@@ -136,6 +107,6 @@ final class AdminModelContractTest extends TestCase
      */
     protected static function asTheSiteSends(): array
     {
-        return self::ADMIN_AS_THE_SITE_SENDS;
+        return [];
     }
 }

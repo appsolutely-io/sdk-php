@@ -25,16 +25,16 @@ final class SiteApiTest extends TestCase
 {
     private const string UUID_V4 = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D';
 
-    public function testACallCarriesTheAdministratorTokenAndTheDocumentedHeaders(): void
+    public function testACallCarriesTheMembersTokenAndTheDocumentedHeaders(): void
     {
         $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->json(['version' => 'v1']));
 
-        $response = $provider->client()->api()->raw()->get('/api/v1/articles/a-1');
+        $response = $provider->client()->forMember('member-access-token')->api()->raw()->get('/api/v1/me/orders/o-1');
 
         $request = self::onlyRequest($provider);
         self::assertSame('GET', $request->getMethod());
-        self::assertSame(FakeProvider::BASE_URL . '/api/v1/articles/a-1', (string) $request->getUri());
-        self::assertSame('Bearer ' . FakeProvider::API_TOKEN, $request->getHeaderLine('Authorization'));
+        self::assertSame(FakeProvider::BASE_URL . '/api/v1/me/orders/o-1', (string) $request->getUri());
+        self::assertSame('Bearer member-access-token', $request->getHeaderLine('Authorization'));
         self::assertSame('application/json, application/problem+json', $request->getHeaderLine('Accept'));
         self::assertStringStartsWith('appsolutely-sdk-php/', $request->getHeaderLine('User-Agent'));
         self::assertMatchesRegularExpression(self::UUID_V4, $request->getHeaderLine('X-Request-Id'));
@@ -77,26 +77,26 @@ final class SiteApiTest extends TestCase
         $provider->client()->api()->raw()->get('/api/v1/version', requestId: $requestId);
     }
 
-    public function testWithoutAnAdministratorTokenACallCarriesNoCredential(): void
+    public function testAPublicCallCarriesNoCredential(): void
     {
         $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->json([]));
 
-        $provider->client(apiToken: null)->api()->raw()->get('/api/v1/version');
+        $provider->client()->api()->raw()->get('/api/v1/version');
 
         self::assertFalse(self::onlyRequest($provider)->hasHeader('Authorization'));
     }
 
-    public function testACallAsAMemberCarriesTheMembersTokenAndLeavesTheAdministratorsAlone(): void
+    public function testACallAsAMemberLeavesThePublicCallsWithoutACredential(): void
     {
         $provider = self::answering(fn(FakeProvider $provider): ResponseInterface => $provider->json([]));
         $client = $provider->client();
 
         $client->forMember('member-access-token')->api()->raw()->get('/api/v1/me');
-        $client->api()->raw()->get('/api/v1/orders');
+        $client->api()->raw()->get('/api/v1/version');
 
-        [$asMember, $asAdministrator] = $provider->siteRequests();
+        [$asMember, $asAnyone] = $provider->siteRequests();
         self::assertSame('Bearer member-access-token', $asMember->getHeaderLine('Authorization'));
-        self::assertSame('Bearer ' . FakeProvider::API_TOKEN, $asAdministrator->getHeaderLine('Authorization'));
+        self::assertFalse($asAnyone->hasHeader('Authorization'));
     }
 
     /**
@@ -263,7 +263,6 @@ final class SiteApiTest extends TestCase
             var_dump($object);
             $dumped = (string) ob_get_clean() . print_r($object, true);
 
-            self::assertStringNotContainsString(FakeProvider::API_TOKEN, $dumped);
             self::assertStringNotContainsString('member-access-token', $dumped);
         }
     }

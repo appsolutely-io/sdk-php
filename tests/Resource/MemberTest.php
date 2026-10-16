@@ -103,7 +103,7 @@ final class MemberTest extends TestCase
 
     public function testTheMembersOrdersAreListedAndRead(): void
     {
-        $site = (new SiteRecorder())->json(['data' => [RecordsTest::order()]])->json(RecordsTest::order('ord-2'));
+        $site = (new SiteRecorder())->json(['data' => [OrdersTest::order()]])->json(OrdersTest::order('ord-2'));
         $orders = self::api($site)->me()->orders();
 
         $listed = iterator_to_array($orders->list(), false);
@@ -198,7 +198,7 @@ final class MemberTest extends TestCase
         $site = (new SiteRecorder())
             ->json(['upserts' => [self::address()], 'tombstones' => [], 'next_cursor' => 'a', 'has_more' => false])
             ->json(['results' => [['mutation_id' => 'm-1', 'id' => 'addr-1', 'applied' => true, 'server_record' => self::address()]]])
-            ->json(['upserts' => [RecordsTest::order()], 'tombstones' => [], 'next_cursor' => 'b', 'has_more' => false]);
+            ->json(['upserts' => [OrdersTest::order()], 'tombstones' => [], 'next_cursor' => 'b', 'has_more' => false]);
         $sync = self::api($site)->sync();
 
         $addresses = $sync->addresses()->pull();
