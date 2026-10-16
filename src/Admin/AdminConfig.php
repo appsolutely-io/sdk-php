@@ -36,6 +36,9 @@ final readonly class AdminConfig
     /** The settings shared with a Config, checked by it. */
     public Config $site;
 
+    /** Held wrapped, so neither a dump nor an export nor an array cast shows it. */
+    private \SensitiveParameterValue $clientSecret;
+
     /**
      * @param list<string> $scopes the Administrator API scopes to ask for, at least one, such as `admin:articles:read`
      */
@@ -44,7 +47,7 @@ final readonly class AdminConfig
         public string $issuer,
         public string $clientId,
         #[\SensitiveParameter]
-        private string $clientSecret,
+        string $clientSecret,
         public array $scopes,
         public ?ClientInterface $httpClient = null,
         public ?RequestFactoryInterface $requestFactory = null,
@@ -65,6 +68,8 @@ final readonly class AdminConfig
         if ($clientSecret === '') {
             throw new InvalidConfigException('The administrator credential\'s client secret must not be empty.');
         }
+
+        $this->clientSecret = new \SensitiveParameterValue($clientSecret);
 
         if ($scopes === []) {
             throw new InvalidConfigException('An administrator credential asks for at least one Administrator API scope, such as "admin:articles:read".');
@@ -98,7 +103,10 @@ final readonly class AdminConfig
 
     public function clientSecret(): string
     {
-        return $this->clientSecret;
+        $secret = $this->clientSecret->getValue();
+        assert(is_string($secret));
+
+        return $secret;
     }
 
     /**

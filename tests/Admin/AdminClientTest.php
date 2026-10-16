@@ -132,6 +132,9 @@ final class AdminClientTest extends TestCase
         yield 'a lookalike prefix' => ['/api/admin/v1x/articles'];
         yield 'climbing out of it' => ['/api/admin/v1/../../v1/me'];
         yield 'the token endpoint' => ['/oauth/token'];
+        yield 'an encoded slash' => ['/api/admin/v1/articles%2f..%2f..%2fv1%2fme'];
+        yield 'an encoded backslash' => ['/api/admin/v1/articles%5c..%5cme'];
+        yield 'a dot segment with a parameter' => ['/api/admin/v1/..;/v1/me'];
     }
 
     #[DataProvider('pathsOutsideTheAdministratorApi')]
@@ -154,6 +157,9 @@ final class AdminClientTest extends TestCase
 
         self::assertStringNotContainsString(self::ADMIN_CLIENT_SECRET, print_r($config, true));
         self::assertStringNotContainsString(self::ADMIN_CLIENT_SECRET, print_r(new AdminClient($config), true));
+
+        self::assertStringNotContainsString(self::ADMIN_CLIENT_SECRET, var_export((array) $config, true));
+        self::assertSame(self::ADMIN_CLIENT_SECRET, $config->clientSecret());
 
         $this->expectException(NotSerializableException::class);
         serialize($config);
