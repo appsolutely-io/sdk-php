@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk;
 
 /**
- * The Site API document this client is written and tested against.
+ * The Site API and Administrator API documents this client is written and
+ * tested against, both at one commit of the site software.
  *
  * A site answers the operations of its own version of the document; an
  * operation the site has and this client lacks is still reachable through

@@ -3,16 +3,17 @@
 declare(strict_types=1);
 
 /*
- * Pins the Site API document this client is held to:
+ * Pins the Site API and Administrator API documents this client is held to:
  *
  *     composer pin-contract -- [--root=<package>] <site-software checkout> <ref>
  *
- * copies `docs/api/openapi.yaml` as it is at <ref> (a commit, a branch or a
- * tag) into tests/Contract/openapi.yaml and writes the commit <ref> names into
+ * copies `docs/api/openapi.yaml` and `docs/api/admin-openapi.yaml` as they are
+ * at <ref> (a commit, a branch or a tag) into tests/Contract/openapi.yaml and
+ * tests/Contract/admin-openapi.yaml and writes the commit <ref> names into
  * Contract::REVISION, and that commit's release into Contract::RELEASE: its
  * version tag (`v*`), or the version tag before it, the commits since and
- * the full commit, or `unreleased` when no version tag precedes it. Both files are written by the same run so they cannot name
- * different commits: both are written to temporary files first and only then
+ * the full commit, or `unreleased` when no version tag precedes it. The files are written by the same run so they cannot name
+ * different commits: all are written to temporary files first and only then
  * renamed into place, and the originals are backed up first and put back
  * when a rename fails, so nothing is changed when either cannot be read or
  * written; each file keeps its permissions. A run that finds a file such a
@@ -26,6 +27,8 @@ const DOCUMENT = 'docs/api/openapi.yaml';
 /** Where the package keeps the revision and the copy of the document, under its root. */
 const CONTRACT_FILE = 'src/Contract.php';
 const DOCUMENT_COPY = 'tests/Contract/openapi.yaml';
+const ADMIN_DOCUMENT = 'docs/api/admin-openapi.yaml';
+const ADMIN_DOCUMENT_COPY = 'tests/Contract/admin-openapi.yaml';
 /** What a run writes beside each file: the new contents, and the original until both are in place. */
 const PINNING = '.pinning';
 const UNPINNED = '.unpinned';
@@ -221,7 +224,7 @@ if (get_included_files()[0] !== __FILE__) {
     return;
 }
 
-const USAGE = "Usage: composer pin-contract -- [--root=<package>] <site-software checkout> <ref>\n\nCopies " . DOCUMENT . ' at <ref> into ' . DOCUMENT_COPY . ' and records the commit in Contract::REVISION and Contract::RELEASE (' . CONTRACT_FILE . ").\n--root=<package> pins another copy of this package than the one the tool sits in.";
+const USAGE = "Usage: composer pin-contract -- [--root=<package>] <site-software checkout> <ref>\n\nCopies " . DOCUMENT . ' and ' . ADMIN_DOCUMENT . ' at <ref> into ' . DOCUMENT_COPY . ' and ' . ADMIN_DOCUMENT_COPY . ' and records the commit in Contract::REVISION and Contract::RELEASE (' . CONTRACT_FILE . ").\n--root=<package> pins another copy of this package than the one the tool sits in.";
 
 $root = dirname(__DIR__);
 $arguments = [];
@@ -246,7 +249,8 @@ if (count($arguments) !== 2) {
 [$checkout, $ref] = $arguments;
 $contractPath = $root . '/' . CONTRACT_FILE;
 $documentPath = $root . '/' . DOCUMENT_COPY;
-refuseLeftovers([$contractPath, $documentPath]);
+$adminDocumentPath = $root . '/' . ADMIN_DOCUMENT_COPY;
+refuseLeftovers([$contractPath, $documentPath, $adminDocumentPath]);
 
 [$exitCode, $commit, $error] = git($checkout, ['rev-parse', '--verify', '--quiet', '--end-of-options', $ref . '^{commit}']);
 $commit = trim($commit);
@@ -272,6 +276,11 @@ if ($exitCode !== 0 || $document === '') {
     fail(sprintf('%s has no %s at %s. %s', $checkout, DOCUMENT, $commit, trim($error)));
 }
 
+[$exitCode, $adminDocument, $error] = git($checkout, ['show', $commit . ':' . ADMIN_DOCUMENT]);
+if ($exitCode !== 0 || $adminDocument === '') {
+    fail(sprintf('%s has no %s at %s. %s', $checkout, ADMIN_DOCUMENT, $commit, trim($error)));
+}
+
 $contract = file_get_contents($contractPath);
 if ($contract === false) {
     fail(sprintf('%s could not be read.', $contractPath));
@@ -288,9 +297,10 @@ if ($pinned === null || $count !== 1) {
 $warnings = writeAll([
     $contractPath => $pinned,
     $documentPath => $document,
+    $adminDocumentPath => $adminDocument,
 ]);
 
-fwrite(STDOUT, sprintf("Pinned %s at %s (%s, %s).\n", DOCUMENT, $commit, $ref, $release));
+fwrite(STDOUT, sprintf("Pinned %s and %s at %s (%s, %s).\n", DOCUMENT, ADMIN_DOCUMENT, $commit, $ref, $release));
 foreach ($warnings as $warning) {
     fwrite(STDERR, $warning . "\n");
 }

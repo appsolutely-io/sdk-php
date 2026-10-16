@@ -24,6 +24,9 @@ final class PinContractTest extends TestCase
     private const string CONTRACT_FILE = 'src/Contract.php';
     private const string DOCUMENT_COPY = 'tests/Contract/openapi.yaml';
     private const string SITE_DOCUMENT = 'docs/api/openapi.yaml';
+    private const string ADMIN_DOCUMENT = "openapi: 3.1.0\ninfo:\n  title: Administrator API\n  version: v1\npaths: {}\n";
+    private const string ADMIN_DOCUMENT_COPY = 'tests/Contract/admin-openapi.yaml';
+    private const string SITE_ADMIN_DOCUMENT = 'docs/api/admin-openapi.yaml';
     /** What a run leaves beside a file it writes: the new contents, and the original until both are in place. */
     private const string PINNING = '.pinning';
     private const string UNPINNED = '.unpinned';
@@ -75,6 +78,7 @@ final class PinContractTest extends TestCase
 
         self::assertSame(0, $exitCode, $output);
         self::assertSame(self::DOCUMENT, file_get_contents($this->package(self::DOCUMENT_COPY)));
+        self::assertSame(self::ADMIN_DOCUMENT, file_get_contents($this->package(self::ADMIN_DOCUMENT_COPY)));
         self::assertStringContainsString("public const string REVISION = '" . $first . "';", (string) file_get_contents($this->package(self::CONTRACT_FILE)));
         self::assertStringContainsString("public const string RELEASE = 'v0.19.0';", (string) file_get_contents($this->package(self::CONTRACT_FILE)));
         self::assertStringContainsString($first, $output);
@@ -143,6 +147,20 @@ final class PinContractTest extends TestCase
         self::assertFileDoesNotExist($this->package(self::DOCUMENT_COPY));
     }
 
+    public function testARefWithoutTheAdministratorApiDocumentChangesNothing(): void
+    {
+        $this->commitDocument(self::DOCUMENT, null);
+        $before = (string) file_get_contents($this->package(self::CONTRACT_FILE));
+
+        [$exitCode, $output] = $this->pin('main');
+
+        self::assertNotSame(0, $exitCode);
+        self::assertStringContainsString(self::SITE_ADMIN_DOCUMENT, $output);
+        self::assertSame($before, file_get_contents($this->package(self::CONTRACT_FILE)));
+        self::assertFileDoesNotExist($this->package(self::DOCUMENT_COPY));
+        self::assertFileDoesNotExist($this->package(self::ADMIN_DOCUMENT_COPY));
+    }
+
     public function testARefThatNamesNoCommitIsRefused(): void
     {
         $this->commitDocument(self::DOCUMENT);
@@ -195,7 +213,7 @@ final class PinContractTest extends TestCase
      */
     public static function leftovers(): iterable
     {
-        foreach ([self::CONTRACT_FILE, self::DOCUMENT_COPY] as $file) {
+        foreach ([self::CONTRACT_FILE, self::DOCUMENT_COPY, self::ADMIN_DOCUMENT_COPY] as $file) {
             foreach ([self::PINNING, self::UNPINNED] as $suffix) {
                 yield $file . $suffix => [$file . $suffix];
             }
@@ -320,13 +338,17 @@ final class PinContractTest extends TestCase
         return $this->scratch . '/site' . ($path === '' ? '' : '/' . $path);
     }
 
-    private function commitDocument(string $contents): string
+    private function commitDocument(string $contents, ?string $adminContents = self::ADMIN_DOCUMENT): string
     {
         if (!is_dir($this->site('.git'))) {
             $this->git('init', '--quiet', '--initial-branch=main');
         }
         file_put_contents($this->site(self::SITE_DOCUMENT), $contents);
         $this->git('add', self::SITE_DOCUMENT);
+        if ($adminContents !== null) {
+            file_put_contents($this->site(self::SITE_ADMIN_DOCUMENT), $adminContents);
+            $this->git('add', self::SITE_ADMIN_DOCUMENT);
+        }
         $this->git('-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'document');
 
         return trim($this->git('rev-parse', 'HEAD'));
