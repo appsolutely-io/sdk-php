@@ -19,7 +19,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **BREAKING:** the client is held to the Site API document of the site software at the release that retires administrator tokens on the Site API (`Contract::REVISION`). The site no longer answers an administrator on the Site API: an administrator's work goes through `AdminClient` and the Administrator API.
+- **BREAKING:** the client is held to the Site API document of the site software v0.32.0 (`Contract::REVISION`). The site no longer answers an administrator on the Site API: an administrator's work goes through `AdminClient` and the Administrator API.
 - **BREAKING:** `Client::api()` returns `Api\PublicApi`, the calls anyone may make (`version()`, `openApiDocument()`, `magicLink()` and an untyped `raw()`), sent without a credential. `Api\AdministratorApi` is removed.
 - **BREAKING:** the product catalogue is the backend's alone: `Resource\Products` moves to `Resource\Backend\Products`, reached from `backend()->products()` with the `catalogue:read` scope.
 - **BREAKING:** `Model\EndpointWebhookDelivery` holds the delivery's fields itself (`$webhookId`, `$type`, `$status`, `$attempts` and the times), as its schema does, in place of a nested `$delivery`.

@@ -1226,7 +1226,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, slug: { type: [string, 'null'] }, status: { type: string, enum: [1, 0] }, cover: { type: [string, 'null'] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, published_at: { type: string, format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { title: { type: string }, slug: { type: [string, 'null'] }, status: { type: integer, enum: [1, 0] }, cover: { type: [string, 'null'] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, published_at: { type: string, format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
               required: [title, status, published_at]
       responses:
         201:
@@ -1332,7 +1332,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, slug: { type: [string, 'null'] }, status: { type: string, enum: [1, 0] }, cover: { type: [string, 'null'] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, published_at: { type: string, format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { title: { type: string }, slug: { type: [string, 'null'] }, status: { type: integer, enum: [1, 0] }, cover: { type: [string, 'null'] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, published_at: { type: string, format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
       responses:
         200:
           description: 'The record.'
@@ -1525,7 +1525,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, slug: { type: [string, 'null'] }, categories: { type: [array, 'null'], items: { type: string, format: uuid } }, sort: { type: [integer, 'null'] }, published_at: { type: string, format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, status: { type: string, enum: [1, 0] }, cover: { type: [string, 'null'] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, content: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { title: { type: string }, slug: { type: [string, 'null'] }, categories: { type: [array, 'null'], items: { type: string, format: uuid } }, sort: { type: [integer, 'null'] }, published_at: { type: string, format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, status: { type: integer, enum: [1, 0] }, cover: { type: [string, 'null'] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, content: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
               required: [title, published_at, status]
       responses:
         201:
@@ -1631,7 +1631,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, slug: { type: [string, 'null'] }, categories: { type: [array, 'null'], items: { type: string, format: uuid } }, sort: { type: [integer, 'null'] }, published_at: { type: string, format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, status: { type: string, enum: [1, 0] }, cover: { type: [string, 'null'] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, content: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { title: { type: string }, slug: { type: [string, 'null'] }, categories: { type: [array, 'null'], items: { type: string, format: uuid } }, sort: { type: [integer, 'null'] }, published_at: { type: string, format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, status: { type: integer, enum: [1, 0] }, cover: { type: [string, 'null'] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, content: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
       responses:
         200:
           description: 'The record.'
@@ -3189,7 +3189,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { type: { type: [string, 'null'] }, title: { type: [string, 'null'] }, status: { type: [string, 'null'], enum: [1, 0] }, sort_order: { type: [integer, 'null'] }, keyword: { type: [string, 'null'] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, description: { type: [string, 'null'] }, content: { type: [string, 'null'] }, config: { type: [string, 'null'] } }
+              properties: { type: { type: [string, 'null'] }, title: { type: [string, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] }, sort_order: { type: [integer, 'null'] }, keyword: { type: [string, 'null'] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, description: { type: [string, 'null'] }, content: { type: [string, 'null'] }, config: { type: [string, 'null'] } }
       responses:
         200:
           description: 'The record.'
@@ -3792,7 +3792,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string }, slug: { type: string }, status: { type: string, enum: [1, 0] }, description: { type: [string, 'null'] }, target_table: { type: [string, 'null'] }, meta_keys_to_collect: { type: [string, 'null'] }, api_access_token: { type: [string, 'null'] } }
+              properties: { name: { type: string }, slug: { type: string }, status: { type: integer, enum: [1, 0] }, description: { type: [string, 'null'] }, target_table: { type: [string, 'null'] }, meta_keys_to_collect: { type: [string, 'null'] }, api_access_token: { type: [string, 'null'] } }
               required: [name, slug, status]
       responses:
         201:
@@ -3898,7 +3898,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string }, slug: { type: string }, status: { type: string, enum: [1, 0] }, description: { type: [string, 'null'] }, target_table: { type: [string, 'null'] }, meta_keys_to_collect: { type: [string, 'null'] }, api_access_token: { type: [string, 'null'] } }
+              properties: { name: { type: string }, slug: { type: string }, status: { type: integer, enum: [1, 0] }, description: { type: [string, 'null'] }, target_table: { type: [string, 'null'] }, meta_keys_to_collect: { type: [string, 'null'] }, api_access_token: { type: [string, 'null'] } }
       responses:
         200:
           description: 'The record.'
@@ -5495,7 +5495,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, reference: { type: [string, 'null'] }, url: { type: [string, 'null'] }, type: { type: [string, 'null'], enum: [link, dropdown, divider, label, custom] }, target: { type: [string, 'null'], enum: [_self, _blank, _parent, _top, modal, iframe] }, is_external: { type: boolean }, icon: { type: [string, 'null'] }, thumbnail: { type: [string, 'null'] }, permission_key: { type: [string, 'null'] }, status: { type: string, enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { title: { type: string }, reference: { type: [string, 'null'] }, url: { type: [string, 'null'] }, type: { type: [string, 'null'], enum: [link, dropdown, divider, label, custom] }, target: { type: [string, 'null'], enum: [_self, _blank, _parent, _top, modal, iframe] }, is_external: { type: boolean }, icon: { type: [string, 'null'] }, thumbnail: { type: [string, 'null'] }, permission_key: { type: [string, 'null'] }, status: { type: integer, enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
               required: [title, status]
       responses:
         201:
@@ -5601,7 +5601,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, reference: { type: [string, 'null'] }, url: { type: [string, 'null'] }, type: { type: [string, 'null'], enum: [link, dropdown, divider, label, custom] }, target: { type: [string, 'null'], enum: [_self, _blank, _parent, _top, modal, iframe] }, is_external: { type: boolean }, icon: { type: [string, 'null'] }, thumbnail: { type: [string, 'null'] }, permission_key: { type: [string, 'null'] }, status: { type: string, enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { title: { type: string }, reference: { type: [string, 'null'] }, url: { type: [string, 'null'] }, type: { type: [string, 'null'], enum: [link, dropdown, divider, label, custom] }, target: { type: [string, 'null'], enum: [_self, _blank, _parent, _top, modal, iframe] }, is_external: { type: boolean }, icon: { type: [string, 'null'] }, thumbnail: { type: [string, 'null'] }, permission_key: { type: [string, 'null'] }, status: { type: integer, enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
       responses:
         200:
           description: 'The record.'
@@ -6076,7 +6076,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string }, template_id: { type: string, format: uuid }, sender_id: { type: [string, 'null'], format: uuid }, trigger_type: { type: string, enum: [form_submission, user_registration, order_placed, support_ticket_member_message, support_ticket_admin_reply, order_revived, payment_arrived_late, payment_approval_lapsed, carried_payment_closed, refund_requested, refund_approved, refund_declined, refund_paid, subscription_started, subscription_renewed, subscription_payment_due, subscription_payment_failed, subscription_ended, subscription_extended, subscription_seats_freed, subscription_authentication_required, admin_api_failed_authentication, admin_api_new_address, admin_api_volume, admin_api_out_of_scope] }, trigger_reference: { type: [string, 'null'] }, delay_minutes: { type: [integer, 'null'] }, recipient_type: { type: string, enum: [admin, user, custom, conditional] }, status: { type: [string, 'null'], enum: [1, 0] }, recipient_emails: { type: [array, 'null'], items: { type: string } }, conditions: { type: [string, 'null'] } }
+              properties: { name: { type: string }, template_id: { type: string, format: uuid }, sender_id: { type: [string, 'null'], format: uuid }, trigger_type: { type: string, enum: [form_submission, user_registration, order_placed, support_ticket_member_message, support_ticket_admin_reply, order_revived, payment_arrived_late, payment_approval_lapsed, carried_payment_closed, refund_requested, refund_approved, refund_declined, refund_paid, subscription_started, subscription_renewed, subscription_payment_due, subscription_payment_failed, subscription_ended, subscription_extended, subscription_seats_freed, subscription_plan_change_withdrawn, subscription_authentication_required, admin_api_failed_authentication, admin_api_new_address, admin_api_volume, admin_api_out_of_scope] }, trigger_reference: { type: [string, 'null'] }, delay_minutes: { type: [integer, 'null'] }, recipient_type: { type: string, enum: [admin, user, custom, conditional] }, status: { type: [integer, 'null'], enum: [1, 0] }, recipient_emails: { type: [array, 'null'], items: { type: string } }, conditions: { type: [string, 'null'] } }
               required: [name, template_id, trigger_type, recipient_type]
       responses:
         201:
@@ -6184,7 +6184,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string }, template_id: { type: string, format: uuid }, sender_id: { type: [string, 'null'], format: uuid }, trigger_type: { type: string, enum: [form_submission, user_registration, order_placed, support_ticket_member_message, support_ticket_admin_reply, order_revived, payment_arrived_late, payment_approval_lapsed, carried_payment_closed, refund_requested, refund_approved, refund_declined, refund_paid, subscription_started, subscription_renewed, subscription_payment_due, subscription_payment_failed, subscription_ended, subscription_extended, subscription_seats_freed, subscription_authentication_required, admin_api_failed_authentication, admin_api_new_address, admin_api_volume, admin_api_out_of_scope] }, trigger_reference: { type: [string, 'null'] }, delay_minutes: { type: [integer, 'null'] }, recipient_type: { type: string, enum: [admin, user, custom, conditional] }, status: { type: [string, 'null'], enum: [1, 0] }, recipient_emails: { type: [array, 'null'], items: { type: string } }, conditions: { type: [string, 'null'] } }
+              properties: { name: { type: string }, template_id: { type: string, format: uuid }, sender_id: { type: [string, 'null'], format: uuid }, trigger_type: { type: string, enum: [form_submission, user_registration, order_placed, support_ticket_member_message, support_ticket_admin_reply, order_revived, payment_arrived_late, payment_approval_lapsed, carried_payment_closed, refund_requested, refund_approved, refund_declined, refund_paid, subscription_started, subscription_renewed, subscription_payment_due, subscription_payment_failed, subscription_ended, subscription_extended, subscription_seats_freed, subscription_plan_change_withdrawn, subscription_authentication_required, admin_api_failed_authentication, admin_api_new_address, admin_api_volume, admin_api_out_of_scope] }, trigger_reference: { type: [string, 'null'] }, delay_minutes: { type: [integer, 'null'] }, recipient_type: { type: string, enum: [admin, user, custom, conditional] }, status: { type: [integer, 'null'], enum: [1, 0] }, recipient_emails: { type: [array, 'null'], items: { type: string } }, conditions: { type: [string, 'null'] } }
       responses:
         200:
           description: 'The record.'
@@ -6567,7 +6567,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string }, slug: { type: string }, category: { type: [string, 'null'] }, status: { type: string, enum: [1, 0] }, subject: { type: [string, 'null'] }, body_html: { type: [string, 'null'] }, body_text: { type: [string, 'null'] }, variables: { type: [string, 'null'] } }
+              properties: { name: { type: string }, slug: { type: string }, category: { type: [string, 'null'] }, status: { type: integer, enum: [1, 0] }, subject: { type: [string, 'null'] }, body_html: { type: [string, 'null'] }, body_text: { type: [string, 'null'] }, variables: { type: [string, 'null'] } }
               required: [name, slug, status]
       responses:
         201:
@@ -6675,7 +6675,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string }, slug: { type: string }, category: { type: [string, 'null'] }, status: { type: string, enum: [1, 0] }, subject: { type: [string, 'null'] }, body_html: { type: [string, 'null'] }, body_text: { type: [string, 'null'] }, variables: { type: [string, 'null'] } }
+              properties: { name: { type: string }, slug: { type: string }, category: { type: [string, 'null'] }, status: { type: integer, enum: [1, 0] }, subject: { type: [string, 'null'] }, body_html: { type: [string, 'null'] }, body_text: { type: [string, 'null'] }, variables: { type: [string, 'null'] } }
       responses:
         200:
           description: 'The record.'
@@ -7962,7 +7962,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, remark: { type: [string, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [string, 'null'], enum: [1, 0] } }
+              properties: { title: { type: string }, remark: { type: [string, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] } }
               required: [title]
       responses:
         201:
@@ -8071,7 +8071,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, remark: { type: [string, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [string, 'null'], enum: [1, 0] } }
+              properties: { title: { type: string }, remark: { type: [string, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] } }
       responses:
         200:
           description: 'The record.'
@@ -8252,7 +8252,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { type: { type: [string, 'null'] }, remark: { type: [string, 'null'] }, view_style: { type: [string, 'null'] }, anchor_label: { type: [string, 'null'] }, name: { type: [string, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [string, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time } }
+              properties: { type: { type: [string, 'null'] }, remark: { type: [string, 'null'] }, view_style: { type: [string, 'null'] }, anchor_label: { type: [string, 'null'] }, name: { type: [string, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time } }
       responses:
         200:
           description: 'The record.'
@@ -8368,7 +8368,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { block_group_id: { type: string, format: uuid }, title: { type: string }, class: { type: string }, remark: { type: [string, 'null'] }, description: { type: [string, 'null'] }, instruction: { type: [string, 'null'] }, scope: { type: string, enum: [page, global] }, droppable: { type: [boolean, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [string, 'null'], enum: [1, 0] }, template: { type: [string, 'null'] }, query_options: { type: [string, 'null'] }, query_options_definition: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { block_group_id: { type: string, format: uuid }, title: { type: string }, class: { type: string }, remark: { type: [string, 'null'] }, description: { type: [string, 'null'] }, instruction: { type: [string, 'null'] }, scope: { type: string, enum: [page, global] }, droppable: { type: [boolean, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] }, template: { type: [string, 'null'] }, query_options: { type: [string, 'null'] }, query_options_definition: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
               required: [block_group_id, title, class, scope]
       responses:
         201:
@@ -8477,7 +8477,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { block_group_id: { type: string, format: uuid }, title: { type: string }, class: { type: string }, remark: { type: [string, 'null'] }, description: { type: [string, 'null'] }, instruction: { type: [string, 'null'] }, scope: { type: string, enum: [page, global] }, droppable: { type: [boolean, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [string, 'null'], enum: [1, 0] }, template: { type: [string, 'null'] }, query_options: { type: [string, 'null'] }, query_options_definition: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { block_group_id: { type: string, format: uuid }, title: { type: string }, class: { type: string }, remark: { type: [string, 'null'] }, description: { type: [string, 'null'] }, instruction: { type: [string, 'null'] }, scope: { type: string, enum: [page, global] }, droppable: { type: [boolean, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] }, template: { type: [string, 'null'] }, query_options: { type: [string, 'null'] }, query_options_definition: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
       responses:
         200:
           description: 'The record.'
@@ -9020,7 +9020,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, slug: { type: [string, 'null'] }, name: { type: [string, 'null'] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, status: { type: string, enum: [1, 0] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, h1_text: { type: [string, 'null'] }, canonical_url: { type: [string, 'null'], format: uri }, og_title: { type: [string, 'null'] }, og_image: { type: [string, 'null'] }, og_description: { type: [string, 'null'] }, meta_robots: { type: [string, 'null'] }, language: { type: [string, 'null'] }, hreflang: { type: [string, 'null'] }, structured_data: { type: [object, 'null'], additionalProperties: { type: string } }, setting: { type: [object, 'null'], additionalProperties: { type: string } }, parent_id: { type: [string, 'null'], format: uuid } }
+              properties: { title: { type: string }, slug: { type: [string, 'null'] }, name: { type: [string, 'null'] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, status: { type: integer, enum: [1, 0] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, h1_text: { type: [string, 'null'] }, canonical_url: { type: [string, 'null'], format: uri }, og_title: { type: [string, 'null'] }, og_image: { type: [string, 'null'] }, og_description: { type: [string, 'null'] }, meta_robots: { type: [string, 'null'] }, language: { type: [string, 'null'] }, hreflang: { type: [string, 'null'] }, structured_data: { type: [object, 'null'], additionalProperties: { type: string } }, setting: { type: [object, 'null'], additionalProperties: { type: string } }, parent_id: { type: [string, 'null'], format: uuid } }
               required: [title, status]
       responses:
         201:
@@ -9183,7 +9183,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, slug: { type: [string, 'null'] }, name: { type: [string, 'null'] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, status: { type: string, enum: [1, 0] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, h1_text: { type: [string, 'null'] }, canonical_url: { type: [string, 'null'], format: uri }, og_title: { type: [string, 'null'] }, og_image: { type: [string, 'null'] }, og_description: { type: [string, 'null'] }, meta_robots: { type: [string, 'null'] }, language: { type: [string, 'null'] }, hreflang: { type: [string, 'null'] }, structured_data: { type: [object, 'null'], additionalProperties: { type: string } }, setting: { type: [object, 'null'], additionalProperties: { type: string } }, parent_id: { type: [string, 'null'], format: uuid } }
+              properties: { title: { type: string }, slug: { type: [string, 'null'] }, name: { type: [string, 'null'] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, status: { type: integer, enum: [1, 0] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, h1_text: { type: [string, 'null'] }, canonical_url: { type: [string, 'null'], format: uri }, og_title: { type: [string, 'null'] }, og_image: { type: [string, 'null'] }, og_description: { type: [string, 'null'] }, meta_robots: { type: [string, 'null'] }, language: { type: [string, 'null'] }, hreflang: { type: [string, 'null'] }, structured_data: { type: [object, 'null'], additionalProperties: { type: string } }, setting: { type: [object, 'null'], additionalProperties: { type: string } }, parent_id: { type: [string, 'null'], format: uuid } }
       responses:
         200:
           description: 'The record.'
@@ -10627,7 +10627,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, slug: { type: [string, 'null'] }, kind: { type: string, enum: [spec, variant] }, filterable: { type: boolean }, filter_mode: { type: string, enum: [single, multi] }, filter_sort: { type: [integer, 'null'] }, status: { type: string, enum: [0, 1] }, remark: { type: [string, 'null'] }, values: { type: [array, 'null'], items: { type: object } } }
+              properties: { title: { type: string }, slug: { type: [string, 'null'] }, kind: { type: string, enum: [spec, variant] }, filterable: { type: boolean }, filter_mode: { type: string, enum: [single, multi] }, filter_sort: { type: [integer, 'null'] }, status: { type: integer, enum: [0, 1] }, remark: { type: [string, 'null'] }, values: { type: [array, 'null'], items: { type: object } } }
               required: [title, kind, filter_mode, status]
       responses:
         201:
@@ -10733,7 +10733,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, slug: { type: [string, 'null'] }, kind: { type: string, enum: [spec, variant] }, filterable: { type: boolean }, filter_mode: { type: string, enum: [single, multi] }, filter_sort: { type: [integer, 'null'] }, status: { type: string, enum: [0, 1] }, remark: { type: [string, 'null'] }, values: { type: [array, 'null'], items: { type: object } } }
+              properties: { title: { type: string }, slug: { type: [string, 'null'] }, kind: { type: string, enum: [spec, variant] }, filterable: { type: boolean }, filter_mode: { type: string, enum: [single, multi] }, filter_sort: { type: [integer, 'null'] }, status: { type: integer, enum: [0, 1] }, remark: { type: [string, 'null'] }, values: { type: [array, 'null'], items: { type: object } } }
       responses:
         200:
           description: 'The record.'
@@ -10850,7 +10850,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, slug: { type: [string, 'null'] }, status: { type: string, enum: [1, 0] }, cover: { type: [string, 'null'] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, published_at: { type: string, format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { title: { type: string }, slug: { type: [string, 'null'] }, status: { type: integer, enum: [1, 0] }, cover: { type: [string, 'null'] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, published_at: { type: string, format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
               required: [title, status, published_at]
       responses:
         201:
@@ -10956,7 +10956,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string }, slug: { type: [string, 'null'] }, status: { type: string, enum: [1, 0] }, cover: { type: [string, 'null'] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, published_at: { type: string, format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { title: { type: string }, slug: { type: [string, 'null'] }, status: { type: integer, enum: [1, 0] }, cover: { type: [string, 'null'] }, description: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, published_at: { type: string, format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
       responses:
         200:
           description: 'The record.'
@@ -11338,7 +11338,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { type: { type: string, enum: [physical, auto_virtual, manual_virtual, subscription, voucher] }, status: { type: string, enum: [1, 0] }, voucher_purpose: { type: [string, 'null'], enum: [single_purpose, multi_purpose] }, voucher_supply: { type: [string, 'null'], enum: [goods, services] }, voucher_place: { type: [string, 'null'] }, voucher_product_id: { type: [string, 'null'], format: uuid }, voucher_valid_days: { type: [integer, 'null'] }, pack_valid_days: { type: [integer, 'null'] }, per_seat: { type: boolean }, plan_family: { type: [string, 'null'] }, shipment_methods: { type: [array, 'null'], items: { type: string, enum: [App\Models\UserAddress, App\Models\User, Email, Mobile, Whatsapp, Telegram, WeChat, Weixin] } }, categories: { type: [array, 'null'], items: { type: string, format: uuid } }, spec_values: { type: [array, 'null'], items: { type: string, format: uuid } }, title: { type: string }, subtitle: { type: [string, 'null'] }, slug: { type: [string, 'null'] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, cover: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, description: { type: [string, 'null'] }, payment_methods: { type: [array, 'null'], items: { type: string, enum: [credit_card, debit_card, bank_transfer, e_wallet, qr_code, crypto, cash_on_delivery, buy_now_pay_later] } }, sort: { type: [integer, 'null'] }, content: { type: string }, setting: { type: [object, 'null'], additionalProperties: { type: string } }, additional_columns: { type: [array, 'null'], items: { type: object } }, skus: { type: [array, 'null'], items: { type: object } } }
+              properties: { type: { type: string, enum: [physical, auto_virtual, manual_virtual, subscription, voucher] }, status: { type: integer, enum: [1, 0] }, voucher_purpose: { type: [string, 'null'], enum: [single_purpose, multi_purpose] }, voucher_supply: { type: [string, 'null'], enum: [goods, services] }, voucher_place: { type: [string, 'null'] }, voucher_product_id: { type: [string, 'null'], format: uuid }, voucher_valid_days: { type: [integer, 'null'] }, pack_valid_days: { type: [integer, 'null'] }, per_seat: { type: boolean }, plan_family: { type: [string, 'null'] }, shipment_methods: { type: [array, 'null'], items: { type: string, enum: [App\Models\UserAddress, App\Models\User, Email, Mobile, Whatsapp, Telegram, WeChat, Weixin] } }, categories: { type: [array, 'null'], items: { type: string, format: uuid } }, spec_values: { type: [array, 'null'], items: { type: string, format: uuid } }, title: { type: string }, subtitle: { type: [string, 'null'] }, slug: { type: [string, 'null'] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, cover: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, description: { type: [string, 'null'] }, payment_methods: { type: [array, 'null'], items: { type: string, enum: [credit_card, debit_card, bank_transfer, e_wallet, qr_code, crypto, cash_on_delivery, buy_now_pay_later] } }, sort: { type: [integer, 'null'] }, content: { type: string }, setting: { type: [object, 'null'], additionalProperties: { type: string } }, additional_columns: { type: [array, 'null'], items: { type: object } }, skus: { type: [array, 'null'], items: { type: object } } }
               required: [type, status, title, content]
       responses:
         201:
@@ -11445,7 +11445,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { type: { type: string, enum: [physical, auto_virtual, manual_virtual, subscription, voucher] }, status: { type: string, enum: [1, 0] }, voucher_purpose: { type: [string, 'null'], enum: [single_purpose, multi_purpose] }, voucher_supply: { type: [string, 'null'], enum: [goods, services] }, voucher_place: { type: [string, 'null'] }, voucher_product_id: { type: [string, 'null'], format: uuid }, voucher_valid_days: { type: [integer, 'null'] }, pack_valid_days: { type: [integer, 'null'] }, per_seat: { type: boolean }, plan_family: { type: [string, 'null'] }, shipment_methods: { type: [array, 'null'], items: { type: string, enum: [App\Models\UserAddress, App\Models\User, Email, Mobile, Whatsapp, Telegram, WeChat, Weixin] } }, categories: { type: [array, 'null'], items: { type: string, format: uuid } }, spec_values: { type: [array, 'null'], items: { type: string, format: uuid } }, title: { type: string }, subtitle: { type: [string, 'null'] }, slug: { type: [string, 'null'] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, cover: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, description: { type: [string, 'null'] }, payment_methods: { type: [array, 'null'], items: { type: string, enum: [credit_card, debit_card, bank_transfer, e_wallet, qr_code, crypto, cash_on_delivery, buy_now_pay_later] } }, sort: { type: [integer, 'null'] }, content: { type: string }, setting: { type: [object, 'null'], additionalProperties: { type: string } }, additional_columns: { type: [array, 'null'], items: { type: object } }, skus: { type: [array, 'null'], items: { type: object } } }
+              properties: { type: { type: string, enum: [physical, auto_virtual, manual_virtual, subscription, voucher] }, status: { type: integer, enum: [1, 0] }, voucher_purpose: { type: [string, 'null'], enum: [single_purpose, multi_purpose] }, voucher_supply: { type: [string, 'null'], enum: [goods, services] }, voucher_place: { type: [string, 'null'] }, voucher_product_id: { type: [string, 'null'], format: uuid }, voucher_valid_days: { type: [integer, 'null'] }, pack_valid_days: { type: [integer, 'null'] }, per_seat: { type: boolean }, plan_family: { type: [string, 'null'] }, shipment_methods: { type: [array, 'null'], items: { type: string, enum: [App\Models\UserAddress, App\Models\User, Email, Mobile, Whatsapp, Telegram, WeChat, Weixin] } }, categories: { type: [array, 'null'], items: { type: string, format: uuid } }, spec_values: { type: [array, 'null'], items: { type: string, format: uuid } }, title: { type: string }, subtitle: { type: [string, 'null'] }, slug: { type: [string, 'null'] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, cover: { type: [string, 'null'] }, keywords: { type: [string, 'null'] }, description: { type: [string, 'null'] }, payment_methods: { type: [array, 'null'], items: { type: string, enum: [credit_card, debit_card, bank_transfer, e_wallet, qr_code, crypto, cash_on_delivery, buy_now_pay_later] } }, sort: { type: [integer, 'null'] }, content: { type: string }, setting: { type: [object, 'null'], additionalProperties: { type: string } }, additional_columns: { type: [array, 'null'], items: { type: object } }, skus: { type: [array, 'null'], items: { type: object } } }
       responses:
         200:
           description: 'The record.'
@@ -12567,7 +12567,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { version_id: { type: string, format: uuid }, platform: { type: string, enum: [windows, darwin, linux, ios, android, other] }, arch: { type: [string, 'null'] }, status: { type: [string, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, force_update: { type: boolean }, release_notes: { type: [string, 'null'] }, gray_strategy: { type: [string, 'null'] } }
+              properties: { version_id: { type: string, format: uuid }, platform: { type: string, enum: [windows, darwin, linux, ios, android, other] }, arch: { type: [string, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, force_update: { type: boolean }, release_notes: { type: [string, 'null'] }, gray_strategy: { type: [string, 'null'] } }
               required: [version_id, platform]
       responses:
         201:
@@ -12675,7 +12675,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { version_id: { type: string, format: uuid }, platform: { type: string, enum: [windows, darwin, linux, ios, android, other] }, arch: { type: [string, 'null'] }, status: { type: [string, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, force_update: { type: boolean }, release_notes: { type: [string, 'null'] }, gray_strategy: { type: [string, 'null'] } }
+              properties: { version_id: { type: string, format: uuid }, platform: { type: string, enum: [windows, darwin, linux, ios, android, other] }, arch: { type: [string, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, force_update: { type: boolean }, release_notes: { type: [string, 'null'] }, gray_strategy: { type: [string, 'null'] } }
       responses:
         200:
           description: 'The record.'
@@ -12791,7 +12791,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { version: { type: string }, release_channel: { type: [string, 'null'], enum: [stable, beta, alpha] }, status: { type: [string, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'] } }
+              properties: { version: { type: string }, release_channel: { type: [string, 'null'], enum: [stable, beta, alpha] }, status: { type: [integer, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'] } }
               required: [version]
       responses:
         201:
@@ -12899,7 +12899,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { version: { type: string }, release_channel: { type: [string, 'null'], enum: [stable, beta, alpha] }, status: { type: [string, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'] } }
+              properties: { version: { type: string }, release_channel: { type: [string, 'null'], enum: [stable, beta, alpha] }, status: { type: [integer, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'] } }
       responses:
         200:
           description: 'The record.'
@@ -17573,7 +17573,7 @@ components:
             - 'null'
           format: date-time
         status:
-          type: string
+          type: integer
           enum:
             - 1
             - 0
@@ -17632,7 +17632,7 @@ components:
             - string
             - 'null'
         status:
-          type: string
+          type: integer
           enum:
             - 1
             - 0
@@ -18069,7 +18069,7 @@ components:
             - 'null'
         status:
           type:
-            - string
+            - integer
             - 'null'
           enum:
             - 1
@@ -18127,7 +18127,7 @@ components:
         slug:
           type: string
         status:
-          type: string
+          type: integer
           enum:
             - 1
             - 0
@@ -18194,7 +18194,7 @@ components:
           readOnly: true
         is_spam:
           type:
-            - string
+            - integer
             - 'null'
           enum:
             - 0
@@ -18640,7 +18640,7 @@ components:
             - string
             - 'null'
         status:
-          type: string
+          type: integer
           enum:
             - 1
             - 0
@@ -18952,6 +18952,7 @@ components:
             - subscription_ended
             - subscription_extended
             - subscription_seats_freed
+            - subscription_plan_change_withdrawn
             - subscription_authentication_required
             - admin_api_failed_authentication
             - admin_api_new_address
@@ -18974,7 +18975,7 @@ components:
             - conditional
         status:
           type:
-            - string
+            - integer
             - 'null'
           enum:
             - 1
@@ -19131,7 +19132,7 @@ components:
             - string
             - 'null'
         status:
-          type: string
+          type: integer
           enum:
             - 1
             - 0
@@ -19472,7 +19473,7 @@ components:
             - 'null'
           format: date-time
         status:
-          type: string
+          type: integer
           enum:
             - 1
             - 0
@@ -19602,7 +19603,7 @@ components:
             - 'null'
         status:
           type:
-            - string
+            - integer
             - 'null'
           enum:
             - 1
@@ -19663,7 +19664,7 @@ components:
             - 'null'
         status:
           type:
-            - string
+            - integer
             - 'null'
           enum:
             - 1
@@ -19734,7 +19735,7 @@ components:
             - 'null'
         status:
           type:
-            - string
+            - integer
             - 'null'
           enum:
             - 1
@@ -19952,7 +19953,7 @@ components:
             - subscription
             - voucher
         status:
-          type: string
+          type: integer
           enum:
             - 1
             - 0
@@ -20156,7 +20157,7 @@ components:
             - integer
             - 'null'
         status:
-          type: string
+          type: integer
           enum:
             - 0
             - 1
@@ -20189,7 +20190,7 @@ components:
             - string
             - 'null'
         status:
-          type: string
+          type: integer
           enum:
             - 1
             - 0
@@ -20675,7 +20676,7 @@ components:
             - 'null'
         status:
           type:
-            - string
+            - integer
             - 'null'
           enum:
             - 1
@@ -20748,7 +20749,7 @@ components:
             - alpha
         status:
           type:
-            - string
+            - integer
             - 'null'
           enum:
             - 1
