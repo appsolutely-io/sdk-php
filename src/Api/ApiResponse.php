@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Api;
 
+use Appsolutely\Sdk\Http\Header;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -29,4 +30,15 @@ final readonly class ApiResponse
         public ?string $location,
         public ResponseInterface $response,
     ) {}
+
+    /**
+     * The version the answer names in its `ETag`, to send back as `If-Match`
+     * on a write; null when it names none.
+     */
+    public function etag(): ?string
+    {
+        $etag = $this->response->getHeaderLine(Header::ETAG);
+
+        return $etag !== '' ? $etag : null;
+    }
 }

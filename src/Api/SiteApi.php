@@ -168,26 +168,29 @@ final readonly class SiteApi
 
     /**
      * @param array<string, mixed> $body
+     * @param string|null $ifMatch the `ETag` of the version read, for an API that writes only over the version it was read at
      */
-    public function put(string $path, #[\SensitiveParameter] array $body = [], ?string $requestId = null): ApiResponse
+    public function put(string $path, #[\SensitiveParameter] array $body = [], ?string $requestId = null, ?string $ifMatch = null): ApiResponse
     {
-        return $this->call('PUT', $path, [], $body, $requestId);
+        return $this->call('PUT', $path, [], $body, $requestId, ifMatch: $ifMatch);
     }
 
     /**
      * @param array<string, mixed> $body
+     * @param string|null $ifMatch the `ETag` of the version read, for an API that writes only over the version it was read at
      */
-    public function patch(string $path, #[\SensitiveParameter] array $body = [], ?string $requestId = null): ApiResponse
+    public function patch(string $path, #[\SensitiveParameter] array $body = [], ?string $requestId = null, ?string $ifMatch = null): ApiResponse
     {
-        return $this->call('PATCH', $path, [], $body, $requestId);
+        return $this->call('PATCH', $path, [], $body, $requestId, ifMatch: $ifMatch);
     }
 
     /**
      * @param array<string, string|int|bool|list<string>|null> $query
+     * @param string|null $ifMatch the `ETag` of the version read, for an API that deletes only the version it was read at
      */
-    public function delete(string $path, #[\SensitiveParameter] array $query = [], ?string $requestId = null): ApiResponse
+    public function delete(string $path, #[\SensitiveParameter] array $query = [], ?string $requestId = null, ?string $ifMatch = null): ApiResponse
     {
-        return $this->call('DELETE', $path, $query, null, $requestId);
+        return $this->call('DELETE', $path, $query, null, $requestId, ifMatch: $ifMatch);
     }
 
     /**
@@ -260,6 +263,7 @@ final readonly class SiteApi
         ?string $requestId,
         bool $retryable = false,
         ?string $idempotencyKey = null,
+        ?string $ifMatch = null,
     ): ApiResponse {
         $url = $this->url($path, $query);
         $requestId ??= Uuid::v4();
@@ -273,6 +277,10 @@ final readonly class SiteApi
         $renewed = false;
         if ($idempotencyKey !== null) {
             $headers[Header::IDEMPOTENCY_KEY] = self::structuredFieldString($idempotencyKey);
+        }
+        if ($ifMatch !== null) {
+            self::assertHeaderValue('If-Match', $ifMatch);
+            $headers[Header::IF_MATCH] = $ifMatch;
         }
         $encoded = $body === null ? null : self::encode($body);
 

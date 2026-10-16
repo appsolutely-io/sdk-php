@@ -19,6 +19,8 @@ final class Header
     public const string IDEMPOTENCY_KEY = 'Idempotency-Key';
     public const string IDEMPOTENT_REPLAYED = 'Idempotent-Replayed';
     public const string LOCATION = 'Location';
+    public const string ETAG = 'ETag';
+    public const string IF_MATCH = 'If-Match';
     public const string RATE_LIMIT = 'RateLimit';
     public const string RATE_LIMIT_POLICY = 'RateLimit-Policy';
     public const string REQUEST_ID = 'X-Request-Id';
