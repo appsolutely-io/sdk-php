@@ -48,7 +48,7 @@ final class OperationCatalogueTest extends TestCase
         self::assertSame(self::successStatuses($documented['operation']), $statuses, $id);
         self::assertSame(self::takesIdempotencyKey($documented['parameters']), $operation->takesIdempotencyKey(), $id);
         self::assertSame(self::isCursorList($documented), $operation->isCursorList(), $id);
-        self::assertSame(self::audiences($documented), $operation->audiences(), $id);
+        self::assertSame(self::audience($documented), $operation->audience(), $id);
     }
 
     public function testEveryCaseIsADocumentedOperation(): void
@@ -63,10 +63,10 @@ final class OperationCatalogueTest extends TestCase
     public function testAPathFillsEachPlaceholderEncoded(): void
     {
         self::assertSame(
-            '/api/v1/webhook-subscriptions/sub%2F1/deliveries/msg%201/redeliver',
-            Operation::RedeliverWebhookDelivery->path(['subscription' => 'sub/1', 'event' => 'msg 1']),
+            '/api/v1/role-assignments/sub%2F1/role%201',
+            Operation::AssignRoleAssignment->path(['sub' => 'sub/1', 'key' => 'role 1']),
         );
-        self::assertSame('/api/v1/articles', Operation::ListArticles->path());
+        self::assertSame('/api/v1/products', Operation::ListProducts->path());
     }
 
     /**
@@ -74,9 +74,9 @@ final class OperationCatalogueTest extends TestCase
      */
     public static function unfillablePaths(): iterable
     {
-        yield 'a missing identifier' => [Operation::GetArticle, []];
-        yield 'an empty identifier' => [Operation::GetArticle, ['id' => '']];
-        yield 'an identifier the path has no place for' => [Operation::GetArticle, ['id' => 'a-1', 'slug' => 'x']];
+        yield 'a missing identifier' => [Operation::GetProduct, []];
+        yield 'an empty identifier' => [Operation::GetProduct, ['id' => '']];
+        yield 'an identifier the path has no place for' => [Operation::GetProduct, ['id' => 'a-1', 'slug' => 'x']];
     }
 
     /**
@@ -143,36 +143,27 @@ final class OperationCatalogueTest extends TestCase
     }
 
     /**
-     * Anyone when the operation names no security requirement; otherwise one
-     * audience per requirement, in the document's order: the backend for a
-     * requirement naming the backend's scheme, and for the bearer scheme the
-     * member on the member's own routes (`/api/v1/me`, and the sync resources
-     * named `me-*`) and the administrator on the rest, as the site mounts
-     * them in two audience groups under the same bearer scheme. An operation
-     * that lists both the bearer and the backend scheme answers either.
+     * Anyone when the operation names no security requirement; otherwise the
+     * backend for the backend's scheme, and the member for the bearer scheme,
+     * which only the member's own routes (`/api/v1/me`, and the sync
+     * resources named `me-*`) carry. An operation with more than one
+     * requirement, or the bearer scheme anywhere else, is one this client
+     * has no audience for.
      *
      * @param array{method: string, path: string, operation: array<array-key, mixed>, parameters: list<array<array-key, mixed>>} $documented
-     * @return list<Audience>
      */
-    private static function audiences(array $documented): array
+    private static function audience(array $documented): Audience
     {
         $security = Document::map($documented['operation']['security'] ?? Document::get()['security'] ?? []);
         if ($security === []) {
-            return [Audience::Anyone];
+            return Audience::Anyone;
         }
+        self::assertCount(1, $security, sprintf('%s %s names more than one security requirement.', $documented['method'], $documented['path']));
 
-        $audiences = [];
-        foreach ($security as $requirement) {
-            $audience = match (true) {
-                array_key_exists(self::BACKEND_SCHEME, Document::map($requirement)) => Audience::Backend,
-                preg_match('#^/api/v1/(me(/|$)|sync/me-)#', $documented['path']) === 1 => Audience::Member,
-                default => Audience::Administrator,
-            };
-            if (!in_array($audience, $audiences, true)) {
-                $audiences[] = $audience;
-            }
-        }
-
-        return $audiences;
+        return match (true) {
+            array_key_exists(self::BACKEND_SCHEME, Document::map($security[array_key_first($security)])) => Audience::Backend,
+            preg_match('#^/api/v1/(me(/|$)|sync/me-)#', $documented['path']) === 1 => Audience::Member,
+            default => self::fail(sprintf('%s %s takes a bearer token outside the member\'s routes.', $documented['method'], $documented['path'])),
+        };
     }
 }

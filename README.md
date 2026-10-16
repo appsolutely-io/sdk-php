@@ -1,6 +1,6 @@
 # Appsolutely PHP SDK
 
-A framework-free PHP client for one app's own site: it signs the site's members in with OpenID Connect, calls the Site API as the site's administrator or as a signed-in member, and verifies the site's Standard Webhooks deliveries.
+A framework-free PHP client for one app's own site: it signs the site's members in with OpenID Connect, calls the Site API as the site's own backend or as a signed-in member, calls the Administrator API with an administrator credential, and verifies the site's Standard Webhooks deliveries.
 
 A site hosted for you and one you host yourself answer the same paths in the same shapes, so pointing the client from one to the other changes the base URL, the issuer and the credentials, nothing else.
 
@@ -13,11 +13,11 @@ Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://git
 
 ## Compatibility
 
-The client is written and tested against the Site API document of the site software v0.30.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests. `AdminClient` is held to the Administrator API document of the same commit.
+The client is written and tested against the Site API document of the site software v0.31.0-8-g45611b48dc72f07ece8532f70656dc429f44deee, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests. `AdminClient` is held to the Administrator API document of the same commit.
 
 While the site software is below 1.0.0, a minor release of it may change a path of the document's `v1` in a breaking way, and its changelog opens each such entry with `BREAKING`; this client follows such a change in a release of its own, marked the same way in its changelog. Otherwise the site adds paths and fields but never removes or retypes one. From the site software's 1.0.0, a breaking change is announced as deprecated a release ahead and arrives in a new major release. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
 
-- **A newer site** answers everything this client calls. Fields it adds stay readable in each model's `$extra`, an enumerated value it adds reads as the plain string it is (the model's constants name only the values this client knows), and an operation it adds is reachable through the untyped calls of `api()->raw()` until a release of the client types it.
+- **A newer site** answers everything this client calls. Fields it adds stay readable in each model's `$extra`, an enumerated value it adds reads as the plain string it is (the model's constants name only the values this client knows), and an operation it adds is reachable through the untyped calls of each client's `raw()` until a release of the client types it.
 - **An older site** lacks what was added after it. Calling an operation it does not have is refused with an `Exception\ApiException` (a `NotFoundException` for a path it does not have), and an answer without a field this client requires throws an `Exception\UnexpectedResponseException` naming the schema and the field rather than reading a wrong value. Keep the site at least at the version above.
 
 ## Installation
@@ -58,9 +58,8 @@ use Appsolutely\Sdk\Config;
 // refuses under strict_types; casting it would turn a missing secret into ''.
 $clientId = getenv('APPSOLUTELY_CLIENT_ID');
 $clientSecret = getenv('APPSOLUTELY_CLIENT_SECRET');
-$apiToken = getenv('APPSOLUTELY_API_TOKEN');
-if ($clientId === false || $clientSecret === false || $apiToken === false) {
-    throw new RuntimeException('Set APPSOLUTELY_CLIENT_ID, APPSOLUTELY_CLIENT_SECRET and APPSOLUTELY_API_TOKEN.');
+if ($clientId === false || $clientSecret === false) {
+    throw new RuntimeException('Set APPSOLUTELY_CLIENT_ID and APPSOLUTELY_CLIENT_SECRET.');
 }
 // The backend's machine client is optional, and its id and secret go together: both set, or neither.
 $backendClientId = getenv('APPSOLUTELY_BACKEND_CLIENT_ID') ?: null;
@@ -71,16 +70,13 @@ $client = new Client(new Config(
     issuer: 'https://shop.example.com',            // the site's OpenID issuer, exactly as its discovery names it
     clientId: $clientId,                           // the site's OAuth client that signs members in
     clientSecret: $clientSecret,
-    apiToken: $apiToken,                           // optional: the administrator token issued on the site
     cache: $psr16Cache,                            // your application's shared cache; see below
     backendClientId: $backendClientId,             // optional: the site backend's machine client
     backendClientSecret: $backendClientSecret,     // given with its id, or not at all
 ));
 ```
 
-The administrator token is a long-lived credential issued on the site's API-token screen; it is sent on the calls your server makes on its own behalf. Leave it out when your server only acts for signed-in members. Keep it, like the client secret, out of version control.
-
-Only `baseUrl` is always required. The member sign-in client (`clientId` with `clientSecret`) is needed only to sign members in, and the `issuer` only for that or for the backend client: a backend-only integration gives `issuer` and the backend client, an administrator-only one just `apiToken`. `Client::oidc()` throws an `InvalidConfigException` when the Config holds no sign-in client.
+Only `baseUrl` is always required. The member sign-in client (`clientId` with `clientSecret`) is needed only to sign members in, and the `issuer` only for that or for the backend client: a backend-only integration gives `issuer` and the backend client, and one that makes only the calls anyone may make gives just `baseUrl`. Keep the secrets out of version control. `Client::oidc()` throws an `InvalidConfigException` when the Config holds no sign-in client.
 
 The backend client is the machine client registered for your app's backend, apart from the client that signs members in; `Client::backend()` calls as it (see [The site's backend](#the-sites-backend)). `backendScopes` narrows what its token may do; without it, the token carries every scope the client is registered with. `backendClientAuthentication` says how that client authenticates to the token endpoint when it differs from the sign-in client's `clientAuthentication`.
 
@@ -164,79 +160,9 @@ The same client reads the member's UserInfo claims (`userInfo($accessToken, $mem
 
 ## Calling the Site API
 
-`$client->api()` calls the site's API as its administrator, with the token from `Config`; `$client->backend()` calls it as the site's own backend, with a token its machine client is granted; `$client->forMember($accessToken)->api()` calls it as a signed-in member, with the access token their sign-in returned. Every operation of the Site API document has one typed method, on the client of the audience that may call it: the member's own data only on the member's, the backend's calls only on the backend's, everything else only on the administrator's.
+`$client->backend()` calls the site's API as the site's own backend, with a token its machine client is granted; `$client->forMember($accessToken)->api()` calls it as a signed-in member, with the access token their sign-in returned; `$client->api()` makes the calls anyone may make, without a credential. Every operation of the Site API document has one typed method, on the client of the audience that may call it. An administrator's work is not in the Site API: it is done through the Administrator API (see [Calling the Administrator API](#calling-the-administrator-api)).
 
 Answers are small readonly models in `Appsolutely\Sdk\Model`. Ids are strings, times are `DateTimeImmutable` in UTC, money is an integer count of the currency's minor units beside its ISO 4217 `currency` (`1999` with `USD` is 19.99), and `$model->extra` keeps the members the site sent that the model has no property for, as decoded, so a field added by a newer site stays readable. A webhook delivery carries a record in the same shape as the API serves it, so typed events hold these same models. The document the client is written against is pinned at `Contract::REVISION`, a commit of the site software.
-
-### Pages, articles and products
-
-```php
-use Appsolutely\Sdk\Exception\NotFoundException;
-use Appsolutely\Sdk\Exception\ValidationFailedException;
-
-$api = $client->api();
-
-foreach ($api->articles()->list(sort: 'published_at', order: 'desc') as $article) {
-    echo $article->title, ' ', $article->publishedAt->format(DATE_ATOM), "\n";
-}
-
-$article = $api->articles()->get($id);
-$created = $api->articles()->create(['title' => 'Hello', 'content' => '<p>Hi</p>', 'published_at' => new DateTimeImmutable()]);
-$created->value;          // the Article
-$created->replayed;       // see "Writes that must happen once"
-
-try {
-    $api->articles()->update($id, ['title' => $title]);   // only the fields given change
-} catch (ValidationFailedException $exception) {
-    $errors = $exception->errors;          // ['title' => ['The title field is required.']]
-} catch (NotFoundException) {
-    // gone in the meantime
-}
-
-$page = $api->pages()->get($pageId);            // Model\ContentPage, so it is not mistaken for Api\Page
-$product = $api->products()->get($productId);   // $product->prices: one ProductPrice per currency, the lowest of its skus
-$product->skuPrices;                            // one ProductSkuPrice per sku and currency, with the interval a subscription sku renews in
-```
-
-### Orders, form entries, account states and webhook deliveries
-
-```php
-foreach ($api->orders()->list(sort: 'updated_at') as $order) {
-    $order->totalAmount;      // minor units of $order->currency
-    $order->items;            // list of OrderLine
-}
-
-$entry = $api->formEntries()->get($entryId);   // $entry->data holds the answers, keyed by field
-
-$states = $api->accountStates()->list(['member-42', 'member-43']);   // one page, no cursor
-foreach ($states->items as $state) {
-    $state->entitlements;     // list of Entitlement
-}
-
-$failed = $api->webhookDeliveries()->list($subscription, status: 'failed', since: new DateTimeImmutable('-1 day'));
-$api->webhookDeliveries()->redeliver($subscription, $webhookId);
-```
-
-### Sync feeds
-
-A pull returns what changed in one resource since a cursor; keep `nextCursor` and pull from it next time, until `hasMore` is false:
-
-```php
-$cursor = $savedCursor;   // null the first time
-do {
-    $pull = $api->sync()->articles()->pull($cursor);
-    foreach ($pull->upserts as $article) { /* created or changed */ }
-    foreach ($pull->tombstones as $tombstone) { /* $tombstone->id was deleted */ }
-    $cursor = $pull->nextCursor;
-} while ($pull->hasMore);
-
-$push = $api->sync()->articles()->push([
-    ['mutation_id' => 'm-1', 'op' => 'upsert', 'id' => $id, 'client_updated_at' => $editedAt, 'attributes' => ['title' => 'Hi']],
-]);
-$push->results[0]->applied;   // and ->reason, ->errors, ->serverRecord
-```
-
-Feeds exist for articles, form entries, orders, pages and products. A `410` `cursor-expired` refusal means records went without a tombstone since the cursor: pull again from the start.
 
 ### The site's backend
 
@@ -285,7 +211,13 @@ foreach ($backend->accountStates()->list($since) as $page) {
     $since = $page->nextChangedSince;                        // keep it for the next walk
 }
 
-$backend->products()->get($productId)->skuPrices;            // the catalogue, with the catalogue:read scope
+$product = $backend->products()->get($productId);           // the catalogue, with the catalogue:read scope
+$product->prices;                                            // one ProductPrice per currency, the lowest of its skus
+$product->skuPrices;                                         // one ProductSkuPrice per sku and currency, with the interval a subscription sku renews in
+
+// A digital delivery's content, with the fulfilments:write scope: once, however often it is retried.
+$fulfilled = $backend->fulfilments()->create($deliveryToken, $licenceKey, channel: 'email');
+$fulfilled->value->status;                                   // 'delivered'; a token no longer pending is a ConflictException
 
 try {
     $checkout = $backend->checkoutSessions()->create($subject, [['product' => 'team', 'quantity' => 5, 'sku' => 'team-yearly']], $successUrl, $cancelUrl);
@@ -352,12 +284,32 @@ $member->me()->subscriptions()->change($subscriptionId, $returnUrl, quantity: 3)
 $member->me()->subscriptions()->cancel($subscriptionId);
 $member->me()->subscriptions()->resume($subscriptionId, $returnUrl);   // takes a cancellation back
 
-$member->sync()->addresses()->pull($cursor);                 // and ->push(), and ->orders()->pull()
 ```
+
+#### Sync feeds
+
+A pull returns what changed in one resource since a cursor; keep `nextCursor` and pull from it next time, until `hasMore` is false:
+
+```php
+$cursor = $savedCursor;   // null the first time
+do {
+    $pull = $member->sync()->addresses()->pull($cursor);
+    foreach ($pull->upserts as $address) { /* created or changed */ }
+    foreach ($pull->tombstones as $tombstone) { /* $tombstone->id was deleted */ }
+    $cursor = $pull->nextCursor;
+} while ($pull->hasMore);
+
+$push = $member->sync()->addresses()->push([
+    ['mutation_id' => 'm-1', 'op' => 'upsert', 'id' => $addressId, 'client_updated_at' => $editedAt, 'attributes' => ['city' => 'Leeds']],
+]);
+$push->results[0]->applied;   // and ->reason, ->errors, ->serverRecord
+```
+
+Feeds exist for the member's addresses (pull and push) and orders (pull). A `410` `cursor-expired` refusal means records went without a tombstone since the cursor: pull again from the start.
 
 ### Without a credential
 
-The version record, the API document and the magic-link sign-in are open to anyone, so the client sends them without a credential even when it holds the administrator token:
+The version record, the API document and the magic-link sign-in are open to anyone, so the client sends them without a credential:
 
 ```php
 use Appsolutely\Sdk\Exception\ForbiddenException;
@@ -382,8 +334,8 @@ try {
 A list method returns an `Api\Paginator` and sends no request until it is used. Iterating it walks every item, asking for each next page only when iteration reaches it and stopping at the page without a cursor; `page()` fetches one page, the first or the one a cursor kept from an earlier run asks for:
 
 ```php
-$page = $client->api()->orders()->list(limit: 100)->page($savedCursor);
-$page->items;                           // list of Model\Order
+$page = $client->backend()->products()->list(limit: 100)->page($savedCursor);
+$page->items;                           // list of Model\Product
 $savedCursor = $page->nextCursor;       // null on the last page
 ```
 
@@ -398,16 +350,16 @@ A refusal is thrown as an `Exception\ApiException` built from the site's RFC 945
 Each client's `raw()` gives the calls underneath the typed methods, with the same credential, headers, retries and refusals, for an operation the site has and this client was not written against. Paths are the ones the site's API document names; a success is an `Api\ApiResponse`: the decoded body in `$data` (null for a `204`), `$status`, `$location` for a created resource, `$requestId` as the site answered it, and `$rateLimit`, the budget the site states in its `RateLimit-Policy` and `RateLimit` headers, by quota name (`$response->rateLimit->quota('api:authenticated')?->remaining`):
 
 ```php
-$data = $client->api()->raw()->get('/api/v1/articles/' . rawurlencode($id), requestId: $traceId)->data;
+$data = $client->backend()->raw()->get('/api/v1/products/' . rawurlencode($id), requestId: $traceId)->data;
 
-foreach ($client->api()->raw()->paginate('/api/v1/orders', ['sort' => 'updated_at', 'order' => 'desc'], limit: 100) as $order) {
-    // every order as decoded JSON, most recently changed first, 100 per request
+foreach ($client->backend()->raw()->paginate('/api/v1/products', ['sort' => 'updated_at', 'order' => 'desc'], limit: 100) as $product) {
+    // every product as decoded JSON, most recently changed first, 100 per request
 }
 ```
 
 ### Writes that must happen once
 
-Every write the site keys accepts an `Idempotency-Key`, and its method always sends one: creating an article, filing a member's address, redelivering a webhook, starting a checkout or a visit to the billing pages, cancelling, changing or resuming a member's subscription, attaching or advancing a test clock, and creating a webhook endpoint or starting its secret rotation. The key is yours (1 to 255 printable ASCII characters, spaces included, one per operation) or a fresh UUID v4, sent as a quoted Structured Field String (RFC 9651) as the Idempotency-Key draft defines it. The same key goes with every retry, so a retry after a lost answer is answered with the first answer, its status and body, instead of acting a second time (a replayed billing visit carries a fresh single-use `url` for the same visit), and the result says which key was sent and whether the answer was replayed:
+Every write the site keys accepts an `Idempotency-Key`, and its method always sends one: filing a member's address, fulfilling a digital delivery, redelivering a webhook, starting a checkout or a visit to the billing pages, cancelling, changing or resuming a member's subscription, attaching or advancing a test clock, and creating a webhook endpoint or starting its secret rotation. The key is yours (1 to 255 printable ASCII characters, spaces included, one per operation) or a fresh UUID v4, sent as a quoted Structured Field String (RFC 9651) as the Idempotency-Key draft defines it. The same key goes with every retry, so a retry after a lost answer is answered with the first answer, its status and body, instead of acting a second time (a replayed billing visit carries a fresh single-use `url` for the same visit), and the result says which key was sent and whether the answer was replayed:
 
 ```php
 $filed = $member->me()->addresses()->create($address, idempotencyKey: $formSubmissionId);
@@ -440,24 +392,24 @@ use Appsolutely\Sdk\Api\Operation;
 use Appsolutely\Sdk\Testing\FakeClient;
 
 $fake = (new FakeClient())
-    ->answer(Operation::GetArticle, ['id' => 'a-1', 'title' => 'Hello', /* ... as the document shapes it */])
-    ->answerPage(Operation::ListOrders, [$order1, $order2], nextCursor: 'c2')
-    ->answerPage(Operation::ListOrders, [$order3])
-    ->refuse(Operation::CreateArticle, 'validation-failed', 422, 'The request did not pass validation.', members: ['errors' => ['title' => ['Required.']]]);
+    ->answer(Operation::GetProduct, ['id' => 'p-1', 'slug' => 'team', /* ... as the document shapes it */])
+    ->answerPage(Operation::ListProducts, [$product1, $product2], nextCursor: 'c2')
+    ->answerPage(Operation::ListProducts, [$product3])
+    ->refuse(Operation::CreateFulfilment, 'conflict', 409, 'The delivery is no longer pending.');
 
-$service = new ArticleImporter($fake->client());   // a real Client; nothing leaves the process
+$service = new LicenceDelivery($fake->client());   // a real Client; nothing leaves the process
 $service->run();
 
-$call = $fake->lastCall(Operation::CreateArticle);
+$call = $fake->lastCall(Operation::CreateFulfilment);
 $call->body;              // the JSON body sent, decoded
 $call->idempotencyKey;    // the key sent with a keyed write
-$call->pathParameters;    // ['id' => 'a-1'] for a path with placeholders
+$call->pathParameters;    // ['id' => 'p-1'] for a path with placeholders
 $call->query;             // the query, decoded
-$call->token;             // FakeClient::ADMINISTRATOR_TOKEN, a member's token, or null
+$call->token;             // FakeClient::BACKEND_TOKEN, a member's token, or null
 $fake->calls();           // every call, in order
 ```
 
-`client()` is a real `Client` whose HTTP client answers from the arrangement, so an arranged body is read into the same models as a site's answer, a refusal becomes the same `ApiException` subclass, and an answer that breaks the document fails the same way. Answers to one operation are given in the order arranged, and the last one keeps answering. `answer()` takes the operation's success status unless you pass another, and headers such as `Idempotent-Replayed: true`; `refuse()` takes a problem type (`validation-failed`, or a full URI), a status, a title, an optional detail (left out when empty, as the site leaves it out), and the problem's extension members, which may not reuse a standard member (`type`, `title`, `status`, `detail`, `instance`); a `401` carries the site's `WWW-Authenticate: Bearer` challenge, and an `insufficient-scope` `403` the challenge naming its `required` scope, unless you pass another. `forMember($token)` calls as a member. Calls are not retried, so a refusal is thrown at once. A call with no answer arranged, or to a path that is no operation of the document, throws `Exception\UnarrangedCallException`, a `LogicException`. Sign-in through `oidc()` is not faked.
+`client()` is a real `Client` whose HTTP client answers from the arrangement, so an arranged body is read into the same models as a site's answer, a refusal becomes the same `ApiException` subclass, and an answer that breaks the document fails the same way. Answers to one operation are given in the order arranged, and the last one keeps answering. `answer()` takes the operation's success status unless you pass another, and headers such as `Idempotent-Replayed: true`; `refuse()` takes a problem type (`validation-failed`, or a full URI), a status, a title, an optional detail (left out when empty, as the site leaves it out), and the problem's extension members, which may not reuse a standard member (`type`, `title`, `status`, `detail`, `instance`); a `401` carries the site's `WWW-Authenticate: Bearer` challenge, and an `insufficient-scope` `403` the challenge naming its `required` scope, unless you pass another. `backend()` calls as the backend, whose token is granted in memory as `FakeClient::BACKEND_TOKEN` and is not recorded as a call; `forMember($token)` calls as a member. Calls are not retried, so a refusal is thrown at once. A call with no answer arranged, or to a path that is no operation of the document, throws `Exception\UnarrangedCallException`, a `LogicException`. Sign-in through `oidc()` is not faked.
 
 ## Calling the Administrator API
 

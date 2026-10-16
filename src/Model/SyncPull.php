@@ -22,7 +22,7 @@ final readonly class SyncPull
      *
      * @internal
      */
-    public const array SCHEMAS = ['ArticleFeed', 'FormEntryFeed', 'OrderFeed', 'PageFeed', 'ProductFeed', 'UserAddressFeed'];
+    public const array SCHEMAS = ['OrderFeed', 'UserAddressFeed'];
 
     /**
      * The feed schema of a resource, named for its record's schema.

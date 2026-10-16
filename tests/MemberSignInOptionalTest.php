@@ -14,8 +14,8 @@ use Psr\Http\Message\ResponseInterface;
 
 /**
  * The member sign-in client is needed only for signing members in: an
- * integration that calls as the site's backend or with an administrator
- * token configures neither it nor, without a backend, an issuer, and is
+ * integration that calls as the site's backend, or makes only the public
+ * calls, configures neither it nor, without a backend, an issuer, and is
  * refused only when it reaches for sign-in.
  */
 final class MemberSignInOptionalTest extends TestCase
@@ -45,13 +45,12 @@ final class MemberSignInOptionalTest extends TestCase
         $client->oidc();
     }
 
-    public function testAnAdministratorOnlyConfigNeedsNoIssuer(): void
+    public function testAConfigForThePublicCallsAloneNeedsNoIssuer(): void
     {
         $provider = new FakeProvider();
         $provider->site = static fn(): ResponseInterface => $provider->json(['data' => [], 'next_cursor' => null]);
         $config = new Config(
             baseUrl: FakeProvider::BASE_URL,
-            apiToken: FakeProvider::API_TOKEN,
             httpClient: $provider->http,
             requestFactory: $provider->factory,
             streamFactory: $provider->factory,
@@ -59,12 +58,12 @@ final class MemberSignInOptionalTest extends TestCase
         );
         $client = new Client($config);
 
-        $client->api()->raw()->get('/api/v1/articles');
+        $client->api()->raw()->get('/api/v1');
 
         self::assertNull($config->issuer);
         self::assertNull($config->clientId);
         self::assertNull($config->clientSecret());
-        self::assertSame('Bearer ' . FakeProvider::API_TOKEN, $provider->siteRequests()[0]->getHeaderLine('Authorization'));
+        self::assertFalse($provider->siteRequests()[0]->hasHeader('Authorization'));
         $this->expectException(InvalidConfigException::class);
         $client->oidc();
     }

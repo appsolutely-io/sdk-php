@@ -82,7 +82,7 @@ final class LoggingTest extends TestCase
         $logger = new RecordingLogger();
         $provider = new FakeProvider();
         $provider->site = static fn(): ResponseInterface => $provider->problem(503, 'temporarily-unavailable', ['detail' => self::SECRET]);
-        $api = $provider->client(apiToken: self::SECRET, logger: $logger)->api()->raw();
+        $api = $provider->client(logger: $logger)->forMember(self::SECRET)->api()->raw();
 
         foreach ([
             static fn() => $api->get('/api/v1/articles', ['search' => self::SECRET]),

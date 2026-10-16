@@ -22,23 +22,16 @@ final class ConfigTest extends TestCase
             issuer: 'https://login.example.com',
             clientId: 'client-1',
             clientSecret: 'secret-1',
-            apiToken: '7|admin-token',
         );
 
         self::assertSame('https://site.example.com', $config->baseUrl);
         self::assertSame('https://login.example.com', $config->issuer);
-        self::assertSame('7|admin-token', $config->apiToken());
         self::assertSame('client-1', $config->clientId);
         self::assertSame('secret-1', $config->clientSecret());
         self::assertNull($config->httpClient);
         self::assertNull($config->cache);
         self::assertNull($config->clock);
         self::assertNull($config->logger);
-    }
-
-    public function testTheAdministratorTokenIsOptional(): void
-    {
-        self::assertNull((new Config('https://site.example.com', 'https://login.example.com', 'id', 'secret'))->apiToken());
     }
 
     public function testABaseUrlWithOnlyATrailingSlashIsAccepted(): void
@@ -52,7 +45,7 @@ final class ConfigTest extends TestCase
     public static function secretProperties(): iterable
     {
         yield 'client secret' => ['clientSecret'];
-        yield 'administrator token' => ['apiToken'];
+        yield 'backend client secret' => ['backendClientSecret'];
     }
 
     #[DataProvider('secretProperties')]
@@ -74,10 +67,8 @@ final class ConfigTest extends TestCase
             var_dump($object);
             $dumped = (string) ob_get_clean();
 
-            foreach ([FakeProvider::CLIENT_SECRET, FakeProvider::API_TOKEN] as $secret) {
-                self::assertStringNotContainsString($secret, $dumped);
-                self::assertStringNotContainsString($secret, print_r($object, true));
-            }
+            self::assertStringNotContainsString(FakeProvider::CLIENT_SECRET, $dumped);
+            self::assertStringNotContainsString(FakeProvider::CLIENT_SECRET, print_r($object, true));
         }
         self::assertStringContainsString('[redacted]', print_r($config, true));
     }
@@ -165,7 +156,7 @@ final class ConfigTest extends TestCase
     }
 
     /**
-     * The base URL receives the administrator token on every call, so it is
+     * The base URL receives the member's and the backend's tokens, so it is
      * held to the issuer's rules.
      */
     #[DataProvider('ambiguousIssuers')]
@@ -214,39 +205,35 @@ final class ConfigTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{string, string, string, string, ?string}>
+     * @return iterable<string, array{string, string, string, string}>
      */
     public static function invalid(): iterable
     {
-        yield 'base URL over plain http' => ['http://site.example.com', 'https://login.example.com', 'id', 'secret', null];
-        yield 'base URL without a host' => ['https://', 'https://login.example.com', 'id', 'secret', null];
-        yield 'base URL that is not a URL' => ['site.example.com', 'https://login.example.com', 'id', 'secret', null];
-        yield 'base URL with a query' => ['https://site.example.com?x=1', 'https://login.example.com', 'id', 'secret', null];
-        yield 'base URL with a fragment' => ['https://site.example.com#x', 'https://login.example.com', 'id', 'secret', null];
+        yield 'base URL over plain http' => ['http://site.example.com', 'https://login.example.com', 'id', 'secret'];
+        yield 'base URL without a host' => ['https://', 'https://login.example.com', 'id', 'secret'];
+        yield 'base URL that is not a URL' => ['site.example.com', 'https://login.example.com', 'id', 'secret'];
+        yield 'base URL with a query' => ['https://site.example.com?x=1', 'https://login.example.com', 'id', 'secret'];
+        yield 'base URL with a fragment' => ['https://site.example.com#x', 'https://login.example.com', 'id', 'secret'];
         // Every path the client calls is absolute from the site's origin.
-        yield 'base URL with a path' => ['https://site.example.com/shop', 'https://login.example.com', 'id', 'secret', null];
-        yield 'empty administrator token' => ['https://site.example.com', 'https://login.example.com', 'id', 'secret', ''];
-        yield 'administrator token with a line break' => ['https://site.example.com', 'https://login.example.com', 'id', 'secret', "token\r\nX-Forged: 1"];
-        yield 'administrator token with a space' => ['https://site.example.com', 'https://login.example.com', 'id', 'secret', 'two words'];
-        yield 'administrator token beyond ASCII' => ['https://site.example.com', 'https://login.example.com', 'id', 'secret', "t\u{00E9}"];
-        yield 'issuer over plain http' => ['https://site.example.com', 'http://login.example.com', 'id', 'secret', null];
+        yield 'base URL with a path' => ['https://site.example.com/shop', 'https://login.example.com', 'id', 'secret'];
+        yield 'issuer over plain http' => ['https://site.example.com', 'http://login.example.com', 'id', 'secret'];
         // Whether a *.localhost name resolves to the loopback interface is up
         // to the resolver, so only the three exact loopback forms are trusted.
-        yield 'issuer over plain http on a localhost subdomain' => ['https://site.example.com', 'http://login.localhost', 'id', 'secret', null];
-        yield 'issuer over plain http on another 127/8 address' => ['https://site.example.com', 'http://127.0.0.2', 'id', 'secret', null];
-        yield 'issuer without a host' => ['https://site.example.com', 'https://', 'id', 'secret', null];
-        yield 'issuer that is not a URL' => ['https://site.example.com', 'login.example.com', 'id', 'secret', null];
-        yield 'issuer with a query' => ['https://site.example.com', 'https://login.example.com?x=1', 'id', 'secret', null];
-        yield 'issuer with a fragment' => ['https://site.example.com', 'https://login.example.com#x', 'id', 'secret', null];
-        yield 'empty client id' => ['https://site.example.com', 'https://login.example.com', '', 'secret', null];
-        yield 'empty client secret' => ['https://site.example.com', 'https://login.example.com', 'id', '', null];
+        yield 'issuer over plain http on a localhost subdomain' => ['https://site.example.com', 'http://login.localhost', 'id', 'secret'];
+        yield 'issuer over plain http on another 127/8 address' => ['https://site.example.com', 'http://127.0.0.2', 'id', 'secret'];
+        yield 'issuer without a host' => ['https://site.example.com', 'https://', 'id', 'secret'];
+        yield 'issuer that is not a URL' => ['https://site.example.com', 'login.example.com', 'id', 'secret'];
+        yield 'issuer with a query' => ['https://site.example.com', 'https://login.example.com?x=1', 'id', 'secret'];
+        yield 'issuer with a fragment' => ['https://site.example.com', 'https://login.example.com#x', 'id', 'secret'];
+        yield 'empty client id' => ['https://site.example.com', 'https://login.example.com', '', 'secret'];
+        yield 'empty client secret' => ['https://site.example.com', 'https://login.example.com', 'id', ''];
     }
 
     #[DataProvider('invalid')]
-    public function testItRefusesAnInvalidValueAtConstruction(string $baseUrl, string $issuer, string $clientId, string $clientSecret, ?string $apiToken): void
+    public function testItRefusesAnInvalidValueAtConstruction(string $baseUrl, string $issuer, string $clientId, string $clientSecret): void
     {
         try {
-            new Config($baseUrl, $issuer, $clientId, $clientSecret, $apiToken);
+            new Config($baseUrl, $issuer, $clientId, $clientSecret);
             self::fail('Config accepted an invalid value.');
         } catch (InvalidConfigException $exception) {
             self::assertInstanceOf(AppsolutelyException::class, $exception);

@@ -15,8 +15,7 @@ use Psr\Http\Message\ResponseInterface;
 
 /**
  * The version record, the API document and the magic-link sign-in are
- * open to anyone, so the client sends them without a credential even when
- * it holds the administrator token.
+ * open to anyone, so the client sends them without a credential.
  */
 final class PublicOperationsTest extends TestCase
 {

@@ -275,8 +275,8 @@ final readonly class Caller
 
     private function assertAudience(Operation $operation): void
     {
-        if (!in_array($this->audience, $operation->audiences(), true)) {
-            throw new LogicException(sprintf('%s is called by %s, not %s.', $operation->value, implode(' or ', array_map(static fn(Audience $audience): string => $audience->name, $operation->audiences())), $this->audience->name));
+        if ($operation->audience() !== $this->audience) {
+            throw new LogicException(sprintf('%s is called by %s, not %s.', $operation->value, $operation->audience()->name, $this->audience->name));
         }
     }
 

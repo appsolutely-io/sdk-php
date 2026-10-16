@@ -10,7 +10,9 @@ use Appsolutely\Sdk\Resource\Backend\CheckoutSessions;
 use Appsolutely\Sdk\Resource\Backend\Deliveries;
 use Appsolutely\Sdk\Resource\Backend\FeatureKeys;
 use Appsolutely\Sdk\Resource\Backend\FeatureValues;
+use Appsolutely\Sdk\Resource\Backend\Fulfilments;
 use Appsolutely\Sdk\Resource\Backend\PortalSessions;
+use Appsolutely\Sdk\Resource\Backend\Products;
 use Appsolutely\Sdk\Resource\Backend\ReturnTargets;
 use Appsolutely\Sdk\Resource\Backend\RoleAssignments;
 use Appsolutely\Sdk\Resource\Backend\Roles;
@@ -18,7 +20,6 @@ use Appsolutely\Sdk\Resource\Backend\Seats;
 use Appsolutely\Sdk\Resource\Backend\StorePurchases;
 use Appsolutely\Sdk\Resource\Backend\TestClocks;
 use Appsolutely\Sdk\Resource\Backend\WebhookEndpoints;
-use Appsolutely\Sdk\Resource\Products;
 
 /**
  * The Site API as the site's own backend: the calls answered for the token
@@ -66,6 +67,14 @@ final readonly class BackendApi
     public function products(): Products
     {
         return new Products($this->backend);
+    }
+
+    /**
+     * Digital deliveries the backend fulfils, with the `fulfilments:write` scope.
+     */
+    public function fulfilments(): Fulfilments
+    {
+        return new Fulfilments($this->backend);
     }
 
     public function webhookEndpoints(): WebhookEndpoints

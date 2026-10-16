@@ -182,7 +182,7 @@ final class BackendTest extends TestCase
 
         self::assertSame('POST /api/v1/deliveries/msg_1/redeliveries', $site->line());
         self::assertSame('12', $redelivery->redelivered[0]->endpointId);
-        self::assertSame('msg_1', $redelivery->redelivered[0]->delivery->webhookId);
+        self::assertSame('msg_1', $redelivery->redelivered[0]->webhookId);
         self::assertSame(['13' => 'The endpoint is switched off.'], $redelivery->refused);
     }
 

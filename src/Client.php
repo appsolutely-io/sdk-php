@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk;
 
-use Appsolutely\Sdk\Api\AdministratorApi;
 use Appsolutely\Sdk\Api\BackendApi;
 use Appsolutely\Sdk\Api\BackendToken;
+use Appsolutely\Sdk\Api\PublicApi;
 use Appsolutely\Sdk\Api\SiteApi;
 use Appsolutely\Sdk\Cache\InMemoryCache;
 use Appsolutely\Sdk\Clock\SystemClock;
@@ -17,9 +17,10 @@ use Appsolutely\Sdk\Oidc\OpenIdClient;
 use Psr\Log\NullLogger;
 
 /**
- * The entry point: one Config in, every part of the site's API out. Calls
- * made through it carry the administrator token; forMember() gives the same
- * calls as a signed-in member.
+ * The entry point: one Config in, every part of the site's API out: the
+ * operations anyone may call, the site's backend, and forMember() for a
+ * signed-in member. A site's administrators call the Administrator API,
+ * through Admin\AdminClient.
  */
 final readonly class Client
 {
@@ -29,7 +30,7 @@ final readonly class Client
 
     private SiteApi $site;
 
-    private AdministratorApi $api;
+    private PublicApi $api;
 
     private ?BackendApi $backend;
 
@@ -56,8 +57,8 @@ final readonly class Client
             $clock,
             $logger,
         );
-        $this->site = new SiteApi($http, $config->baseUrl, $config->apiToken(), $clock, $config->retryPolicy, $logger);
-        $this->api = new AdministratorApi($this->site);
+        $this->site = new SiteApi($http, $config->baseUrl, null, $clock, $config->retryPolicy, $logger);
+        $this->api = new PublicApi($this->site);
         $this->signsMembersIn = $config->clientId !== null;
 
         $backendSecret = $config->backendClientSecret();
@@ -82,7 +83,7 @@ final readonly class Client
      */
     public function __serialize(): array
     {
-        throw new NotSerializableException('A Client holds the client secret and the administrator token and is not serialized; build it again from its Config.');
+        throw new NotSerializableException('A Client holds the client secrets and is not serialized; build it again from its Config.');
     }
 
     /**
@@ -90,7 +91,7 @@ final readonly class Client
      */
     public function __unserialize(array $data): void
     {
-        throw new NotSerializableException('A Client holds the client secret and the administrator token and is not unserialized; build it again from its Config.');
+        throw new NotSerializableException('A Client holds the client secrets and is not unserialized; build it again from its Config.');
     }
 
     /**
@@ -107,11 +108,9 @@ final readonly class Client
     }
 
     /**
-     * The Site API as the administrator, with the token from Config (or no
-     * credential when the Config holds none); the operations anyone may
-     * call are here too, sent without a credential.
+     * The Site API operations anyone may call, sent without a credential.
      */
-    public function api(): AdministratorApi
+    public function api(): PublicApi
     {
         return $this->api;
     }

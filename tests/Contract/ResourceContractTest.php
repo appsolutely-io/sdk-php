@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Tests\Contract;
 
-use Appsolutely\Sdk\Api\AdministratorApi;
 use Appsolutely\Sdk\Api\Audience;
 use Appsolutely\Sdk\Api\BackendApi;
 use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\MemberApi;
 use Appsolutely\Sdk\Api\Operation;
 use Appsolutely\Sdk\Api\Paginator;
+use Appsolutely\Sdk\Api\PublicApi;
 use Appsolutely\Sdk\Api\RetryPolicy;
 use Appsolutely\Sdk\Client;
 use Appsolutely\Sdk\Config;
@@ -94,15 +94,14 @@ final class ResourceContractTest extends TestCase
     public function testEveryMethodIsOnTheClientOfItsOperationsAudience(): void
     {
         foreach (self::endpoints() as $endpoint) {
-            $audiences = $endpoint['operation']->audiences();
-            $expected = [];
-            foreach ([AdministratorApi::class => [Audience::Anyone, Audience::Administrator], MemberApi::class => [Audience::Member], BackendApi::class => [Audience::Backend]] as $root => $served) {
-                if (array_intersect(array_map(static fn(Audience $audience): string => $audience->name, $served), array_map(static fn(Audience $audience): string => $audience->name, $audiences)) !== []) {
-                    $expected[] = $root;
-                }
-            }
+            $audience = $endpoint['operation']->audience();
+            $expected = match ($audience) {
+                Audience::Anyone => PublicApi::class,
+                Audience::Member => MemberApi::class,
+                Audience::Backend => BackendApi::class,
+            };
 
-            self::assertSame($expected, $endpoint['roots'], sprintf('%s calls %s, an operation for %s, from %s.', $endpoint['method'], $endpoint['operation']->value, implode(' and ', array_map(static fn(Audience $audience): string => $audience->name, $audiences)), $endpoint['roots'] === [] ? 'no client' : implode(' and ', $endpoint['roots'])));
+            self::assertSame([$expected], $endpoint['roots'], sprintf('%s calls %s, an operation for %s, from %s.', $endpoint['method'], $endpoint['operation']->value, $audience->name, $endpoint['roots'] === [] ? 'no client' : implode(' and ', $endpoint['roots'])));
         }
     }
 
@@ -567,14 +566,14 @@ final class ResourceContractTest extends TestCase
 
     /**
      * Each method marked with the operation it calls, and the clients
-     * (AdministratorApi, MemberApi, BackendApi) it is reached from.
+     * (PublicApi, MemberApi, BackendApi) it is reached from.
      *
      * @return list<array{operation: Operation, method: string, roots: list<class-string>}>
      */
     private static function endpoints(): array
     {
         $roots = [];
-        foreach ([AdministratorApi::class, MemberApi::class, BackendApi::class] as $root) {
+        foreach ([PublicApi::class, MemberApi::class, BackendApi::class] as $root) {
             foreach (self::reachable($root) as $class) {
                 $roots[$class][] = $root;
             }
@@ -691,7 +690,6 @@ final class ResourceContractTest extends TestCase
             issuer: 'https://site.test',
             clientId: 'contract-client',
             clientSecret: 'contract-client-secret',
-            apiToken: 'contract-administrator-token',
             httpClient: $site,
             requestFactory: Psr17FactoryDiscovery::findRequestFactory(),
             streamFactory: Psr17FactoryDiscovery::findStreamFactory(),

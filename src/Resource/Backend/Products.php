@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Appsolutely\Sdk\Resource;
+namespace Appsolutely\Sdk\Resource\Backend;
 
 use Appsolutely\Sdk\Api\Caller;
 use Appsolutely\Sdk\Api\Endpoint;
@@ -12,12 +12,12 @@ use Appsolutely\Sdk\Api\SiteApi;
 use Appsolutely\Sdk\Model\Product;
 
 /**
- * The site's product catalogue, read as the administrator or as the site's
- * own backend.
+ * The site's product catalogue, read by the site's own backend with the
+ * `catalogue:read` scope.
  */
 final readonly class Products
 {
-    /** @internal obtain it from Client::api()->products() or Client::backend()->products() */
+    /** @internal obtain it from Client::backend()->products() */
     public function __construct(private Caller $caller) {}
 
     /**

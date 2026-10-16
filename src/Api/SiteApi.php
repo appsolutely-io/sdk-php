@@ -23,12 +23,11 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Calls to the Site API, every one carrying the credential of the client it
- * came from: the administrator token from Client::api(), the member's
- * access token from Client::forMember()->api(), or none when the Config
- * holds no administrator token.
+ * came from: the member's access token from Client::forMember()->api(), the
+ * backend's token from Client::backend(), or none from Client::api().
  *
  * Paths are the ones the site's API document names, such as
- * `/api/v1/articles`, with identifiers filled in as the site gave them. A
+ * `/api/v1/products`, with identifiers filled in as the site gave them. A
  * success is answered as an ApiResponse; a refusal is thrown as an
  * Exception\ApiException. Reads and keyed writes are retried as the
  * Config's RetryPolicy says; other writes never are.

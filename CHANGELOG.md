@@ -14,6 +14,22 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SiteApi::put()`, `patch()` and `delete()` take an optional `ifMatch`, and `ApiResponse::etag()` reads an answer's version.
 - `Testing\FakeAdminClient` and `Testing\RecordedAdminCall`, the Administrator API in memory for an integrator's tests. A read or an update answers an `ETag` (`FakeAdminClient::ETAG` unless one is arranged), and an update or a delete sent without `If-Match` is refused `428` `precondition-required`, as the site refuses it.
 - `composer pin-contract` also pins `docs/api/admin-openapi.yaml`, at the same commit as the Site API document, into `tests/Contract/admin-openapi.yaml`.
+- `backend()->fulfilments()->create($token, $deliveryPayload, $channel)`: the backend fulfils a pending digital delivery with the `fulfilments:write` scope, once under an `Idempotency-Key`, and reads the delivery token as it stands (`Model\Fulfilment`). A token no longer pending is a `ConflictException`.
+- `Testing\FakeClient::backend()`: the fake answers the backend's token request in memory with `FakeClient::BACKEND_TOKEN`, so the backend's operations can be arranged and recorded like any other.
+
+### Changed
+
+- **BREAKING:** the client is held to the Site API document of the site software at the release that retires administrator tokens on the Site API (`Contract::REVISION`). The site no longer answers an administrator on the Site API: an administrator's work goes through `AdminClient` and the Administrator API.
+- **BREAKING:** `Client::api()` returns `Api\PublicApi`, the calls anyone may make (`version()`, `openApiDocument()`, `magicLink()` and an untyped `raw()`), sent without a credential. `Api\AdministratorApi` is removed.
+- **BREAKING:** the product catalogue is the backend's alone: `Resource\Products` moves to `Resource\Backend\Products`, reached from `backend()->products()` with the `catalogue:read` scope.
+- **BREAKING:** `Model\EndpointWebhookDelivery` holds the delivery's fields itself (`$webhookId`, `$type`, `$status`, `$attempts` and the times), as its schema does, in place of a nested `$delivery`.
+- **BREAKING:** `Operation::audiences()` is replaced by `Operation::audience()`, since every operation now has one audience.
+- **BREAKING:** `Testing\FakeClient::ADMINISTRATOR_TOKEN` is replaced by `FakeClient::BACKEND_TOKEN`.
+
+### Removed
+
+- **BREAKING:** `Config`'s `apiToken` parameter and `Config::apiToken()`: the site issues no administrator token for the Site API. Arguments passed by position after `$clientSecret` move.
+- **BREAKING:** the administrator's Site API resources and their operations: `pages()`, `articles()`, `orders()`, `formEntries()`, `accountStates()` (the backend's `backend()->accountStates()` stays), `webhookDeliveries()` and the administrator sync feeds (`sync()`, with `Resource\Sync` and its article, form entry, order, page and product feeds), with `Model\WebhookDelivery` and `Audience::Administrator`. The Administrator API serves the same records through `AdminClient`; the sync feeds have no replacement.
 
 ## [0.4.0] - 2026-10-16
 

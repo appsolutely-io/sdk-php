@@ -9,11 +9,8 @@ namespace Appsolutely\Sdk\Api;
  */
 enum Audience
 {
-    /** No credential: the version record, the API document and the magic-link sign-in. */
+    /** No credential: the version record, the API document and the magic-link sign-in, from Client::api(). */
     case Anyone;
-
-    /** The site's administrator token, from Client::api(). */
-    case Administrator;
 
     /** A signed-in member's access token, from Client::forMember()->api(). */
     case Member;
