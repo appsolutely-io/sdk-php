@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Http;
 
+use Appsolutely\Sdk\Config;
+use Appsolutely\Sdk\Exception\InvalidConfigException;
 use Appsolutely\Sdk\Exception\TransportException;
 use Appsolutely\Sdk\Sdk;
 use Appsolutely\Sdk\Support\Untrusted;
+use Http\Discovery\Exception\NotFoundException;
+use Http\Discovery\Psr17FactoryDiscovery;
+use Http\Discovery\Psr18ClientDiscovery;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamFactoryInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * @internal
@@ -24,6 +30,27 @@ final readonly class HttpTransport
         private RequestFactoryInterface $requests,
         private StreamFactoryInterface $streams,
     ) {}
+
+    /**
+     * The transport a Config describes: its HTTP client and factories, or
+     * the ones installed, the client given the Config's timeouts.
+     */
+    public static function forConfig(Config $config, LoggerInterface $logger): self
+    {
+        try {
+            return new self(
+                $config->httpClient ?? ClientTimeouts::apply(Psr18ClientDiscovery::find(), $config->timeout, $config->connectTimeout, $logger),
+                $config->requestFactory ?? Psr17FactoryDiscovery::findRequestFactory(),
+                $config->streamFactory ?? Psr17FactoryDiscovery::findStreamFactory(),
+            );
+        } catch (NotFoundException $exception) {
+            throw new InvalidConfigException(
+                'No PSR-18 HTTP client or PSR-17 factory was passed in or found installed; require one, such as guzzlehttp/guzzle or symfony/http-client with nyholm/psr7.',
+                0,
+                $exception,
+            );
+        }
+    }
 
     public static function isSuccessful(ResponseInterface $response): bool
     {
