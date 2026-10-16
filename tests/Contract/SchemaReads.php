@@ -20,18 +20,10 @@ trait SchemaReads
      * so a document that changes, to agree with the site or otherwise, fails
      * until the entry is dropped or rewritten.
      *
-     * The document leaves an account's `totals` an open object, listed or
-     * not; the site sends a quantity per key. It leaves a subscription's `pending_period` an
-     * open object or null; the site sends the period's start and where its
-     * payment stands.
+     * The document leaves a subscription's `pending_period` an open object or
+     * null; the site sends the period's start and where its payment stands.
      */
     private const array AS_THE_SITE_SENDS = [
-        'AccountState' => [
-            'totals' => ['document' => ['type' => 'object', 'additionalProperties' => true], 'site' => ['seats' => 3]],
-        ],
-        'ListedAccountState' => [
-            'totals' => ['document' => ['type' => 'object', 'additionalProperties' => true], 'site' => ['seats' => 3]],
-        ],
         'AccountSubscription' => [
             'pending_period' => ['document' => ['type' => ['object', 'null'], 'additionalProperties' => true], 'site' => ['start' => '2026-05-01T00:00:00Z', 'status' => 'pending']],
         ],
@@ -350,7 +342,7 @@ trait SchemaReads
             'array' => [self::sample(Document::map($schema['items'] ?? ['type' => 'string']))],
             'object' => isset($schema['properties'])
                 ? array_map(static fn(mixed $property): mixed => self::sample(Document::map($property)), Document::map($schema['properties']))
-                : ['key' => 'value'],
+                : ['key' => is_array($schema['additionalProperties'] ?? null) ? self::sample(Document::map($schema['additionalProperties'])) : 'value'],
             default => 'x',
         };
     }

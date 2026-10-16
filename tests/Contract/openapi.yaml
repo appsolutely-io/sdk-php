@@ -12108,8 +12108,10 @@ components:
           items:
             $ref: '#/components/schemas/AccountEntitlement'
         totals:
+          description: 'How much of each entitlement key the account holds, by entitlement key: for a counted key the sum of its quantities, for any other key 1 while it is held. An account holding nothing has an empty object.'
           type: object
-          additionalProperties: true
+          additionalProperties:
+            type: integer
         subscriptions:
           description: "Every subscription of the account that is not `canceled` and counts in the credential's mode, oldest first. A write to any field an entry carries raises `sequence`."
           type: array
@@ -12835,49 +12837,16 @@ components:
           required:
             - form_name
     ListedAccountState:
-      type: object
-      properties:
-        subject:
-          type: string
-        sequence:
-          type: integer
-        status:
-          type: string
-          enum:
-            - active
-            - suspended
-            - erased
-            - unknown
-        email:
-          type:
-            - string
-            - 'null'
-        email_verified:
-          type: boolean
-        entitlements:
-          type: array
-          items:
-            $ref: '#/components/schemas/AccountEntitlement'
-        totals:
-          type: object
-          additionalProperties: true
-        subscriptions:
-          type: array
-          items:
-            $ref: '#/components/schemas/AccountSubscription'
-        entitlements_changed_at:
-          description: "When what this member's entitlements read returns last changed, to the second: a grant, a subscription, a seat, a purchase or a refund, a value on a product they hold, a window or grant reached by the clock, a tester's mark or an erasure. A name first handed out is changed then; a name recorded before this field existed carries the moment it was added. For display and ordering; start the next walk from `next_changed_since`, not from this."
-          type: string
-          format: date-time
-      required:
-        - subject
-        - sequence
-        - status
-        - email_verified
-        - entitlements
-        - totals
-        - subscriptions
-        - entitlements_changed_at
+      allOf:
+        - $ref: '#/components/schemas/AccountState'
+        - type: object
+          properties:
+            entitlements_changed_at:
+              description: "When what this member's entitlements read returns last changed, to the second: a grant, a subscription, a seat, a purchase or a refund, a value on a product they hold, a window or grant reached by the clock, a tester's mark or an erasure. A name first handed out is changed then; a name recorded before this field existed carries the moment it was added. For display and ordering; start the next walk from `next_changed_since`, not from this."
+              type: string
+              format: date-time
+          required:
+            - entitlements_changed_at
     ListedAccountStatePage:
       type: object
       properties:
@@ -13002,8 +12971,12 @@ components:
             - string
             - 'null'
           format: date-time
+        terms:
+          description: "The site's current terms version (null when it asks for no acceptance) and whether the member has accepted it. A member who has not is asked to in the member area, where most pages wait until they do; this API stays open."
+          $ref: '#/components/schemas/MemberTerms'
       required:
         - id
+        - terms
     MemberSubscription:
       type: object
       properties:
@@ -13080,6 +13053,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MemberSubscription'
+    MemberTerms:
+      type: object
+      properties:
+        current:
+          type:
+            - string
+            - 'null'
+        accepted:
+          type: boolean
+      required:
+        - accepted
     OpenBackendPortalSessionPayload:
       type: object
       properties:

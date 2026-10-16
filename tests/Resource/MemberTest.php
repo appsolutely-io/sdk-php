@@ -6,6 +6,7 @@ namespace Appsolutely\Sdk\Tests\Resource;
 
 use Appsolutely\Sdk\Api\MemberApi;
 use Appsolutely\Sdk\Exception\ApiException;
+use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -41,8 +42,8 @@ final class MemberTest extends TestCase
 
     public function testTheMemberIsReadAndRenamedWithTheirToken(): void
     {
-        $member = ['id' => 'member-42', 'name' => 'Ada', 'email' => 'ada@example.com', 'email_verified_at' => '2026-10-01T00:00:00Z', 'created_at' => null, 'updated_at' => null];
-        $site = (new SiteRecorder())->json($member)->json([...$member, 'name' => 'Ada L.']);
+        $member = ['id' => 'member-42', 'name' => 'Ada', 'email' => 'ada@example.com', 'email_verified_at' => '2026-10-01T00:00:00Z', 'created_at' => null, 'updated_at' => null, 'terms' => ['current' => '2026-09', 'accepted' => false]];
+        $site = (new SiteRecorder())->json($member)->json([...$member, 'name' => 'Ada L.', 'terms' => ['accepted' => true]]);
 
         $me = self::api($site)->me();
         $read = $me->get();
@@ -56,6 +57,20 @@ final class MemberTest extends TestCase
         self::assertSame('PATCH /api/v1/me', $site->line(1));
         self::assertSame(['name' => 'Ada L.'], $site->body(1));
         self::assertSame('Ada L.', $renamed->name);
+        self::assertSame('2026-09', $read->terms->current);
+        self::assertFalse($read->terms->accepted);
+        self::assertNull($renamed->terms->current);
+        self::assertTrue($renamed->terms->accepted);
+    }
+
+    public function testAMemberWithoutTermsIsRefused(): void
+    {
+        $site = (new SiteRecorder())->json(['id' => 'member-42', 'name' => null, 'email' => null, 'email_verified_at' => null, 'created_at' => null, 'updated_at' => null]);
+
+        $this->expectException(UnexpectedResponseException::class);
+        $this->expectExceptionMessage('terms');
+
+        self::api($site)->me()->get();
     }
 
     public function testAddressesAreListedFiledChangedAndDeleted(): void

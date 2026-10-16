@@ -7,6 +7,17 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-16
+
+### Added
+
+- `Member::$terms`, a `MemberTerms`: the site's `current` terms version, null when it asks for no acceptance, and whether the member has `accepted` it. A member who has not is asked to in the site's member area; the Site API stays open to them.
+
+### Changed
+
+- **BREAKING:** the client is held to the Site API document of the site software v0.30.0 (`Contract::REVISION`), and needs a site at least that new: a member's `terms` is required, so `me()->get()` and `me()->update()` against an older site are refused as an `UnexpectedResponseException`. `Member`'s constructor takes `$terms` before `$extra`.
+- An account state's `totals` are declared as integers by entitlement key, which `AccountState::$totals` already read them as; nothing changes for a caller.
+
 ## [0.3.0] - 2026-10-14
 
 ### Changed
