@@ -12,6 +12,7 @@ use Appsolutely\Sdk\Model\ProductSkuPrice;
 use Appsolutely\Sdk\Model\SubscriptionSource;
 use Appsolutely\Sdk\Tests\Support\SiteFixture;
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -216,6 +217,32 @@ final class BackendTest extends TestCase
         self::assertSame('POST /api/v1/seats', $site->line());
         self::assertSame(['pool' => '9', 'payer' => 'payer-sub', 'member' => 'member-sub', 'label' => null], $site->body());
         self::assertSame('9', $seat->pool);
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>}>
+     */
+    public static function seatMembers(): iterable
+    {
+        yield 'null member' => [['member' => null]];
+        yield 'omitted member' => [[]];
+        yield 'named member' => [['member' => 'member-sub']];
+    }
+
+    /** @param array<string, mixed> $member */
+    #[DataProvider('seatMembers')]
+    public function testASeatPoolAcceptsAnUnavailableMember(array $member): void
+    {
+        $seat = [...$member, 'id' => '5', 'pool' => '9', 'label' => null, 'granted_at' => '2026-10-08T12:00:00Z', 'passing' => false];
+        $site = (new SiteRecorder())->json(['data' => [['id' => '9', 'product' => null, 'quantity' => 1, 'scheduled' => 1, 'ceiling' => 1, 'occupied' => 1, 'seats' => [$seat]]]]);
+
+        $pools = self::backend($site)->seats()->pools('payer-sub');
+
+        self::assertCount(1, $pools->items);
+        self::assertSame(1, $pools->items[0]->occupied);
+        self::assertCount(1, $pools->items[0]->seats);
+        self::assertSame($member['member'] ?? null, $pools->items[0]->seats[0]->member);
+        self::assertSame('5', $pools->items[0]->seats[0]->id);
     }
 
     public function testAnAccountStateIsReadByItsSubject(): void

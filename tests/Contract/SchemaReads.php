@@ -40,7 +40,7 @@ trait SchemaReads
     private static function assertReadsMatch(string $schema, array $reads, string $class): void
     {
         foreach ($reads as $path) {
-            self::assertNotNull(self::schemaAt(static::document()::schema($schema), $path), sprintf('%s reads "%s", which the %s schema does not define.', $class, $path, $schema));
+            self::assertNotNull(self::schemaAt($schema, $path), sprintf('%s reads "%s", which the %s schema does not define.', $class, $path, $schema));
         }
 
         foreach (self::requiredPaths(static::document()::schema($schema), '', $reads) as $required) {
@@ -87,9 +87,9 @@ trait SchemaReads
     {
         $mismatches = [];
         foreach ($accessors as $path => $used) {
-            $parent = str_contains($path, '.') ? self::schemaAt(static::document()::schema($schema), substr($path, 0, (int) strrpos($path, '.'))) : static::document()::schema($schema);
-            $node = self::schemaAt(static::document()::schema($schema), $path);
-            if ($parent === null || $node === null || self::sampledAsTheSiteSends($parent) || self::sampledAsTheSiteSends($node)) {
+            $parent = str_contains($path, '.') ? self::schemaAt($schema, substr($path, 0, (int) strrpos($path, '.'))) : static::document()::schema($schema);
+            $node = self::schemaAt($schema, $path);
+            if ($parent === null || $node === null || self::sampledAsTheSiteSends($schema, $path)) {
                 continue;
             }
             $field = substr($path, (int) strrpos('.' . $path, '.'));
@@ -169,21 +169,40 @@ trait SchemaReads
     }
 
     /**
-     * Whether a node is the declaration of a field asTheSiteSends() samples
-     * otherwise than the document, which checks that it still declares it so.
-     *
-     * @param array<array-key, mixed> $node
+     * Whether a named field or one of its parents is sampled otherwise than
+     * the document. References switch the scope to the schema they name.
      */
-    private static function sampledAsTheSiteSends(array $node): bool
+    private static function sampledAsTheSiteSends(string $schema, string $path): bool
     {
-        unset($node['description']);
-
-        foreach (static::asTheSiteSends() as $fields) {
-            foreach ($fields as $override) {
-                if (static::document()::map($override['document']) === $node) {
-                    return true;
-                }
+        $node = static::document()::schema($schema);
+        foreach (static::document()::list($node['allOf'] ?? []) as $part) {
+            $reference = static::document()::refName(static::document()::map($part));
+            if ($reference !== null && self::sampledAsTheSiteSends($reference, $path)) {
+                return true;
             }
+        }
+        $prefix = '';
+        foreach (explode('.', $path) as $segment) {
+            $reference = static::document()::refName($node);
+            if ($reference !== null) {
+                $schema = $reference;
+                $prefix = '';
+            }
+            $list = str_ends_with($segment, '[]');
+            $name = $list ? substr($segment, 0, -2) : $segment;
+            $prefix .= $name;
+            if (array_key_exists($prefix, static::asTheSiteSends()[$schema] ?? [])) {
+                return true;
+            }
+            $properties = static::document()::map(self::nonNull(static::document()::resolve($node))['properties'] ?? null);
+            if (!isset($properties[$name])) {
+                return false;
+            }
+            $node = static::document()::map($properties[$name]);
+            if ($list) {
+                $node = static::document()::map(self::nonNull(static::document()::resolve($node))['items'] ?? null);
+            }
+            $prefix .= $list ? '[].' : '.';
         }
 
         return false;
@@ -193,12 +212,11 @@ trait SchemaReads
      * The schema at a read path (`items[].price`), or null when the
      * document defines nothing there.
      *
-     * @param array<array-key, mixed> $schema
      * @return array<array-key, mixed>|null
      */
-    private static function schemaAt(array $schema, string $path): ?array
+    private static function schemaAt(string $schema, string $path): ?array
     {
-        $node = $schema;
+        $node = static::document()::schema($schema);
         foreach (explode('.', $path) as $segment) {
             $list = str_ends_with($segment, '[]');
             $name = $list ? substr($segment, 0, -2) : $segment;
@@ -206,7 +224,7 @@ trait SchemaReads
             if (!isset($properties[$name])) {
                 // Beneath a field sampled as the site sends it, the document
                 // declares nothing to hold a read to.
-                return self::sampledAsTheSiteSends($node) ? $node : null;
+                return self::sampledAsTheSiteSends($schema, $path) ? $node : null;
             }
             $node = static::document()::map($properties[$name]);
             if ($list) {

@@ -16,14 +16,14 @@ final readonly class Seat implements SchemaModel
 
     /**
      * @param string $pool the id of the subscription the pool is
-     * @param string $member the holder's public name
+     * @param string|null $member the holder's public name, or null when unavailable
      * @param bool $passing whether the seat is about to leave its holder, at the pool's next renewal
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
         public string $id,
         public string $pool,
-        public string $member,
+        public ?string $member,
         public ?string $label,
         public DateTimeImmutable $grantedAt,
         public bool $passing,
@@ -36,7 +36,7 @@ final readonly class Seat implements SchemaModel
         return new self(
             id: $json->string('id'),
             pool: $json->string('pool'),
-            member: $json->string('member'),
+            member: $json->nullableString('member'),
             label: $json->nullableString('label'),
             grantedAt: $json->time('granted_at'),
             passing: $json->bool('passing'),

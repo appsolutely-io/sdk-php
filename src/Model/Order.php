@@ -24,8 +24,10 @@ final readonly class Order implements SchemaModel
      * @param string|null $subscriptionStartState how far the subscription this order buys has got; null when it buys none
      * @param string|null $subscriptionStartRefusal why that subscription will not start, when it will not
      * @param string $currency ISO 4217
+     * @param int|null $taxAmount tax in minor units, or null while tax preparation is pending
+     * @param int|null $totalAmount total in minor units, or null while tax preparation is pending
      * @param bool $taxIncluded whether `$taxAmount` is already part of the other amounts, rather than added to them to reach the total
-     * @param string $totalShown what the buyer was told `$totalAmount` is: `final` for the whole charge, `before_provider_tax` for an amount a payment provider then added its own tax to, `priced_by_provider` for a price sent to a provider that ran its own checkout; only on `final` is it what the buyer paid
+     * @param string $totalShown what the buyer was told `$totalAmount` is: `final` for the whole charge, `before_provider_tax` for an amount a payment provider then added its own tax to, `priced_by_provider` for a price sent to a provider that ran its own checkout; `tax_preparation_pending` means no final tax or total is available; only on `final` is it what the buyer paid
      * @param list<OrderLine> $items
      * @param string|null $paymentUrl where to send the signed-in member to finish paying an order still awaiting payment, on the site's own address
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
@@ -43,9 +45,9 @@ final readonly class Order implements SchemaModel
         public string $currency,
         public int $discountedAmount,
         public int $shippingAmount,
-        public int $taxAmount,
+        public ?int $taxAmount,
         public bool $taxIncluded,
-        public int $totalAmount,
+        public ?int $totalAmount,
         public string $totalShown,
         public ?string $note,
         public ?DateTimeImmutable $createdAt,
@@ -71,9 +73,9 @@ final readonly class Order implements SchemaModel
             currency: $json->string('currency'),
             discountedAmount: $json->int('discounted_amount'),
             shippingAmount: $json->int('shipping_amount'),
-            taxAmount: $json->int('tax_amount'),
+            taxAmount: $json->nullableInt('tax_amount'),
             taxIncluded: $json->bool('tax_included'),
-            totalAmount: $json->int('total_amount'),
+            totalAmount: $json->nullableInt('total_amount'),
             totalShown: $json->string('total_shown'),
             note: $json->nullableString('note'),
             createdAt: $json->nullableTime('created_at'),

@@ -21,6 +21,15 @@ final class SiteApiOverrides
      * null; the site sends the period's start and where its payment stands.
      */
     public const array AS_THE_SITE_SENDS = [
+        // The Site API document at d66073e65 allows pending tax and totals to be null.
+        'Order' => [
+            'tax_amount' => ['document' => ['type' => 'integer'], 'site' => null],
+            'total_amount' => ['document' => ['type' => 'integer'], 'site' => null],
+        ],
+        // The Site API document at d66073e65 allows an unavailable seat member to be null.
+        'Seat' => [
+            'member' => ['document' => ['type' => 'string'], 'site' => null],
+        ],
         'AccountSubscription' => [
             'pending_period' => ['document' => ['type' => ['object', 'null'], 'additionalProperties' => true], 'site' => ['start' => '2026-05-01T00:00:00Z', 'status' => 'pending']],
         ],
