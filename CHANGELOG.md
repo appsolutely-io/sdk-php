@@ -9,10 +9,12 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Seat pools accept seats whose member name is null or omitted.
 - Orders awaiting tax preparation accept null tax and total amounts in API answers and typed webhook deliveries.
 
 ### Upgrading
 
+- `Model\Seat::$member` changes from `string` to `?string`. Consumers must handle null when the member name is unavailable.
 - `Model\Order::$taxAmount` and `Model\Order::$totalAmount` change from `int` to `?int`. Consumers must check for null before arithmetic or displaying a final amount; null means the amount is not yet available, rather than zero.
 
 ## [0.5.0] - 2026-10-17
