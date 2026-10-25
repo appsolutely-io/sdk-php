@@ -8,6 +8,7 @@ use Appsolutely\Sdk\Api\MemberApi;
 use Appsolutely\Sdk\Exception\NotFoundException;
 use Appsolutely\Sdk\Exception\UnexpectedResponseException;
 use Appsolutely\Sdk\Tests\Support\SiteFixture;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -44,6 +45,62 @@ final class OrdersTest extends TestCase
         self::assertSame(1, $order->items[0]->quantity);
         self::assertSame(1900, $order->items[0]->price);
         self::assertSame('USD', $order->items[0]->currency);
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>}>
+     */
+    public static function unpricedAmounts(): iterable
+    {
+        yield 'null tax' => [['tax_amount' => null]];
+        yield 'null total' => [['total_amount' => null]];
+        yield 'pending preparation' => [['tax_amount' => null, 'total_amount' => null, 'total_shown' => 'tax_preparation_pending']];
+    }
+
+    /** @param array<string, mixed> $amounts */
+    #[DataProvider('unpricedAmounts')]
+    public function testAnOrderAcceptsUnpricedAmounts(array $amounts): void
+    {
+        $record = [...self::order(), ...$amounts];
+        $site = (new SiteRecorder())->json($record);
+
+        $order = self::api($site)->me()->orders()->get('ord-1');
+
+        self::assertSame($record['tax_amount'], $order->taxAmount);
+        self::assertSame($record['total_amount'], $order->totalAmount);
+        self::assertSame($record['total_shown'], $order->totalShown);
+    }
+
+    public function testAnOrderAcceptsOmittedUnpricedAmounts(): void
+    {
+        $record = self::order();
+        unset($record['tax_amount'], $record['total_amount']);
+        $site = (new SiteRecorder())->json($record);
+
+        $order = self::api($site)->me()->orders()->get('ord-1');
+
+        self::assertNull($order->taxAmount);
+        self::assertNull($order->totalAmount);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function amountFields(): iterable
+    {
+        yield 'tax' => ['tax_amount'];
+        yield 'total' => ['total_amount'];
+    }
+
+    #[DataProvider('amountFields')]
+    public function testAnOrderRefusesMalformedAmounts(string $field): void
+    {
+        $site = (new SiteRecorder())->json([...self::order(), $field => 'unpriced']);
+
+        $this->expectException(UnexpectedResponseException::class);
+        $this->expectExceptionMessage('"' . $field . '"');
+
+        self::api($site)->me()->orders()->get('ord-1');
     }
 
     public function testAnOrderStatusIsTheStringTheSiteSends(): void

@@ -310,6 +310,16 @@ final class TypedEventTest extends TestCase
         self::deliver(EventType::FORM_SUBMITTED, SiteFixture::json('form-entry'));
     }
 
+    public function testAnOrderDeliveryAcceptsPendingAmounts(): void
+    {
+        $event = self::deliver(EventType::ORDER_STATUS_UPDATED, SiteFixture::json('order', ['tax_amount' => null, 'total_amount' => null, 'total_shown' => 'tax_preparation_pending']));
+
+        self::assertInstanceOf(OrderEvent::class, $event);
+        self::assertNull($event->order->taxAmount);
+        self::assertNull($event->order->totalAmount);
+        self::assertSame('tax_preparation_pending', $event->order->totalShown);
+    }
+
     private static function assertTheOrder(Order $order, string $status): void
     {
         self::assertSame('SO-20261008-0042', $order->id);
