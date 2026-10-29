@@ -23,17 +23,22 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- OAuth credential objects use explicit redacted debug fields and refuse serialization; OAuth exceptions retain hints and other response extensions.
+
 - Installation and configuration guidance describe public client integrations with a site.
 - Seat pools accept seats whose member name is null or omitted.
 - Orders awaiting tax preparation accept null tax and total amounts in API answers and typed webhook deliveries.
 
 ### Upgrading
 
-- Raw Administrator API callers must replace `PATCH /api/admin/v1/store-settings/bulk` with `POST /api/admin/v1/store-settings` for a registration (`store` and `app_id` required) or `PATCH /api/admin/v1/store-settings/{store_setting}` for an existing registration, supplying its opaque reference and current `If-Match` version. The resource now represents app registrations rather than individual setting rows.
+- `Testing\FakeClient` supplies automatic OIDC discovery and token answers only for internal requests without `X-Request-Id`. Tests calling the typed OAuth wrappers must arrange those operation answers explicitly.
+- Store-purchase and entitlement reads against sites older than aio v0.38.0 throw `UnexpectedResponseException` when their answers omit the required `belongs_to_you` or `kind` fields. Upgrade the site before using this source revision.
+
+- **BREAKING:** Raw Administrator API callers must replace `PATCH /api/admin/v1/store-settings/bulk` with `POST /api/admin/v1/store-settings` for a registration (`store` and `app_id` required) or `PATCH /api/admin/v1/store-settings/{store_setting}` for an existing registration, supplying its opaque reference and current `If-Match` version. The resource now represents app registrations rather than individual setting rows.
 - Tests arranging store-purchase or entitlement answers must send the new required fields from aio v0.38.0. A final purchase outcome does not establish ownership, and an unavailable order total must remain null rather than be treated as zero.
 - Where seat removal must target a pool, pass its reference to `backend()->seats()->take($member, $pool)`; the existing `take($member)` call remains available without a pool filter.
-- Handle purchase ownership through `StorePurchaseTransaction::$belongsToYou`, rather than inferring it from `outcome` or `subscriptionId`. Direct constructors must change from `new StorePurchaseTransaction($outcome, $subscriptionId, $status, $kind, $environment, $extra)` to `new StorePurchaseTransaction($outcome, $subscriptionId, $status, $kind, $environment, $belongsToYou, $extra)`.
-- Direct entitlement constructors must change from `new Entitlement($key, $label, $quantity, $expiresAt, $periodStart, $periodEnd, $breakdown, $extra)` to `new Entitlement($key, $label, $quantity, $expiresAt, $periodStart, $periodEnd, $breakdown, $kind, $extra)`. Test answers must include the server's `kind` and purchase `belongs_to_you` fields.
+- **BREAKING:** Handle purchase ownership through `StorePurchaseTransaction::$belongsToYou`, rather than inferring it from `outcome` or `subscriptionId`. Direct constructors must change from `new StorePurchaseTransaction($outcome, $subscriptionId, $status, $kind, $environment, $extra)` to `new StorePurchaseTransaction($outcome, $subscriptionId, $status, $kind, $environment, $belongsToYou, $extra)`.
+- **BREAKING:** Direct entitlement constructors must change from `new Entitlement($key, $label, $quantity, $expiresAt, $periodStart, $periodEnd, $breakdown, $extra)` to `new Entitlement($key, $label, $quantity, $expiresAt, $periodStart, $periodEnd, $breakdown, $kind, $extra)`. Test answers must include the server's `kind` and purchase `belongs_to_you` fields.
 - `Model\Seat::$member` changes from `string` to `?string`. Consumers must handle null when the member name is unavailable.
 - `Model\Order::$taxAmount` and `Model\Order::$totalAmount` change from `int` to `?int`. Consumers must check for null before arithmetic or displaying a final amount; null means the amount is not yet available, rather than zero.
 
