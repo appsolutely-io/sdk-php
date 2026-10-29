@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Request\OAuth;
 
+use Appsolutely\Sdk\Http\Header;
 use Appsolutely\Sdk\Oidc\ClientAuthentication;
 
 final readonly class ClientIdentity
@@ -31,7 +32,7 @@ final readonly class ClientIdentity
     public function headers(): array
     {
         return $this->clientSecret !== null && $this->authentication === ClientAuthentication::ClientSecretBasic
-            ? ['Authorization' => 'Basic ' . base64_encode(urlencode($this->clientId) . ':' . urlencode($this->clientSecret))]
+            ? [Header::AUTHORIZATION => 'Basic ' . base64_encode(urlencode($this->clientId) . ':' . urlencode($this->clientSecret))]
             : [];
     }
 
