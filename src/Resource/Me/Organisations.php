@@ -46,4 +46,8 @@ final readonly class Organisations
     {
         return $this->caller->keyed(Operation::DissolveMeOrganisation, \Appsolutely\Sdk\Model\OrganisationBillingOperation::class, ['organisation' => $organisation], [], $idempotencyKey);
     }
+    public function invitations(): \Appsolutely\Sdk\Resource\Me\Organisations\Invitations
+    {
+        return new \Appsolutely\Sdk\Resource\Me\Organisations\Invitations($this->caller);
+    }
 }

@@ -117,9 +117,27 @@ enum Operation: string
 
     case DissolveMeOrganisation = 'dissolveMeOrganisation';
 
+    case ListMeOrganisationInvitations = 'listMeOrganisationInvitations';
+
+    case CreateMeOrganisationInvitation = 'createMeOrganisationInvitation';
+
+    case AcceptMeOrganisationInvitation = 'acceptMeOrganisationInvitation';
+
+    case DeclineMeOrganisationInvitation = 'declineMeOrganisationInvitation';
+
+    case ResendMeOrganisationInvitation = 'resendMeOrganisationInvitation';
+
+    case RevokeMeOrganisationInvitation = 'revokeMeOrganisationInvitation';
+
     public function method(): string
     {
         return match ($this) {
+            self::RevokeMeOrganisationInvitation => 'POST',
+            self::ResendMeOrganisationInvitation => 'POST',
+            self::DeclineMeOrganisationInvitation => 'POST',
+            self::AcceptMeOrganisationInvitation => 'POST',
+            self::CreateMeOrganisationInvitation => 'POST',
+            self::ListMeOrganisationInvitations => 'GET',
             self::DissolveMeOrganisation => 'POST',
             self::LeaveMeOrganisation => 'POST',
             self::ListMeOrganisationChanges => 'GET',
@@ -151,6 +169,12 @@ enum Operation: string
     public function template(): string
     {
         return match ($this) {
+            self::RevokeMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/revoke',
+            self::ResendMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/resend',
+            self::DeclineMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/decline',
+            self::AcceptMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/accept',
+            self::CreateMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations',
+            self::ListMeOrganisationInvitations => '/api/v1/me/organisations/{organisation}/invitations',
             self::DissolveMeOrganisation => '/api/v1/me/organisations/{organisation}/dissolve',
             self::LeaveMeOrganisation => '/api/v1/me/organisations/{organisation}/leave',
             self::ListMeOrganisationChanges => '/api/v1/me/organisations/{organisation}/changes',
@@ -264,6 +288,12 @@ enum Operation: string
     public function audience(): Audience
     {
         return match ($this) {
+            self::RevokeMeOrganisationInvitation => Audience::Member,
+            self::ResendMeOrganisationInvitation => Audience::Member,
+            self::DeclineMeOrganisationInvitation => Audience::Member,
+            self::AcceptMeOrganisationInvitation => Audience::Member,
+            self::CreateMeOrganisationInvitation => Audience::Member,
+            self::ListMeOrganisationInvitations => Audience::Member,
             self::DissolveMeOrganisation => Audience::Member,
             self::LeaveMeOrganisation => Audience::Member,
             self::ListMeOrganisationChanges => Audience::Member,
@@ -305,6 +335,12 @@ enum Operation: string
     public function successStatuses(): array
     {
         return match ($this) {
+            self::RevokeMeOrganisationInvitation => [204],
+            self::ResendMeOrganisationInvitation => [200],
+            self::DeclineMeOrganisationInvitation => [204],
+            self::AcceptMeOrganisationInvitation => [200],
+            self::CreateMeOrganisationInvitation => [201],
+            self::ListMeOrganisationInvitations => [200],
             self::DissolveMeOrganisation => [202],
             self::LeaveMeOrganisation => [204],
             self::ListMeOrganisationChanges => [200],
@@ -335,6 +371,12 @@ enum Operation: string
     public function takesIdempotencyKey(): bool
     {
         return match ($this) {
+            self::RevokeMeOrganisationInvitation => true,
+            self::ResendMeOrganisationInvitation => true,
+            self::DeclineMeOrganisationInvitation => true,
+            self::AcceptMeOrganisationInvitation => true,
+            self::CreateMeOrganisationInvitation => true,
+            self::ListMeOrganisationInvitations => false,
             self::DissolveMeOrganisation => true,
             self::LeaveMeOrganisation => true,
             self::ListMeOrganisationChanges => false,
@@ -364,6 +406,12 @@ enum Operation: string
     public function isCursorList(): bool
     {
         return match ($this) {
+            self::RevokeMeOrganisationInvitation => false,
+            self::ResendMeOrganisationInvitation => false,
+            self::DeclineMeOrganisationInvitation => false,
+            self::AcceptMeOrganisationInvitation => false,
+            self::CreateMeOrganisationInvitation => false,
+            self::ListMeOrganisationInvitations => true,
             self::DissolveMeOrganisation => false,
             self::LeaveMeOrganisation => false,
             self::ListMeOrganisationChanges => true,
