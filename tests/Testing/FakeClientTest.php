@@ -310,4 +310,34 @@ final class FakeClientTest extends TestCase
         self::assertSame(FakeClient::MEMBER_TOKEN, $fake->lastCall(Operation::PushSyncMeAddress)->token);
         self::assertNull($fake->lastCall(Operation::PushSyncMeAddress)->idempotencyKey);
     }
+    /** @return iterable<string, array{bool}> */
+    public static function primitiveBootstrapCalls(): iterable
+    {
+        yield 'discovery' => [false];
+        yield 'token' => [true];
+    }
+
+    #[DataProvider('primitiveBootstrapCalls')]
+    public function testUnarrangedPrimitivesCannotUseInternalBootstrap(bool $token): void
+    {
+        $fake = new FakeClient();
+        $this->expectException(UnarrangedCallException::class);
+        if ($token) {
+            $fake->api()->oauth()->exchange(new \Appsolutely\Sdk\Request\OAuth\ClientCredentialsGrant(), new \Appsolutely\Sdk\Request\OAuth\ClientIdentity('explicit-client'));
+        } else {
+            $fake->api()->openIdConfiguration();
+        }
+    }
+
+    public function testArrangedPrimitiveTokensDoNotReplaceBackendBootstrap(): void
+    {
+        $fake = (new FakeClient())
+            ->answer(Operation::ExchangeOAuthToken, ['access_token' => 'explicit-token', 'token_type' => 'Bearer', 'expires_in' => 300])
+            ->answer(Operation::GetProduct, \Appsolutely\Sdk\Tests\Support\SiteFixture::record('product'));
+        $fake->backend()->products()->get('product');
+        self::assertSame(FakeClient::BACKEND_TOKEN, $fake->lastCall(Operation::GetProduct)->token);
+        self::assertCount(0, $fake->calls(Operation::ExchangeOAuthToken));
+        self::assertSame('explicit-token', $fake->api()->oauth()->exchange(new \Appsolutely\Sdk\Request\OAuth\ClientCredentialsGrant(), new \Appsolutely\Sdk\Request\OAuth\ClientIdentity('explicit-client'))->accessToken);
+        self::assertCount(1, $fake->calls(Operation::ExchangeOAuthToken));
+    }
 }
