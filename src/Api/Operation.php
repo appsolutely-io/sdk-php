@@ -105,9 +105,12 @@ enum Operation: string
 
     case GetDistributionTargetVersion = 'getDistributionTargetVersion';
 
+    case CreateMeTrial = 'createMeTrial';
+
     public function method(): string
     {
         return match ($this) {
+            self::CreateMeTrial => 'POST',
             self::GetDistributionTargetVersion => 'GET',
             self::GetDistributionVersion => 'GET',
             self::GetOpenIdConfiguration => 'GET',
@@ -133,6 +136,7 @@ enum Operation: string
     public function template(): string
     {
         return match ($this) {
+            self::CreateMeTrial => '/api/v1/me/trials',
             self::GetDistributionTargetVersion => '/api/distribution-version/{distribution}/{target}',
             self::GetDistributionVersion => '/api/distribution-version/{distribution}',
             self::GetOpenIdConfiguration => '/.well-known/openid-configuration',
@@ -240,6 +244,7 @@ enum Operation: string
     public function audience(): Audience
     {
         return match ($this) {
+            self::CreateMeTrial => Audience::Member,
             self::GetDistributionTargetVersion => Audience::Anyone,
             self::GetDistributionVersion => Audience::Anyone,
             self::GetOpenIdConfiguration => Audience::Anyone,
@@ -275,6 +280,7 @@ enum Operation: string
     public function successStatuses(): array
     {
         return match ($this) {
+            self::CreateMeTrial => [200],
             self::GetDistributionTargetVersion => [200],
             self::GetDistributionVersion => [200],
             self::GetOpenIdConfiguration => [200],
@@ -299,6 +305,7 @@ enum Operation: string
     public function takesIdempotencyKey(): bool
     {
         return match ($this) {
+            self::CreateMeTrial => false,
             self::GetDistributionTargetVersion => false,
             self::GetDistributionVersion => false,
             self::GetOpenIdConfiguration => false,
@@ -322,6 +329,7 @@ enum Operation: string
     public function isCursorList(): bool
     {
         return match ($this) {
+            self::CreateMeTrial => false,
             self::GetDistributionTargetVersion => false,
             self::GetDistributionVersion => false,
             self::GetOpenIdConfiguration => false,

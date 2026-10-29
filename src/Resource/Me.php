@@ -87,4 +87,8 @@ final readonly class Me
     {
         return new Subscriptions($this->caller);
     }
+    public function trials(): \Appsolutely\Sdk\Resource\Me\Trials
+    {
+        return new \Appsolutely\Sdk\Resource\Me\Trials($this->caller);
+    }
 }
