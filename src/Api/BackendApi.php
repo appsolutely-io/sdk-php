@@ -136,4 +136,8 @@ final readonly class BackendApi
     {
         return new Seats($this->backend);
     }
+    public function organisationRoles(): \Appsolutely\Sdk\Resource\Backend\OrganisationRoles
+    {
+        return new \Appsolutely\Sdk\Resource\Backend\OrganisationRoles($this->backend);
+    }
 }

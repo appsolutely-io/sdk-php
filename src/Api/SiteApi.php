@@ -134,6 +134,43 @@ final readonly class SiteApi
     }
 
     /**
+     * A single form exchange, independent of cached machine credentials.
+     *
+     * @internal
+     * @param array<string, string> $fields
+     * @param array<string, string> $headers
+     */
+    public function form(string $path, #[\SensitiveParameter] array $fields, #[\SensitiveParameter] array $headers = []): ApiResponse
+    {
+        $requestId = Uuid::v4();
+        $response = $this->http->postForm($this->url($path, []), $fields, [...$headers, Header::ACCEPT => self::ACCEPT, Header::REQUEST_ID => $requestId]);
+        return $this->oauthAnswer($response, 'POST', $path, $requestId);
+    }
+
+    /** @internal */
+    public function oauthGet(string $path): ApiResponse
+    {
+        $requestId = Uuid::v4();
+        $headers = [Header::ACCEPT => self::ACCEPT, Header::REQUEST_ID => $requestId];
+        if ($this->token !== null) {
+            $headers[Header::AUTHORIZATION] = 'Bearer ' . $this->token;
+        }
+        $response = $this->http->get($this->url($path, []), $headers);
+
+        return $this->oauthAnswer($response, 'GET', $path, $requestId);
+    }
+
+    private function oauthAnswer(ResponseInterface $response, string $method, string $path, string $requestId): ApiResponse
+    {
+        if (!HttpTransport::isSuccessful($response)) {
+            throw \Appsolutely\Sdk\Exception\OAuthException::fromResponse($response)
+                ?? ApiException::fromResponse($response, $requestId, $this->clock->now());
+        }
+
+        return $this->answer($response, $method, $path, $requestId, null);
+    }
+
+    /**
      * A POST the site runs once however often it arrives: it carries an
      * Idempotency-Key, the same on every retry of this call, and a retry
      * is answered with the first answer (`$replayed` on the result). Use it
@@ -147,12 +184,24 @@ final readonly class SiteApi
      */
     public function postIdempotent(string $path, #[\SensitiveParameter] array $body = [], ?string $idempotencyKey = null, ?string $requestId = null): ApiResponse
     {
+        return $this->idempotent('POST', $path, $body, $idempotencyKey, $requestId);
+    }
+
+    /**
+     * @internal
+     * @param array<string, mixed>|null $body
+     */
+    public function idempotent(string $method, string $path, #[\SensitiveParameter] ?array $body, ?string $idempotencyKey = null, ?string $requestId = null): ApiResponse
+    {
+        if (!in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            throw new InvalidArgumentValueException('An idempotent operation must use a write method.');
+        }
         $idempotencyKey ??= Uuid::v4();
         if (preg_match('/^[\x20-\x7E]{1,255}$/D', $idempotencyKey) !== 1) {
             throw new InvalidArgumentValueException('An Idempotency-Key must be 1 to 255 printable ASCII characters.');
         }
 
-        return $this->call('POST', $path, [], $body, $requestId, retryable: true, idempotencyKey: $idempotencyKey);
+        return $this->call($method, $path, [], $body, $requestId, retryable: true, idempotencyKey: $idempotencyKey);
     }
 
     /**

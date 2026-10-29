@@ -117,7 +117,7 @@ final class MemberTest extends TestCase
 
     public function testTheMembersEntitlementsAreOnePage(): void
     {
-        $site = (new SiteRecorder())->json(['data' => [['key' => 'pro', 'label' => 'Pro', 'quantity' => 1, 'expires_at' => null]]]);
+        $site = (new SiteRecorder())->json(['data' => [['key' => 'pro', 'label' => 'Pro', 'quantity' => 1, 'kind' => 'paid', 'expires_at' => null]]]);
 
         $page = self::api($site)->me()->entitlements()->list();
 

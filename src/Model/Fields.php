@@ -198,6 +198,25 @@ final class Fields
         return $values;
     }
 
+    /** @return list<string>|null */
+    public function nullableStrings(string $name): ?array
+    {
+        $value = $this->value($name, __FUNCTION__);
+        if ($value === null) {
+            return null;
+        }
+        if (!is_array($value) || !array_is_list($value)) {
+            $this->refuse($name, 'a list of strings', $value);
+        }
+        foreach ($value as $item) {
+            if (!is_string($item)) {
+                $this->refuse($name, 'a list of strings', $value);
+            }
+        }
+
+        return $value;
+    }
+
     /**
      * A free-form object, such as a form entry's answers, kept as decoded.
      * `{}` and `[]` both decode to an empty array. A member named like a

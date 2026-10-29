@@ -40,6 +40,7 @@ final readonly class StorePurchaseTransaction implements SchemaModel
         public ?string $status,
         public ?string $kind,
         public ?string $environment,
+        public bool $belongsToYou,
         public array $extra = [],
     ) {}
 
@@ -48,6 +49,7 @@ final readonly class StorePurchaseTransaction implements SchemaModel
     {
         return new self(
             outcome: $json->string('outcome'),
+            belongsToYou: $json->bool('belongs_to_you'),
             subscriptionId: $json->nullableString('subscription_id'),
             status: $json->nullableString('status'),
             kind: $json->nullableString('kind'),

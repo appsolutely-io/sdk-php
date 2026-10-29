@@ -89,9 +89,171 @@ enum Operation: string
     case DeleteSeat = 'deleteSeat';
     case ListSeatPools = 'listSeatPools';
 
+    case RequestDeviceAuthorization = 'requestDeviceAuthorization';
+
+    case ExchangeOAuthToken = 'exchangeOAuthToken';
+
+    case RevokeOAuthToken = 'revokeOAuthToken';
+
+    case GetOpenIdSigningKeys = 'getOpenIdSigningKeys';
+
+    case GetOAuthUserInfo = 'getOAuthUserInfo';
+
+    case GetOpenIdConfiguration = 'getOpenIdConfiguration';
+
+    case GetDistributionVersion = 'getDistributionVersion';
+
+    case GetDistributionTargetVersion = 'getDistributionTargetVersion';
+
+    case CreateMeTrial = 'createMeTrial';
+
+    case ListMeOrganisations = 'listMeOrganisations';
+
+    case CreateMeOrganisation = 'createMeOrganisation';
+
+    case ListMeOrganisationChanges = 'listMeOrganisationChanges';
+
+    case LeaveMeOrganisation = 'leaveMeOrganisation';
+
+    case DissolveMeOrganisation = 'dissolveMeOrganisation';
+
+    case ListMeOrganisationInvitations = 'listMeOrganisationInvitations';
+
+    case CreateMeOrganisationInvitation = 'createMeOrganisationInvitation';
+
+    case AcceptMeOrganisationInvitation = 'acceptMeOrganisationInvitation';
+
+    case DeclineMeOrganisationInvitation = 'declineMeOrganisationInvitation';
+
+    case ResendMeOrganisationInvitation = 'resendMeOrganisationInvitation';
+
+    case RevokeMeOrganisationInvitation = 'revokeMeOrganisationInvitation';
+
+    case GetOrganisationRole = 'getOrganisationRole';
+
+    case AssignOrganisationRole = 'assignOrganisationRole';
+
+    case RevokeOrganisationRole = 'revokeOrganisationRole';
+
+    case ListOrganisationRoles = 'listOrganisationRoles';
+
+    case ListMeOrganisationPools = 'listMeOrganisationPools';
+
+    case ListMeOrganisationPoolSeats = 'listMeOrganisationPoolSeats';
+
+    case CreateMeOrganisationSeat = 'createMeOrganisationSeat';
+
+    case DeleteMeOrganisationSeat = 'deleteMeOrganisationSeat';
+
+    case CreateMeOrganisationTransfer = 'createMeOrganisationTransfer';
+
+    case GetMeOrganisationTransfer = 'getMeOrganisationTransfer';
+
+    case AcceptMeOrganisationTransfer = 'acceptMeOrganisationTransfer';
+
+    case CreateMeOrganisationBinding = 'createMeOrganisationBinding';
+
+    case ReconcileMeOrganisationBinding = 'reconcileMeOrganisationBinding';
+
+    case CancelMeOrganisationTransfer = 'cancelMeOrganisationTransfer';
+
+    case ReviewMeOrganisationTransfer = 'reviewMeOrganisationTransfer';
+
+    case GetMeOrganisationBillingOperation = 'getMeOrganisationBillingOperation';
+
+    case ReviewMeOrganisationBilling = 'reviewMeOrganisationBilling';
+
+    case TakeoverMeOrganisationBilling = 'takeoverMeOrganisationBilling';
+
+    case CreateMeOrganisationRecoveryBinding = 'createMeOrganisationRecoveryBinding';
+
+    case CancelMeOrganisationRecoveryBinding = 'cancelMeOrganisationRecoveryBinding';
+
+    case ReconcileMeOrganisationRecoveryBinding = 'reconcileMeOrganisationRecoveryBinding';
+
+    case CreateMeOrganisationReplacement = 'createMeOrganisationReplacement';
+
+    case CurrentMeOrganisationReplacement = 'currentMeOrganisationReplacement';
+
+    case ReviewMeOrganisationReplacement = 'reviewMeOrganisationReplacement';
+
+    case GetMeOrganisationReplacement = 'getMeOrganisationReplacement';
+
+    case CloseMeOrganisationReplacement = 'closeMeOrganisationReplacement';
+
+    case CompleteMeOrganisationReplacement = 'completeMeOrganisationReplacement';
+
+    case ReconcileMeOrganisationReplacement = 'reconcileMeOrganisationReplacement';
+
+    case GetBackendOrganisationRole = 'getBackendOrganisationRole';
+
+    case AssignBackendOrganisationRole = 'assignBackendOrganisationRole';
+
+    case RevokeBackendOrganisationRole = 'revokeBackendOrganisationRole';
+
+    case ListBackendOrganisationRoles = 'listBackendOrganisationRoles';
+
+    case CreateBackendOrganisationRole = 'createBackendOrganisationRole';
+
+    case RetireBackendOrganisationRole = 'retireBackendOrganisationRole';
+
     public function method(): string
     {
         return match ($this) {
+            self::RetireBackendOrganisationRole => 'POST',
+            self::CreateBackendOrganisationRole => 'POST',
+            self::ListBackendOrganisationRoles => 'GET',
+            self::RevokeBackendOrganisationRole => 'DELETE',
+            self::AssignBackendOrganisationRole => 'PUT',
+            self::GetBackendOrganisationRole => 'GET',
+            self::ReconcileMeOrganisationReplacement => 'POST',
+            self::CompleteMeOrganisationReplacement => 'POST',
+            self::CloseMeOrganisationReplacement => 'POST',
+            self::GetMeOrganisationReplacement => 'GET',
+            self::ReviewMeOrganisationReplacement => 'GET',
+            self::CurrentMeOrganisationReplacement => 'GET',
+            self::CreateMeOrganisationReplacement => 'POST',
+            self::ReconcileMeOrganisationRecoveryBinding => 'POST',
+            self::CancelMeOrganisationRecoveryBinding => 'POST',
+            self::CreateMeOrganisationRecoveryBinding => 'POST',
+            self::TakeoverMeOrganisationBilling => 'POST',
+            self::ReviewMeOrganisationBilling => 'GET',
+            self::GetMeOrganisationBillingOperation => 'GET',
+            self::ReviewMeOrganisationTransfer => 'GET',
+            self::CancelMeOrganisationTransfer => 'POST',
+            self::ReconcileMeOrganisationBinding => 'POST',
+            self::CreateMeOrganisationBinding => 'POST',
+            self::AcceptMeOrganisationTransfer => 'POST',
+            self::GetMeOrganisationTransfer => 'GET',
+            self::CreateMeOrganisationTransfer => 'POST',
+            self::DeleteMeOrganisationSeat => 'DELETE',
+            self::CreateMeOrganisationSeat => 'POST',
+            self::ListMeOrganisationPoolSeats => 'GET',
+            self::ListMeOrganisationPools => 'GET',
+            self::ListOrganisationRoles => 'GET',
+            self::RevokeOrganisationRole => 'DELETE',
+            self::AssignOrganisationRole => 'PUT',
+            self::GetOrganisationRole => 'GET',
+            self::RevokeMeOrganisationInvitation => 'POST',
+            self::ResendMeOrganisationInvitation => 'POST',
+            self::DeclineMeOrganisationInvitation => 'POST',
+            self::AcceptMeOrganisationInvitation => 'POST',
+            self::CreateMeOrganisationInvitation => 'POST',
+            self::ListMeOrganisationInvitations => 'GET',
+            self::DissolveMeOrganisation => 'POST',
+            self::LeaveMeOrganisation => 'POST',
+            self::ListMeOrganisationChanges => 'GET',
+            self::CreateMeOrganisation => 'POST',
+            self::ListMeOrganisations => 'GET',
+            self::CreateMeTrial => 'POST',
+            self::GetDistributionTargetVersion => 'GET',
+            self::GetDistributionVersion => 'GET',
+            self::GetOpenIdConfiguration => 'GET',
+            self::GetOAuthUserInfo => 'GET',
+            self::GetOpenIdSigningKeys => 'GET',
+            self::RevokeOAuthToken => 'POST',
+            self::ExchangeOAuthToken => 'POST',
+            self::RequestDeviceAuthorization => 'POST',
             self::RequestMagicLink, self::TokenMagicLink,
             self::CreateMeAddress, self::CreateMePushDevice, self::UnregisterMePushDevice,
             self::PushSyncMeAddress,
@@ -109,6 +271,60 @@ enum Operation: string
     public function template(): string
     {
         return match ($this) {
+            self::RetireBackendOrganisationRole => '/api/v1/organisations/{organisation}/roles/{key}/retirement',
+            self::CreateBackendOrganisationRole => '/api/v1/organisations/{organisation}/roles',
+            self::ListBackendOrganisationRoles => '/api/v1/organisations/{organisation}/roles',
+            self::RevokeBackendOrganisationRole => '/api/v1/organisations/{organisation}/members/{membership}/roles/{key}',
+            self::AssignBackendOrganisationRole => '/api/v1/organisations/{organisation}/members/{membership}/roles/{key}',
+            self::GetBackendOrganisationRole => '/api/v1/organisations/{organisation}/members/{membership}/roles',
+            self::ReconcileMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}/reconcile',
+            self::CompleteMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}/complete',
+            self::CloseMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}/close',
+            self::GetMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}',
+            self::ReviewMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{pool}/review',
+            self::CurrentMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{pool}/current',
+            self::CreateMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements',
+            self::ReconcileMeOrganisationRecoveryBinding => '/api/v1/me/organisations/{organisation}/billing/bindings/{binding}/reconcile',
+            self::CancelMeOrganisationRecoveryBinding => '/api/v1/me/organisations/{organisation}/billing/bindings/{binding}/cancel',
+            self::CreateMeOrganisationRecoveryBinding => '/api/v1/me/organisations/{organisation}/billing/bindings',
+            self::TakeoverMeOrganisationBilling => '/api/v1/me/organisations/{organisation}/billing/takeover',
+            self::ReviewMeOrganisationBilling => '/api/v1/me/organisations/{organisation}/billing/review',
+            self::GetMeOrganisationBillingOperation => '/api/v1/me/organisations/{organisation}/billing-operations/{operation}',
+            self::ReviewMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/review',
+            self::CancelMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/cancel',
+            self::ReconcileMeOrganisationBinding => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/bindings/{binding}/reconcile',
+            self::CreateMeOrganisationBinding => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/bindings',
+            self::AcceptMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/accept',
+            self::GetMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}',
+            self::CreateMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers',
+            self::DeleteMeOrganisationSeat => '/api/v1/me/organisations/{organisation}/seats/{seat}',
+            self::CreateMeOrganisationSeat => '/api/v1/me/organisations/{organisation}/seats',
+            self::ListMeOrganisationPoolSeats => '/api/v1/me/organisations/{organisation}/pools/{pool}/seats',
+            self::ListMeOrganisationPools => '/api/v1/me/organisations/{organisation}/pools',
+            self::ListOrganisationRoles => '/api/v1/me/organisations/{organisation}/roles',
+            self::RevokeOrganisationRole => '/api/v1/me/organisations/{organisation}/members/{membership}/roles/{key}',
+            self::AssignOrganisationRole => '/api/v1/me/organisations/{organisation}/members/{membership}/roles/{key}',
+            self::GetOrganisationRole => '/api/v1/me/organisations/{organisation}/members/{membership}/roles',
+            self::RevokeMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/revoke',
+            self::ResendMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/resend',
+            self::DeclineMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/decline',
+            self::AcceptMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/accept',
+            self::CreateMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations',
+            self::ListMeOrganisationInvitations => '/api/v1/me/organisations/{organisation}/invitations',
+            self::DissolveMeOrganisation => '/api/v1/me/organisations/{organisation}/dissolve',
+            self::LeaveMeOrganisation => '/api/v1/me/organisations/{organisation}/leave',
+            self::ListMeOrganisationChanges => '/api/v1/me/organisations/{organisation}/changes',
+            self::CreateMeOrganisation => '/api/v1/me/organisations',
+            self::ListMeOrganisations => '/api/v1/me/organisations',
+            self::CreateMeTrial => '/api/v1/me/trials',
+            self::GetDistributionTargetVersion => '/api/distribution-version/{distribution}/{target}',
+            self::GetDistributionVersion => '/api/distribution-version/{distribution}',
+            self::GetOpenIdConfiguration => '/.well-known/openid-configuration',
+            self::GetOAuthUserInfo => '/oauth/userinfo',
+            self::GetOpenIdSigningKeys => '/oauth/jwks.json',
+            self::RevokeOAuthToken => '/oauth/revoke',
+            self::ExchangeOAuthToken => '/oauth/token',
+            self::RequestDeviceAuthorization => '/oauth/device/code',
             self::GetApiVersion => '/api/v1',
             self::GetOpenApiDocument => '/api/v1/openapi.json',
             self::RequestMagicLink => '/api/v1/auth/magic-link',
@@ -208,6 +424,60 @@ enum Operation: string
     public function audience(): Audience
     {
         return match ($this) {
+            self::RetireBackendOrganisationRole => Audience::Backend,
+            self::CreateBackendOrganisationRole => Audience::Backend,
+            self::ListBackendOrganisationRoles => Audience::Backend,
+            self::RevokeBackendOrganisationRole => Audience::Backend,
+            self::AssignBackendOrganisationRole => Audience::Backend,
+            self::GetBackendOrganisationRole => Audience::Backend,
+            self::ReconcileMeOrganisationReplacement => Audience::Member,
+            self::CompleteMeOrganisationReplacement => Audience::Member,
+            self::CloseMeOrganisationReplacement => Audience::Member,
+            self::GetMeOrganisationReplacement => Audience::Member,
+            self::ReviewMeOrganisationReplacement => Audience::Member,
+            self::CurrentMeOrganisationReplacement => Audience::Member,
+            self::CreateMeOrganisationReplacement => Audience::Member,
+            self::ReconcileMeOrganisationRecoveryBinding => Audience::Member,
+            self::CancelMeOrganisationRecoveryBinding => Audience::Member,
+            self::CreateMeOrganisationRecoveryBinding => Audience::Member,
+            self::TakeoverMeOrganisationBilling => Audience::Member,
+            self::ReviewMeOrganisationBilling => Audience::Member,
+            self::GetMeOrganisationBillingOperation => Audience::Member,
+            self::ReviewMeOrganisationTransfer => Audience::Member,
+            self::CancelMeOrganisationTransfer => Audience::Member,
+            self::ReconcileMeOrganisationBinding => Audience::Member,
+            self::CreateMeOrganisationBinding => Audience::Member,
+            self::AcceptMeOrganisationTransfer => Audience::Member,
+            self::GetMeOrganisationTransfer => Audience::Member,
+            self::CreateMeOrganisationTransfer => Audience::Member,
+            self::DeleteMeOrganisationSeat => Audience::Member,
+            self::CreateMeOrganisationSeat => Audience::Member,
+            self::ListMeOrganisationPoolSeats => Audience::Member,
+            self::ListMeOrganisationPools => Audience::Member,
+            self::ListOrganisationRoles => Audience::Member,
+            self::RevokeOrganisationRole => Audience::Member,
+            self::AssignOrganisationRole => Audience::Member,
+            self::GetOrganisationRole => Audience::Member,
+            self::RevokeMeOrganisationInvitation => Audience::Member,
+            self::ResendMeOrganisationInvitation => Audience::Member,
+            self::DeclineMeOrganisationInvitation => Audience::Member,
+            self::AcceptMeOrganisationInvitation => Audience::Member,
+            self::CreateMeOrganisationInvitation => Audience::Member,
+            self::ListMeOrganisationInvitations => Audience::Member,
+            self::DissolveMeOrganisation => Audience::Member,
+            self::LeaveMeOrganisation => Audience::Member,
+            self::ListMeOrganisationChanges => Audience::Member,
+            self::CreateMeOrganisation => Audience::Member,
+            self::ListMeOrganisations => Audience::Member,
+            self::CreateMeTrial => Audience::Member,
+            self::GetDistributionTargetVersion => Audience::Anyone,
+            self::GetDistributionVersion => Audience::Anyone,
+            self::GetOpenIdConfiguration => Audience::Anyone,
+            self::GetOAuthUserInfo => Audience::Member,
+            self::GetOpenIdSigningKeys => Audience::Anyone,
+            self::RevokeOAuthToken => Audience::Anyone,
+            self::ExchangeOAuthToken => Audience::Anyone,
+            self::RequestDeviceAuthorization => Audience::Anyone,
             self::GetApiVersion, self::GetOpenApiDocument, self::RequestMagicLink, self::TokenMagicLink => Audience::Anyone,
             self::GetMe, self::UpdateMe, self::ListMeAddresses, self::CreateMeAddress, self::UpdateMeAddress,
             self::DeleteMeAddress, self::GetMeBillingEntry, self::ListMeEntitlements, self::ListMeOrders,
@@ -235,6 +505,60 @@ enum Operation: string
     public function successStatuses(): array
     {
         return match ($this) {
+            self::RetireBackendOrganisationRole => [200],
+            self::CreateBackendOrganisationRole => [200],
+            self::ListBackendOrganisationRoles => [200],
+            self::RevokeBackendOrganisationRole => [200],
+            self::AssignBackendOrganisationRole => [200],
+            self::GetBackendOrganisationRole => [200],
+            self::ReconcileMeOrganisationReplacement => [202],
+            self::CompleteMeOrganisationReplacement => [202],
+            self::CloseMeOrganisationReplacement => [202],
+            self::GetMeOrganisationReplacement => [200],
+            self::ReviewMeOrganisationReplacement => [200],
+            self::CurrentMeOrganisationReplacement => [200],
+            self::CreateMeOrganisationReplacement => [202],
+            self::ReconcileMeOrganisationRecoveryBinding => [202],
+            self::CancelMeOrganisationRecoveryBinding => [202],
+            self::CreateMeOrganisationRecoveryBinding => [202],
+            self::TakeoverMeOrganisationBilling => [202],
+            self::ReviewMeOrganisationBilling => [200],
+            self::GetMeOrganisationBillingOperation => [200],
+            self::ReviewMeOrganisationTransfer => [200],
+            self::CancelMeOrganisationTransfer => [202],
+            self::ReconcileMeOrganisationBinding => [202],
+            self::CreateMeOrganisationBinding => [202],
+            self::AcceptMeOrganisationTransfer => [202],
+            self::GetMeOrganisationTransfer => [200],
+            self::CreateMeOrganisationTransfer => [201],
+            self::DeleteMeOrganisationSeat => [204],
+            self::CreateMeOrganisationSeat => [201],
+            self::ListMeOrganisationPoolSeats => [200],
+            self::ListMeOrganisationPools => [200],
+            self::ListOrganisationRoles => [200],
+            self::RevokeOrganisationRole => [200],
+            self::AssignOrganisationRole => [200],
+            self::GetOrganisationRole => [200],
+            self::RevokeMeOrganisationInvitation => [204],
+            self::ResendMeOrganisationInvitation => [200],
+            self::DeclineMeOrganisationInvitation => [204],
+            self::AcceptMeOrganisationInvitation => [200],
+            self::CreateMeOrganisationInvitation => [201],
+            self::ListMeOrganisationInvitations => [200],
+            self::DissolveMeOrganisation => [202],
+            self::LeaveMeOrganisation => [204],
+            self::ListMeOrganisationChanges => [200],
+            self::CreateMeOrganisation => [201],
+            self::ListMeOrganisations => [200],
+            self::CreateMeTrial => [200],
+            self::GetDistributionTargetVersion => [200],
+            self::GetDistributionVersion => [200],
+            self::GetOpenIdConfiguration => [200],
+            self::GetOAuthUserInfo => [200],
+            self::GetOpenIdSigningKeys => [200],
+            self::RevokeOAuthToken => [200],
+            self::ExchangeOAuthToken => [200],
+            self::RequestDeviceAuthorization => [200],
             self::TokenMagicLink, self::CreateMeAddress, self::CreateSeat, self::CreateWebhookEndpoint, self::StartWebhookEndpointsSecretRotation => [201],
             self::CreateCheckoutSession, self::CreateFeatureKey, self::CreateMeCheckoutSession, self::CreateMePortalSession, self::CreatePortalSession, self::CreateReturnTarget, self::CreateRole => [201, 200],
             self::RequestMagicLink, self::RedeliverDelivery, self::ResumeMeSubscription, self::TestDeliveriesWebhookEndpoint => [202],
@@ -251,6 +575,60 @@ enum Operation: string
     public function takesIdempotencyKey(): bool
     {
         return match ($this) {
+            self::RetireBackendOrganisationRole => false,
+            self::CreateBackendOrganisationRole => false,
+            self::ListBackendOrganisationRoles => false,
+            self::RevokeBackendOrganisationRole => false,
+            self::AssignBackendOrganisationRole => false,
+            self::GetBackendOrganisationRole => false,
+            self::ReconcileMeOrganisationReplacement => true,
+            self::CompleteMeOrganisationReplacement => true,
+            self::CloseMeOrganisationReplacement => true,
+            self::GetMeOrganisationReplacement => false,
+            self::ReviewMeOrganisationReplacement => false,
+            self::CurrentMeOrganisationReplacement => false,
+            self::CreateMeOrganisationReplacement => true,
+            self::ReconcileMeOrganisationRecoveryBinding => true,
+            self::CancelMeOrganisationRecoveryBinding => true,
+            self::CreateMeOrganisationRecoveryBinding => true,
+            self::TakeoverMeOrganisationBilling => true,
+            self::ReviewMeOrganisationBilling => false,
+            self::GetMeOrganisationBillingOperation => false,
+            self::ReviewMeOrganisationTransfer => false,
+            self::CancelMeOrganisationTransfer => true,
+            self::ReconcileMeOrganisationBinding => true,
+            self::CreateMeOrganisationBinding => true,
+            self::AcceptMeOrganisationTransfer => true,
+            self::GetMeOrganisationTransfer => false,
+            self::CreateMeOrganisationTransfer => true,
+            self::DeleteMeOrganisationSeat => true,
+            self::CreateMeOrganisationSeat => true,
+            self::ListMeOrganisationPoolSeats => false,
+            self::ListMeOrganisationPools => false,
+            self::ListOrganisationRoles => false,
+            self::RevokeOrganisationRole => true,
+            self::AssignOrganisationRole => true,
+            self::GetOrganisationRole => false,
+            self::RevokeMeOrganisationInvitation => true,
+            self::ResendMeOrganisationInvitation => true,
+            self::DeclineMeOrganisationInvitation => true,
+            self::AcceptMeOrganisationInvitation => true,
+            self::CreateMeOrganisationInvitation => true,
+            self::ListMeOrganisationInvitations => false,
+            self::DissolveMeOrganisation => true,
+            self::LeaveMeOrganisation => true,
+            self::ListMeOrganisationChanges => false,
+            self::CreateMeOrganisation => true,
+            self::ListMeOrganisations => false,
+            self::CreateMeTrial => false,
+            self::GetDistributionTargetVersion => false,
+            self::GetDistributionVersion => false,
+            self::GetOpenIdConfiguration => false,
+            self::GetOAuthUserInfo => false,
+            self::GetOpenIdSigningKeys => false,
+            self::RevokeOAuthToken => false,
+            self::ExchangeOAuthToken => false,
+            self::RequestDeviceAuthorization => false,
             self::CreateMeAddress,
             self::AdvanceTestClock, self::AttachTestClock, self::CancelMeSubscription, self::ChangeMeSubscription, self::CreateCheckoutSession, self::CreateFulfilment, self::CreateMeCheckoutSession, self::CreateMePortalSession, self::CreatePortalSession, self::CreateWebhookEndpoint, self::RedeliverDelivery, self::ResumeMeSubscription, self::StartWebhookEndpointsSecretRotation => true,
             default => false,
@@ -266,6 +644,60 @@ enum Operation: string
     public function isCursorList(): bool
     {
         return match ($this) {
+            self::RetireBackendOrganisationRole => false,
+            self::CreateBackendOrganisationRole => false,
+            self::ListBackendOrganisationRoles => false,
+            self::RevokeBackendOrganisationRole => false,
+            self::AssignBackendOrganisationRole => false,
+            self::GetBackendOrganisationRole => false,
+            self::ReconcileMeOrganisationReplacement => false,
+            self::CompleteMeOrganisationReplacement => false,
+            self::CloseMeOrganisationReplacement => false,
+            self::GetMeOrganisationReplacement => false,
+            self::ReviewMeOrganisationReplacement => false,
+            self::CurrentMeOrganisationReplacement => false,
+            self::CreateMeOrganisationReplacement => false,
+            self::ReconcileMeOrganisationRecoveryBinding => false,
+            self::CancelMeOrganisationRecoveryBinding => false,
+            self::CreateMeOrganisationRecoveryBinding => false,
+            self::TakeoverMeOrganisationBilling => false,
+            self::ReviewMeOrganisationBilling => false,
+            self::GetMeOrganisationBillingOperation => false,
+            self::ReviewMeOrganisationTransfer => false,
+            self::CancelMeOrganisationTransfer => false,
+            self::ReconcileMeOrganisationBinding => false,
+            self::CreateMeOrganisationBinding => false,
+            self::AcceptMeOrganisationTransfer => false,
+            self::GetMeOrganisationTransfer => false,
+            self::CreateMeOrganisationTransfer => false,
+            self::DeleteMeOrganisationSeat => false,
+            self::CreateMeOrganisationSeat => false,
+            self::ListMeOrganisationPoolSeats => true,
+            self::ListMeOrganisationPools => true,
+            self::ListOrganisationRoles => false,
+            self::RevokeOrganisationRole => false,
+            self::AssignOrganisationRole => false,
+            self::GetOrganisationRole => false,
+            self::RevokeMeOrganisationInvitation => false,
+            self::ResendMeOrganisationInvitation => false,
+            self::DeclineMeOrganisationInvitation => false,
+            self::AcceptMeOrganisationInvitation => false,
+            self::CreateMeOrganisationInvitation => false,
+            self::ListMeOrganisationInvitations => true,
+            self::DissolveMeOrganisation => false,
+            self::LeaveMeOrganisation => false,
+            self::ListMeOrganisationChanges => true,
+            self::CreateMeOrganisation => false,
+            self::ListMeOrganisations => true,
+            self::CreateMeTrial => false,
+            self::GetDistributionTargetVersion => false,
+            self::GetDistributionVersion => false,
+            self::GetOpenIdConfiguration => false,
+            self::GetOAuthUserInfo => false,
+            self::GetOpenIdSigningKeys => false,
+            self::RevokeOAuthToken => false,
+            self::ExchangeOAuthToken => false,
+            self::RequestDeviceAuthorization => false,
             self::ListProducts,
             self::ListMeAddresses, self::ListMeOrders, self::RewardsMeReferral,
             self::ListBackendEntitlements, self::ListDeliveries, self::ListRoleAssignments, self::ListWebhookEndpoints => true,

@@ -44,13 +44,17 @@ final readonly class Caller
         $query = self::query($query);
 
         if ($operation->takesIdempotencyKey()) {
-            // A keyed write is sent as postIdempotent() sends it, a POST with
-            // a body and no query; anything else would go out without part of it.
-            if ($operation->method() !== 'POST' || $query !== []) {
-                throw new LogicException(sprintf('%s is a keyed write, which is sent as a POST without a query.', $operation->value));
+            if ($query !== []) {
+                throw new LogicException(sprintf('%s is a keyed write without a query.', $operation->value));
             }
 
-            return $this->api->postIdempotent($url, $body ?? [], $idempotencyKey);
+            $body = match ($operation->method()) {
+                'POST' => $body ?? [],
+                'DELETE' => null,
+                default => $body,
+            };
+
+            return $this->api->idempotent($operation->method(), $url, $body, $idempotencyKey);
         }
         if ($idempotencyKey !== null) {
             throw new LogicException(sprintf('%s takes no Idempotency-Key.', $operation->value));
@@ -64,6 +68,28 @@ final readonly class Caller
             'DELETE' => $this->api->delete($url, $query),
             default => throw new LogicException(sprintf('%s uses %s, which the client does not send.', $operation->value, $operation->method())),
         };
+    }
+
+    /**
+     * @param array<string, string> $fields
+     * @internal
+     */
+    public function form(Operation $operation, #[\SensitiveParameter] array $fields, ?\Appsolutely\Sdk\Request\OAuth\ClientIdentity $identity): ApiResponse
+    {
+        $this->assertAudience($operation);
+
+        return $this->api->form($operation->path(), [...$fields, ...($identity?->fields() ?? [])], $identity?->headers() ?? []);
+    }
+
+    /**
+     * @internal
+     * @return array<array-key, mixed>
+     */
+    public function oauthGet(Operation $operation): array
+    {
+        $this->assertAudience($operation);
+
+        return self::objectOf($this->api->oauthGet($operation->path()), $operation);
     }
 
     /**
@@ -185,10 +211,10 @@ final readonly class Caller
      *
      * @param class-string<T> $model
      * @param array<string, string> $path
-     * @param array<string, mixed> $body
+     * @param array<string, mixed>|null $body
      * @return KeyedResult<T>
      */
-    public function keyed(Operation $operation, string $model, array $path, #[\SensitiveParameter] array $body, ?string $idempotencyKey): KeyedResult
+    public function keyed(Operation $operation, string $model, array $path, #[\SensitiveParameter] ?array $body, ?string $idempotencyKey): KeyedResult
     {
         if (!$operation->takesIdempotencyKey()) {
             throw new LogicException(sprintf('%s takes no Idempotency-Key.', $operation->value));

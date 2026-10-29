@@ -63,6 +63,7 @@ trait SchemaReads
         'time' => ['type' => 'string', 'format' => 'date-time', 'nullable' => false],
         'nullableTime' => ['type' => 'string', 'format' => 'date-time', 'nullable' => true],
         'strings' => ['type' => 'string[]', 'nullable' => false],
+        'nullableStrings' => ['type' => 'string[]', 'nullable' => true],
         'map' => ['type' => 'object', 'nullable' => false],
         'nullableMap' => ['type' => 'object', 'nullable' => true],
         'intMap' => ['type' => 'object', 'nullable' => false],

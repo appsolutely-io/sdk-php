@@ -51,6 +51,16 @@ final class FieldsTest extends TestCase
         self::assertNull($fields->nullableObject('absent'));
     }
 
+    public function testAnOptionalStringListKeepsAbsenceAndRejectsNonStringItems(): void
+    {
+        self::assertNull(Fields::of([], 'Thing')->nullableStrings('roles'));
+        self::assertNull(Fields::of(['roles' => null], 'Thing')->nullableStrings('roles'));
+        self::assertSame([], Fields::of(['roles' => []], 'Thing')->nullableStrings('roles'));
+        self::assertSame(['editor'], Fields::of(['roles' => ['editor']], 'Thing')->nullableStrings('roles'));
+        $this->expectException(UnexpectedResponseException::class);
+        Fields::of(['roles' => ['editor', 7]], 'Thing')->nullableStrings('roles');
+    }
+
     /**
      * @return iterable<string, array{string, string}>
      */

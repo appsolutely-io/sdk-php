@@ -145,6 +145,9 @@ final class ResourceContractTest extends TestCase
      */
     private static array $bodies = [];
 
+    /** @var list<string> */
+    private static array $authorizations = [];
+
     /**
      * What the last drive() threw, null when it returned.
      */
@@ -284,9 +287,7 @@ final class ResourceContractTest extends TestCase
     public function testEveryValueAModelsSchemaEnumeratesIsAConstantOfTheModel(string $class, string $schema): void
     {
         $enumerated = [];
-        foreach (Document::map(Document::schema($schema)['properties'] ?? null) as $field => $declaration) {
-            self::collectEnumerated((string) $field, Document::map($declaration), $schema . '.' . $field, $enumerated);
-        }
+        self::collectEnumerated('', Document::schema($schema), $schema, $enumerated);
 
         $constants = [];
         foreach ((new ReflectionClass($class))->getReflectionConstants(\ReflectionClassConstant::IS_PUBLIC) as $constant) {
@@ -327,6 +328,29 @@ final class ResourceContractTest extends TestCase
         self::assertSame([], $stale, sprintf('%s has constants for values %s no longer enumerates: %s.', $class, $schema, implode(', ', $stale)));
     }
 
+    /** @return iterable<string, array{string}> */
+    public static function alternativesKeywords(): iterable
+    {
+        yield 'exclusive alternatives' => ['oneOf'];
+        yield 'inclusive alternatives' => ['anyOf'];
+    }
+
+    #[DataProvider('alternativesKeywords')]
+    public function testEnumCollectionIncludesSiblingProperties(string $keyword): void
+    {
+        $enumerated = [];
+        self::collectEnumerated('', [
+            'type' => 'object',
+            'properties' => ['state' => ['type' => 'string', 'enum' => ['common']]],
+            $keyword => [
+                ['properties' => ['kind' => ['type' => 'string', 'enum' => ['first']]]],
+                ['properties' => ['kind' => ['type' => 'string', 'enum' => ['second']]]],
+            ],
+        ], 'Example', $enumerated);
+        ksort($enumerated);
+        self::assertSame(['KIND_FIRST' => 'first', 'KIND_SECOND' => 'second', 'STATE_COMMON' => 'common'], $enumerated);
+    }
+
     /**
      * The name of a model's constant for a value of a field:
      * `STATUS_PAST_DUE` for `status` and `past_due`, `TYPE_STORE_CREDIT` for
@@ -348,8 +372,15 @@ final class ResourceContractTest extends TestCase
      */
     private static function collectEnumerated(string $field, array $declaration, string $where, array &$enumerated): void
     {
+        $alternatives = [...Document::list($declaration['oneOf'] ?? []), ...Document::list($declaration['anyOf'] ?? [])];
+        if ($alternatives !== []) {
+            foreach ($alternatives as $alternative) {
+                self::collectEnumerated($field, Document::map($alternative), $where, $enumerated);
+            }
+        }
+        unset($declaration['oneOf'], $declaration['anyOf']);
         $node = self::nonNull(Document::resolve($declaration));
-        $named = Document::refName($declaration) !== null || Document::refName(Document::map(Document::list($declaration['oneOf'] ?? $declaration['anyOf'] ?? [])[0] ?? null)) !== null;
+        $named = Document::refName($declaration) !== null;
         if ($named && isset($node['properties'])) {
             return;
         }
@@ -417,6 +448,13 @@ final class ResourceContractTest extends TestCase
         $endpoint = self::endpointOf($id);
         $documented = Document::map(Document::map(Document::map(Document::operations()[$id]['operation']['requestBody'] ?? null)['content'] ?? null)['application/json'] ?? null)['schema'] ?? null;
 
+        $form = Document::map(Document::map(Document::map(Document::operations()[$id]['operation']['requestBody'] ?? null)['content'] ?? null)['application/x-www-form-urlencoded'] ?? null)['schema'] ?? null;
+        if ($form !== null) {
+            self::assertFormBodies($endpoint, Document::map($form));
+
+            return;
+        }
+
         if (in_array($id, self::BODY_PASSED_THROUGH, true)) {
             self::assertNotNull($documented, sprintf('%s is listed in BODY_PASSED_THROUGH but documents no request body.', $id));
 
@@ -458,6 +496,68 @@ final class ResourceContractTest extends TestCase
                 }
             }
         }
+    }
+
+    /**
+     * @param array{operation: Operation, method: string, roots: list<class-string>} $endpoint
+     * @param array<array-key, mixed> $schema
+     */
+    private static function assertFormBodies(array $endpoint, array $schema): void
+    {
+        $grants = $endpoint['operation'] === Operation::ExchangeOAuthToken ? [
+            new \Appsolutely\Sdk\Request\OAuth\AuthorizationCodeGrant('code', 'https://app.example.test/return', 'verifier'),
+            new \Appsolutely\Sdk\Request\OAuth\RefreshTokenGrant('refresh', 'openid'),
+            new \Appsolutely\Sdk\Request\OAuth\ClientCredentialsGrant('roles:read'),
+            new \Appsolutely\Sdk\Request\OAuth\DeviceCodeGrant('device'),
+        ] : [null];
+        foreach ($grants as $grant) {
+            foreach ([false, true] as $optional) {
+                self::drive($endpoint, $optional, argumentOverrides: $grant === null ? [] : ['grant' => $grant]);
+                $body = self::$bodies[0] ?? null;
+                self::assertIsArray($body);
+                $properties = Document::map($schema['properties'] ?? null);
+                $required = Document::list($schema['required'] ?? []);
+                foreach (Document::list($schema['oneOf'] ?? []) as $alternative) {
+                    $alternative = Document::map($alternative);
+                    $selected = Document::map(Document::map($alternative['properties'] ?? null)['grant_type'] ?? null)['const'] ?? null;
+                    if ($selected === ($body['grant_type'] ?? null)) {
+                        $required = [...$required, ...Document::list($alternative['required'] ?? [])];
+                    }
+                }
+                foreach ($required as $field) {
+                    self::assertIsString($field);
+                    self::assertArrayHasKey($field, $body);
+                    self::assertNotSame('', $body[$field]);
+                }
+                foreach ($body as $name => $value) {
+                    self::assertArrayHasKey($name, $properties);
+                    self::assertIsString($value);
+                }
+                if ($grant !== null) {
+                    self::assertSame($grant->fields(), array_diff_key($body, ['client_id' => true, 'client_secret' => true]));
+                }
+            }
+        }
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function formOperations(): iterable
+    {
+        foreach (['exchangeOAuthToken', 'requestDeviceAuthorization', 'revokeOAuthToken'] as $id) {
+            yield $id => [$id];
+        }
+    }
+
+    #[DataProvider('formOperations')]
+    public function testOAuthFormsUseHttpBasicWithoutBodyCredentials(string $id): void
+    {
+        $identity = new \Appsolutely\Sdk\Request\OAuth\ClientIdentity('client:/', 'secret+&', \Appsolutely\Sdk\Oidc\ClientAuthentication::ClientSecretBasic);
+        self::drive(self::endpointOf($id), optional: true, argumentOverrides: ['identity' => $identity]);
+        self::assertSame(['Basic ' . base64_encode(urlencode('client:/') . ':' . urlencode('secret+&'))], self::$authorizations);
+        $body = self::$bodies[0] ?? null;
+        self::assertIsArray($body);
+        self::assertArrayNotHasKey('client_id', $body);
+        self::assertArrayNotHasKey('client_secret', $body);
     }
 
     public function testEverySchemaASuccessAnswersIsReadByAModel(): void
@@ -626,20 +726,24 @@ final class ResourceContractTest extends TestCase
      *
      * @param array{operation: Operation, method: string, roots: list<class-string>} $endpoint
      * @param array<array-key, mixed>|null $answer
+     * @param array<string, mixed> $argumentOverrides
      * @return non-empty-list<list<string>>
      */
-    private static function drive(array $endpoint, bool $optional, ?array $answer = null): array
+    private static function drive(array $endpoint, bool $optional, ?array $answer = null, array $argumentOverrides = []): array
     {
         // A list whose page carries more than its items and cursor, such as
         // where the next walk starts, is answered with a sample of those.
         $schema = $endpoint['operation']->isCursorList() ? self::successSchema($endpoint['operation']->value) : null;
         $page = $schema === null ? [] : array_diff_key(self::sampleOf($schema), ['data' => true, 'next_cursor' => true]);
-        $site = new class ($endpoint['operation']->successStatus(), $answer, $page) implements ClientInterface {
+        $site = new class ($endpoint['operation']->successStatus(), $answer, $page, $endpoint['operation']->value) implements ClientInterface {
             /** @var list<list<string>> */
             public array $queries = [];
 
             /** @var list<mixed> */
             public array $bodies = [];
+
+            /** @var list<string> */
+            public array $authorizations = [];
 
             /** @var list<string> each request's method and path, `GET /api/v1/pages` */
             public array $lines = [];
@@ -648,14 +752,14 @@ final class ResourceContractTest extends TestCase
              * @param array<array-key, mixed>|null $answer
              * @param array<array-key, mixed> $page what every page of a list carries beside its items and cursor
              */
-            public function __construct(private readonly int $status, private readonly ?array $answer, private readonly array $page) {}
+            public function __construct(private readonly int $status, private readonly ?array $answer, private readonly array $page, private readonly string $operationId) {}
 
             public function sendRequest(RequestInterface $request): ResponseInterface
             {
                 // The backend's sign-in, which only a backend method makes
                 // and which is not one of the calls held to the document.
                 $path = $request->getUri()->getPath();
-                if ($path === '/.well-known/openid-configuration' || $path === '/oauth/token') {
+                if (($path === '/.well-known/openid-configuration' && $this->operationId !== 'getOpenIdConfiguration') || ($path === '/oauth/token' && $this->operationId !== 'exchangeOAuthToken')) {
                     return Psr17FactoryDiscovery::findResponseFactory()->createResponse(200)
                         ->withHeader(Header::CONTENT_TYPE, MediaType::JSON)
                         ->withBody(Psr17FactoryDiscovery::findStreamFactory()->createStream(json_encode($path === '/oauth/token' ? ['access_token' => 'contract-backend-token', 'token_type' => 'Bearer', 'expires_in' => 3600] : [
@@ -677,8 +781,14 @@ final class ResourceContractTest extends TestCase
                 $page = $this->answer ?? ($this->queries === [] ? [...$this->page, 'data' => [], 'next_cursor' => 'next-page'] : [...$this->page, 'data' => []]);
                 $this->queries[] = $names;
                 $this->lines[] = $request->getMethod() . ' ' . $path;
+                $this->authorizations[] = $request->getHeaderLine(Header::AUTHORIZATION);
                 $body = (string) $request->getBody();
-                $this->bodies[] = $body === '' ? null : json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+                if (str_starts_with($request->getHeaderLine(Header::CONTENT_TYPE), MediaType::FORM_URLENCODED)) {
+                    parse_str($body, $decoded);
+                    $this->bodies[] = $decoded;
+                } else {
+                    $this->bodies[] = $body === '' ? null : json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+                }
 
                 return Psr17FactoryDiscovery::findResponseFactory()->createResponse($this->status)
                     ->withHeader(Header::CONTENT_TYPE, MediaType::JSON)
@@ -713,7 +823,7 @@ final class ResourceContractTest extends TestCase
             }
             $type = $parameter->getType();
             self::assertInstanceOf(ReflectionNamedType::class, $type, sprintf('%s takes $%s, of no single type to sample.', $endpoint['method'], $parameter->getName()));
-            $arguments[$parameter->getName()] = self::ARGUMENTS[$parameter->getName()] ?? self::argument($type->getName() === 'array' ? 'string[]' : $type->getName());
+            $arguments[$parameter->getName()] = $argumentOverrides[$parameter->getName()] ?? self::ARGUMENTS[$parameter->getName()] ?? self::argument($type->getName() === 'array' ? 'string[]' : $type->getName());
         }
 
         $paged = $endpoint['operation']->isCursorList();
@@ -750,6 +860,7 @@ final class ResourceContractTest extends TestCase
         }
 
         self::$bodies = $site->bodies;
+        self::$authorizations = $site->authorizations;
 
         return $queries;
     }
@@ -787,6 +898,10 @@ final class ResourceContractTest extends TestCase
     private static function argument(string $type): mixed
     {
         return match ($type) {
+            \Appsolutely\Sdk\Request\OAuth\TokenGrant::class => new \Appsolutely\Sdk\Request\OAuth\AuthorizationCodeGrant('code', 'https://app.example.test/return', 'verifier'),
+            \Appsolutely\Sdk\Request\OAuth\ClientIdentity::class => new \Appsolutely\Sdk\Request\OAuth\ClientIdentity('client', 'secret', \Appsolutely\Sdk\Oidc\ClientAuthentication::ClientSecretPost),
+            \Appsolutely\Sdk\Request\OAuth\DeviceAuthorizationRequest::class => new \Appsolutely\Sdk\Request\OAuth\DeviceAuthorizationRequest('openid'),
+            \Appsolutely\Sdk\Request\OAuth\RevocationRequest::class => new \Appsolutely\Sdk\Request\OAuth\RevocationRequest('token', 'access_token'),
             'string' => 'x',
             'int' => 2,
             'bool' => true,

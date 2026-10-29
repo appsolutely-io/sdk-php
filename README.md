@@ -2,9 +2,7 @@
 
 A framework-free PHP client for one app's own site: it signs the site's members in with OpenID Connect, calls the Site API as the site's own backend or as a signed-in member, calls the Administrator API with an administrator credential, and verifies the site's Standard Webhooks deliveries.
 
-A site hosted for you and one you host yourself answer the same paths in the same shapes, so pointing the client from one to the other changes the base URL, the issuer and the credentials, nothing else.
-
-Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://github.com/appsolutely-io/sdk-laravel), which wires this client into the container, Socialite and the router.
+Every site answers the same paths in the same shapes, so pointing the client at another site changes the base URL, the issuer and the credentials, nothing else.
 
 ## Requirements
 
@@ -13,7 +11,9 @@ Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://git
 
 ## Compatibility
 
-The client is written and tested against the Site API document of the site software v0.32.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests. `AdminClient` is held to the Administrator API document of the same commit.
+PHP client for aio v0.38.0; this release does not run or claim the aio SDK conformance suite.
+
+The client is written and tested against the Site API document of the site software v0.38.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests. `AdminClient` is held to the Administrator API document of the same commit.
 
 While the site software is below 1.0.0, a minor release of it may change a path of the document's `v1` in a breaking way, and its changelog opens each such entry with `BREAKING`; this client follows such a change in a release of its own, marked the same way in its changelog. Otherwise the site adds paths and fields but never removes or retypes one. From the site software's 1.0.0, a breaking change is announced as deprecated a release ahead and arrives in a new major release. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
 
@@ -254,6 +254,8 @@ $backend->testClocks()->attach($subscriptionId);             // a subscription b
 $backend->testClocks()->advance($subscriptionId, 31 * 86400);
 ```
 
+A purchase's `belongsToYou` is the explicit ownership answer. A final `recorded` outcome can describe an ended purchase with no proven owner; a null `subscriptionId` also occurs for one-time and consumable purchases. Read `belongsToYou` rather than inferring ownership from either field.
+
 ### The member's own data
 
 ```php
@@ -285,6 +287,53 @@ $member->me()->subscriptions()->cancel($subscriptionId);
 $member->me()->subscriptions()->resume($subscriptionId, $returnUrl);   // takes a cancellation back
 
 ```
+
+#### Organisations and trials
+
+```php
+$organisations = $member->me()->organisations();
+foreach ($organisations->list() as $organisation) { /* Model\Organisation */ }
+$created = $organisations->create('Studio', idempotencyKey: $submissionId);
+$organisations->invitations()->create($created->value->id, 'member@example.test');
+$organisations->roles()->assign($organisationId, $membershipId, 'editor', idempotencyKey: $roleChangeId);
+$organisations->seats()->pools($organisationId);
+$organisations->transfers()->review($organisationId, $transferId);
+$organisations->billing()->review($organisationId);
+$organisations->recoveryBindings()->reconcile($organisationId, $bindingId, $reviewRevision);
+$organisations->replacements()->current($organisationId, $poolId);
+
+$backend->organisationRoles()->create($organisationId, 'editor');
+$backend->organisationRoles()->assign($organisationId, $membershipId, 'editor');
+
+$trial = $member->me()->trials()->create();
+$trial->state;                         // the server's active, expired or converted state
+```
+
+Organisation invitation, seat, transfer, dissolution, recovery-binding and replacement actions preserve the documented key and review revision. Billing actions return an `OrganisationBillingOperation` whose status and optional confirmation URL describe the server's result; the method does not poll it or follow that URL. Read an operation explicitly with `billing()->operation($organisationId, $operationId)`. Empty successful actions return `Api\ApiResponse`, retaining the status, key and replay flag.
+
+Entitlements expose `kind` (`Entitlement::KIND_TRIAL` or `KIND_PAID`) alongside quantity and period information. The server decides trial eligibility and payment requirements; `trials()->create()` returns its answer or structured refusal.
+
+#### Metadata and individual OAuth requests
+
+```php
+use Appsolutely\Sdk\Request\OAuth\ClientIdentity;
+use Appsolutely\Sdk\Request\OAuth\DeviceAuthorizationRequest;
+use Appsolutely\Sdk\Request\OAuth\DeviceCodeGrant;
+use Appsolutely\Sdk\Request\OAuth\RevocationRequest;
+
+$client->api()->openIdConfiguration();
+$client->api()->signingKeys();
+$client->api()->distributionVersions()->get('desktop');
+$client->api()->distributionVersions()->target('desktop', 'macos-arm64', channel: 'beta');
+
+$identity = new ClientIdentity('public-client');
+$device = $client->api()->oauth()->deviceAuthorization(new DeviceAuthorizationRequest('openid profile'), $identity);
+$wireTokens = $client->api()->oauth()->exchange(new DeviceCodeGrant($deviceCode), $identity);
+$client->api()->oauth()->revoke(new RevocationRequest($accessToken, 'access_token'), $identity);
+$info = $client->forMember($accessToken)->api()->userInfo();
+```
+
+`oauth()->exchange()` accepts `AuthorizationCodeGrant`, `RefreshTokenGrant`, `ClientCredentialsGrant` or `DeviceCodeGrant`, each with only its grant's fields and an optional scope. `ClientIdentity` takes an optional secret and the existing `Oidc\ClientAuthentication` choice of HTTP Basic or body authentication. These wire methods and `userInfo()` send one request, decode OAuth errors as `Exception\OAuthException`, and do not discover endpoints, retry, poll, refresh or store credentials. Other HTTP refusals retain the usual `ApiException` mapping. Token answers are `Model\OAuthToken` values with raw token strings and relative `expiresIn`; the existing `oidc()` flow verifies ID tokens and manages its own sign-in checks. User-info entitlements have their own inline shape, separate from account-state `Model\Entitlement`.
 
 #### Sync feeds
 
@@ -343,7 +392,7 @@ $savedCursor = $page->nextCursor;       // null on the last page
 
 Every call sends `Accept: application/json, application/problem+json`, the SDK's `User-Agent` and an `X-Request-Id`. An answer that breaks the document, such as a required field missing or a time without an offset, is an `Exception\UnexpectedResponseException` naming the schema and the field, never a value read as something else.
 
-A refusal is thrown as an `Exception\ApiException` built from the site's RFC 9457 problem: `$type` (branch on it, or on `hasType('validation-failed')`), `$title`, `$status`, `$detail`, `$errors`, `$requestId`, `$retryAfter`, `$challenge` (the `WWW-Authenticate` header) and any other member through `extension('required_ability')`. `BadRequestException` (400), `ValidationFailedException`, `NotFoundException`, `UnauthenticatedException`, `ForbiddenException`, `ConflictException`, `RateLimitedException` and `ServerErrorException` (any 5xx, with `ServiceUnavailableException` for a 503 beneath it) extend it for the cases you are likely to handle, so catching `ApiException` still catches them all; an answer that is not a problem (a proxy's error page) keeps `$isProblem` false and the raw `$body`. A request that never got an answer is an `Exception\TransportException`; `isNetworkFailure()` says whether the network failed, the only case a retry can change, or the HTTP client refused the request. The network failed when the client throws PSR-18's `NetworkExceptionInterface`, or Guzzle's cURL transfer broke in transit before an answer (cURL error 55, 56 or 92, which Guzzle reports as a `RequestException` without a response); any other cURL error, a certificate one included, is not retried.
+A resource refusal is thrown as an `Exception\ApiException` built from the site's RFC 9457 problem: `$type` (branch on it, or on `hasType('validation-failed')`), `$title`, `$status`, `$detail`, `$errors`, `$requestId`, `$retryAfter`, `$challenge` (the `WWW-Authenticate` header) and any other member through `extension('required_ability')`. `BadRequestException` (400), `ValidationFailedException`, `NotFoundException`, `UnauthenticatedException`, `ForbiddenException`, `ConflictException`, `RateLimitedException` and `ServerErrorException` (any 5xx, with `ServiceUnavailableException` for a 503 beneath it) extend it for the cases you are likely to handle, so catching `ApiException` still catches them all; an answer that is not a problem (a proxy's error page) keeps `$isProblem` false and the raw `$body`. A request that never got an answer is an `Exception\TransportException`; `isNetworkFailure()` says whether the network failed, the only case a retry can change, or the HTTP client refused the request. The network failed when the client throws PSR-18's `NetworkExceptionInterface`, or Guzzle's cURL transfer broke in transit before an answer (cURL error 55, 56 or 92, which Guzzle reports as a `RequestException` without a response); any other cURL error, a certificate one included, is not retried.
 
 ### Untyped calls
 
@@ -359,7 +408,7 @@ foreach ($client->backend()->raw()->paginate('/api/v1/products', ['sort' => 'upd
 
 ### Writes that must happen once
 
-Every write the site keys accepts an `Idempotency-Key`, and its method always sends one: filing a member's address, fulfilling a digital delivery, redelivering a webhook, starting a checkout or a visit to the billing pages, cancelling, changing or resuming a member's subscription, attaching or advancing a test clock, and creating a webhook endpoint or starting its secret rotation. The key is yours (1 to 255 printable ASCII characters, spaces included, one per operation) or a fresh UUID v4, sent as a quoted Structured Field String (RFC 9651) as the Idempotency-Key draft defines it. The same key goes with every retry, so a retry after a lost answer is answered with the first answer, its status and body, instead of acting a second time (a replayed billing visit carries a fresh single-use `url` for the same visit), and the result says which key was sent and whether the answer was replayed:
+Every write the site keys accepts an `Idempotency-Key`, and its method always sends one, including organisation lifecycle, invitation, role, seat and billing actions: filing a member's address, fulfilling a digital delivery, redelivering a webhook, starting a checkout or a visit to the billing pages, cancelling, changing or resuming a member's subscription, attaching or advancing a test clock, and creating a webhook endpoint or starting its secret rotation. The key is yours (1 to 255 printable ASCII characters, spaces included, one per operation) or a fresh UUID v4, sent as a quoted Structured Field String (RFC 9651) as the Idempotency-Key draft defines it. The same key goes with every retry, so a retry after a lost answer is answered with the first answer, its status and body, instead of acting a second time (a replayed billing visit carries a fresh single-use `url` for the same visit), and the result says which key was sent and whether the answer was replayed:
 
 ```php
 $filed = $member->me()->addresses()->create($address, idempotencyKey: $formSubmissionId);
@@ -370,7 +419,7 @@ $filed->idempotencyKey;   // the key that was sent; send it again to retry the s
 
 Untyped, the same is `raw()->postIdempotent($path, $body, $key)`.
 
-Reads and keyed writes are retried after a network failure, a `429`, a `502`, a `503` or a `504`, a read also after a `500`, and, for a keyed write, the `409` of an attempt with the same key still running. Each wait is what the site asks in `Retry-After` (or, on a `429` without it, until the spent quota in `RateLimit` turns over), otherwise a jittered backoff doubling from half a second. Other refusals are thrown at once, and so is a `500` under a key, whose outcome only reading the current state can settle; send the operation again under a new key if it still needs doing. Other writes (`update()`, `delete()`, a sync push, and `raw()`'s `post()`, `put()`, `patch()` and `delete()`) are never retried. Tune or turn this off in `Config`:
+JSON resource reads and keyed writes are retried after a network failure, a `429`, a `502`, a `503` or a `504`, a read also after a `500`, and, for a keyed write, the `409` of an attempt with the same key still running. Each wait is what the site asks in `Retry-After` (or, on a `429` without it, until the spent quota in `RateLimit` turns over), otherwise a jittered backoff doubling from half a second. Other refusals are thrown at once, and so is a `500` under a key, whose outcome only reading the current state can settle; send the operation again under a new key if it still needs doing. Writes without a documented key (`update()`, an unkeyed `delete()`, a sync push, and `raw()`'s `post()`, `put()`, `patch()` and `delete()`) are never retried. Tune or turn this off in `Config`:
 
 ```php
 use Appsolutely\Sdk\Api\RetryPolicy;
@@ -563,6 +612,10 @@ Everything marked `@internal` is outside the public API and may change in any re
 ## Security
 
 Report a vulnerability privately, as [SECURITY.md](SECURITY.md) describes, never in a public issue.
+
+## Design decisions
+
+The [decision records](docs/decisions/README.md) explain the implementation choices and their tradeoffs.
 
 ## License
 

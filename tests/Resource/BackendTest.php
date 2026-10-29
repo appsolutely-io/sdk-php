@@ -133,7 +133,7 @@ final class BackendTest extends TestCase
 
     public function testAStorePurchaseLeavesOutWhatTheStoreDoesNotUse(): void
     {
-        $site = (new SiteRecorder())->json(['outcome' => 'started', 'subscription_id' => '9', 'status' => 'active', 'kind' => 'subscription', 'environment' => 'sandbox']);
+        $site = (new SiteRecorder())->json(['outcome' => 'recorded', 'belongs_to_you' => true, 'subscription_id' => '9', 'status' => 'active', 'kind' => 'subscription', 'environment' => 'sandbox']);
 
         $transaction = self::backend($site)->storePurchases()->transaction('member-sub', 'app_store', 'member', signedTransaction: 'eyJ.signed');
 
@@ -352,6 +352,17 @@ final class BackendTest extends TestCase
         self::assertSame(SubscriptionSource::BILLED_BY_SITE, $intent->mayStillBill[0]->billedBy);
         self::assertNull($intent->mayStillBill[0]->manageUrl);
         self::assertSame('4f6a8c0e-2b4d-4f6a-8c0e-2b4d6f8a0c2e', $intent->mayStillBill[0]->subscriptionId);
+    }
+
+    public function testASeatRemovalCanSelectAPoolWithoutChangingUnscopedCalls(): void
+    {
+        $site = (new SiteRecorder())->empty(204)->empty(204);
+        $seats = self::backend($site)->seats();
+        $seats->take('member', 'pool/1');
+        $seats->take('member');
+        self::assertSame('DELETE /api/v1/seats/member?pool=pool%2F1', $site->line(0));
+        self::assertSame('DELETE /api/v1/seats/member', $site->line(1));
+        self::assertSame('', $site->request(0)->getHeaderLine('Idempotency-Key'));
     }
 
     private static function backend(SiteRecorder $site): BackendApi

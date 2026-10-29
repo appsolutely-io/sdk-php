@@ -158,10 +158,16 @@ final class OperationCatalogueTest extends TestCase
         if ($security === []) {
             return Audience::Anyone;
         }
+        if (in_array([], $security, true)) {
+            self::assertSame([[], ['OAuthClientBasic' => []]], $security);
+
+            return Audience::Anyone;
+        }
         self::assertCount(1, $security, sprintf('%s %s names more than one security requirement.', $documented['method'], $documented['path']));
 
         return match (true) {
             array_key_exists(self::BACKEND_SCHEME, Document::map($security[array_key_first($security)])) => Audience::Backend,
+            array_key_exists('OAuthMemberBearer', Document::map($security[array_key_first($security)])) => Audience::Member,
             preg_match('#^/api/v1/(me(/|$)|sync/me-)#', $documented['path']) === 1 => Audience::Member,
             default => self::fail(sprintf('%s %s takes a bearer token outside the member\'s routes.', $documented['method'], $documented['path'])),
         };

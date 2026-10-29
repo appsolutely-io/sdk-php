@@ -15,6 +15,9 @@ final readonly class Entitlement implements SchemaModel
     /** @internal */
     public const string SCHEMA = 'AccountEntitlement';
 
+    public const string KIND_TRIAL = 'trial';
+    public const string KIND_PAID = 'paid';
+
     /**
      * @param int $quantity for a key the site totals per window, the current window's plan baseline plus every pack still live
      * @param DateTimeImmutable|null $expiresAt null when nothing on the site dates its end
@@ -31,6 +34,7 @@ final readonly class Entitlement implements SchemaModel
         public ?DateTimeImmutable $periodStart,
         public ?DateTimeImmutable $periodEnd,
         public ?array $breakdown,
+        public string $kind,
         public array $extra = [],
     ) {}
 
@@ -41,6 +45,7 @@ final readonly class Entitlement implements SchemaModel
 
         return new self(
             key: $json->string('key'),
+            kind: $json->string('kind'),
             label: $json->string('label'),
             quantity: $json->int('quantity'),
             expiresAt: $json->nullableTime('expires_at'),
