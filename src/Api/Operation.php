@@ -185,9 +185,27 @@ enum Operation: string
 
     case ReconcileMeOrganisationReplacement = 'reconcileMeOrganisationReplacement';
 
+    case GetBackendOrganisationRole = 'getBackendOrganisationRole';
+
+    case AssignBackendOrganisationRole = 'assignBackendOrganisationRole';
+
+    case RevokeBackendOrganisationRole = 'revokeBackendOrganisationRole';
+
+    case ListBackendOrganisationRoles = 'listBackendOrganisationRoles';
+
+    case CreateBackendOrganisationRole = 'createBackendOrganisationRole';
+
+    case RetireBackendOrganisationRole = 'retireBackendOrganisationRole';
+
     public function method(): string
     {
         return match ($this) {
+            self::RetireBackendOrganisationRole => 'POST',
+            self::CreateBackendOrganisationRole => 'POST',
+            self::ListBackendOrganisationRoles => 'GET',
+            self::RevokeBackendOrganisationRole => 'DELETE',
+            self::AssignBackendOrganisationRole => 'PUT',
+            self::GetBackendOrganisationRole => 'GET',
             self::ReconcileMeOrganisationReplacement => 'POST',
             self::CompleteMeOrganisationReplacement => 'POST',
             self::CloseMeOrganisationReplacement => 'POST',
@@ -253,6 +271,12 @@ enum Operation: string
     public function template(): string
     {
         return match ($this) {
+            self::RetireBackendOrganisationRole => '/api/v1/organisations/{organisation}/roles/{key}/retirement',
+            self::CreateBackendOrganisationRole => '/api/v1/organisations/{organisation}/roles',
+            self::ListBackendOrganisationRoles => '/api/v1/organisations/{organisation}/roles',
+            self::RevokeBackendOrganisationRole => '/api/v1/organisations/{organisation}/members/{membership}/roles/{key}',
+            self::AssignBackendOrganisationRole => '/api/v1/organisations/{organisation}/members/{membership}/roles/{key}',
+            self::GetBackendOrganisationRole => '/api/v1/organisations/{organisation}/members/{membership}/roles',
             self::ReconcileMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}/reconcile',
             self::CompleteMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}/complete',
             self::CloseMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}/close',
@@ -400,6 +424,12 @@ enum Operation: string
     public function audience(): Audience
     {
         return match ($this) {
+            self::RetireBackendOrganisationRole => Audience::Backend,
+            self::CreateBackendOrganisationRole => Audience::Backend,
+            self::ListBackendOrganisationRoles => Audience::Backend,
+            self::RevokeBackendOrganisationRole => Audience::Backend,
+            self::AssignBackendOrganisationRole => Audience::Backend,
+            self::GetBackendOrganisationRole => Audience::Backend,
             self::ReconcileMeOrganisationReplacement => Audience::Member,
             self::CompleteMeOrganisationReplacement => Audience::Member,
             self::CloseMeOrganisationReplacement => Audience::Member,
@@ -475,6 +505,12 @@ enum Operation: string
     public function successStatuses(): array
     {
         return match ($this) {
+            self::RetireBackendOrganisationRole => [200],
+            self::CreateBackendOrganisationRole => [200],
+            self::ListBackendOrganisationRoles => [200],
+            self::RevokeBackendOrganisationRole => [200],
+            self::AssignBackendOrganisationRole => [200],
+            self::GetBackendOrganisationRole => [200],
             self::ReconcileMeOrganisationReplacement => [202],
             self::CompleteMeOrganisationReplacement => [202],
             self::CloseMeOrganisationReplacement => [202],
@@ -539,6 +575,12 @@ enum Operation: string
     public function takesIdempotencyKey(): bool
     {
         return match ($this) {
+            self::RetireBackendOrganisationRole => false,
+            self::CreateBackendOrganisationRole => false,
+            self::ListBackendOrganisationRoles => false,
+            self::RevokeBackendOrganisationRole => false,
+            self::AssignBackendOrganisationRole => false,
+            self::GetBackendOrganisationRole => false,
             self::ReconcileMeOrganisationReplacement => true,
             self::CompleteMeOrganisationReplacement => true,
             self::CloseMeOrganisationReplacement => true,
@@ -602,6 +644,12 @@ enum Operation: string
     public function isCursorList(): bool
     {
         return match ($this) {
+            self::RetireBackendOrganisationRole => false,
+            self::CreateBackendOrganisationRole => false,
+            self::ListBackendOrganisationRoles => false,
+            self::RevokeBackendOrganisationRole => false,
+            self::AssignBackendOrganisationRole => false,
+            self::GetBackendOrganisationRole => false,
             self::ReconcileMeOrganisationReplacement => false,
             self::CompleteMeOrganisationReplacement => false,
             self::CloseMeOrganisationReplacement => false,
