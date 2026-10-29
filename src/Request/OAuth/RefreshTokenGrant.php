@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Request\OAuth;
 
 use Appsolutely\Sdk\Exception\NotSerializableException;
+use Appsolutely\Sdk\Support\OptionalFields;
 
 final readonly class RefreshTokenGrant implements TokenGrant
 {
@@ -22,7 +23,7 @@ final readonly class RefreshTokenGrant implements TokenGrant
     /** @return array<string, string> */
     public function fields(): array
     {
-        return array_filter(['grant_type' => 'refresh_token', 'refresh_token' => $this->refreshToken, 'scope' => $this->scope], static fn(?string $value): bool => $value !== null);
+        return OptionalFields::withoutNulls(['grant_type' => 'refresh_token', 'refresh_token' => $this->refreshToken, 'scope' => $this->scope]);
     }
     /** @return array<string, mixed> */
     public function __debugInfo(): array

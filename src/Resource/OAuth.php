@@ -16,6 +16,9 @@ use Appsolutely\Sdk\Request\OAuth\DeviceAuthorizationRequest;
 use Appsolutely\Sdk\Request\OAuth\RevocationRequest;
 use Appsolutely\Sdk\Request\OAuth\TokenGrant;
 
+/**
+ * Individual OAuth wire requests, without sign-in orchestration.
+ */
 final readonly class OAuth
 {
     /** @internal */

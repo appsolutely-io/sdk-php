@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Request\OAuth;
 
 use Appsolutely\Sdk\Exception\NotSerializableException;
+use Appsolutely\Sdk\Support\OptionalFields;
 
 final readonly class ClientCredentialsGrant implements TokenGrant
 {
@@ -16,7 +17,7 @@ final readonly class ClientCredentialsGrant implements TokenGrant
     /** @return array<string, string> */
     public function fields(): array
     {
-        return array_filter(['grant_type' => 'client_credentials', 'scope' => $this->scope], static fn(?string $value): bool => $value !== null);
+        return OptionalFields::withoutNulls(['grant_type' => 'client_credentials', 'scope' => $this->scope]);
     }
     /** @return array<string, mixed> */
     public function __debugInfo(): array

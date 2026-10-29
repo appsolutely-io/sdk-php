@@ -9,6 +9,9 @@ use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\Operation;
 use Appsolutely\Sdk\Model\MemberTrial;
 
+/**
+ * The member's trial request and its server-defined outcome.
+ */
 final readonly class Trials
 {
     /** @internal */

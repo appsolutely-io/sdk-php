@@ -4,74 +4,98 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Resource\Me;
 
+use Appsolutely\Sdk\Api\ApiResponse;
 use Appsolutely\Sdk\Api\Caller;
 use Appsolutely\Sdk\Api\Endpoint;
+use Appsolutely\Sdk\Api\KeyedResult;
 use Appsolutely\Sdk\Api\Operation;
+use Appsolutely\Sdk\Api\Paginator;
+use Appsolutely\Sdk\Api\SiteApi;
+use Appsolutely\Sdk\Model\Organisation;
+use Appsolutely\Sdk\Model\OrganisationBillingOperation;
+use Appsolutely\Sdk\Model\OrganisationChange;
+use Appsolutely\Sdk\Resource\Me\Organisations\Billing;
+use Appsolutely\Sdk\Resource\Me\Organisations\Invitations;
+use Appsolutely\Sdk\Resource\Me\Organisations\RecoveryBindings;
+use Appsolutely\Sdk\Resource\Me\Organisations\Replacements;
+use Appsolutely\Sdk\Resource\Me\Organisations\Roles;
+use Appsolutely\Sdk\Resource\Me\Organisations\Seats;
+use Appsolutely\Sdk\Resource\Me\Organisations\Transfers;
 
+/**
+ * The member's organisations and their lifecycle operations.
+ */
 final readonly class Organisations
 {
     /** @internal */
     public function __construct(private Caller $caller) {}
 
-    /** @return \Appsolutely\Sdk\Api\Paginator<\Appsolutely\Sdk\Model\Organisation> */
+    /** @return Paginator<Organisation> */
     #[Endpoint(Operation::ListMeOrganisations)]
-    public function list(int $limit = \Appsolutely\Sdk\Api\SiteApi::DEFAULT_LIMIT): \Appsolutely\Sdk\Api\Paginator
+    public function list(int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::ListMeOrganisations, \Appsolutely\Sdk\Model\Organisation::class, [], $limit, []);
+        return $this->caller->list(Operation::ListMeOrganisations, Organisation::class, [], $limit, []);
     }
 
-    /** @return \Appsolutely\Sdk\Api\KeyedResult<\Appsolutely\Sdk\Model\Organisation> */
+    /** @return KeyedResult<Organisation> */
     #[Endpoint(Operation::CreateMeOrganisation)]
-    public function create(string $name, ?string $idempotencyKey = null): \Appsolutely\Sdk\Api\KeyedResult
+    public function create(string $name, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::CreateMeOrganisation, \Appsolutely\Sdk\Model\Organisation::class, [], ['name' => $name], $idempotencyKey);
+        return $this->caller->keyed(Operation::CreateMeOrganisation, Organisation::class, [], ['name' => $name], $idempotencyKey);
     }
 
-    /** @return \Appsolutely\Sdk\Api\Paginator<\Appsolutely\Sdk\Model\OrganisationChange> */
+    /** @return Paginator<OrganisationChange> */
     #[Endpoint(Operation::ListMeOrganisationChanges)]
-    public function changes(string $organisation, int $limit = \Appsolutely\Sdk\Api\SiteApi::DEFAULT_LIMIT): \Appsolutely\Sdk\Api\Paginator
+    public function changes(string $organisation, int $limit = SiteApi::DEFAULT_LIMIT): Paginator
     {
-        return $this->caller->list(Operation::ListMeOrganisationChanges, \Appsolutely\Sdk\Model\OrganisationChange::class, [], $limit, ['organisation' => $organisation]);
+        return $this->caller->list(Operation::ListMeOrganisationChanges, OrganisationChange::class, [], $limit, ['organisation' => $organisation]);
     }
 
     #[Endpoint(Operation::LeaveMeOrganisation)]
-    public function leave(string $organisation, ?string $idempotencyKey = null): \Appsolutely\Sdk\Api\ApiResponse
+    public function leave(string $organisation, ?string $idempotencyKey = null): ApiResponse
     {
         return $this->caller->send(Operation::LeaveMeOrganisation, ['organisation' => $organisation], body: [], idempotencyKey: $idempotencyKey);
     }
 
-    /** @return \Appsolutely\Sdk\Api\KeyedResult<\Appsolutely\Sdk\Model\OrganisationBillingOperation> */
+    /** @return KeyedResult<OrganisationBillingOperation> */
     #[Endpoint(Operation::DissolveMeOrganisation)]
-    public function dissolve(string $organisation, ?string $idempotencyKey = null): \Appsolutely\Sdk\Api\KeyedResult
+    public function dissolve(string $organisation, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::DissolveMeOrganisation, \Appsolutely\Sdk\Model\OrganisationBillingOperation::class, ['organisation' => $organisation], [], $idempotencyKey);
+        return $this->caller->keyed(Operation::DissolveMeOrganisation, OrganisationBillingOperation::class, ['organisation' => $organisation], [], $idempotencyKey);
     }
-    public function invitations(): \Appsolutely\Sdk\Resource\Me\Organisations\Invitations
+
+    public function invitations(): Invitations
     {
-        return new \Appsolutely\Sdk\Resource\Me\Organisations\Invitations($this->caller);
+        return new Invitations($this->caller);
     }
-    public function roles(): \Appsolutely\Sdk\Resource\Me\Organisations\Roles
+
+    public function roles(): Roles
     {
-        return new \Appsolutely\Sdk\Resource\Me\Organisations\Roles($this->caller);
+        return new Roles($this->caller);
     }
-    public function seats(): \Appsolutely\Sdk\Resource\Me\Organisations\Seats
+
+    public function seats(): Seats
     {
-        return new \Appsolutely\Sdk\Resource\Me\Organisations\Seats($this->caller);
+        return new Seats($this->caller);
     }
-    public function transfers(): \Appsolutely\Sdk\Resource\Me\Organisations\Transfers
+
+    public function transfers(): Transfers
     {
-        return new \Appsolutely\Sdk\Resource\Me\Organisations\Transfers($this->caller);
+        return new Transfers($this->caller);
     }
-    public function billing(): \Appsolutely\Sdk\Resource\Me\Organisations\Billing
+
+    public function billing(): Billing
     {
-        return new \Appsolutely\Sdk\Resource\Me\Organisations\Billing($this->caller);
+        return new Billing($this->caller);
     }
-    public function recoveryBindings(): \Appsolutely\Sdk\Resource\Me\Organisations\RecoveryBindings
+
+    public function recoveryBindings(): RecoveryBindings
     {
-        return new \Appsolutely\Sdk\Resource\Me\Organisations\RecoveryBindings($this->caller);
+        return new RecoveryBindings($this->caller);
     }
-    public function replacements(): \Appsolutely\Sdk\Resource\Me\Organisations\Replacements
+
+    public function replacements(): Replacements
     {
-        return new \Appsolutely\Sdk\Resource\Me\Organisations\Replacements($this->caller);
+        return new Replacements($this->caller);
     }
 }

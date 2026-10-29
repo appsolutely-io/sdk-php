@@ -9,6 +9,9 @@ use Appsolutely\Sdk\Api\Endpoint;
 use Appsolutely\Sdk\Api\Operation;
 use Appsolutely\Sdk\Model\DistributionVersion;
 
+/**
+ * Minimum supported distribution versions and release-channel targets.
+ */
 final readonly class DistributionVersions
 {
     /** @internal */

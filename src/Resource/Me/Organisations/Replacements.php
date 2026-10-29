@@ -6,56 +6,63 @@ namespace Appsolutely\Sdk\Resource\Me\Organisations;
 
 use Appsolutely\Sdk\Api\Caller;
 use Appsolutely\Sdk\Api\Endpoint;
+use Appsolutely\Sdk\Api\KeyedResult;
 use Appsolutely\Sdk\Api\Operation;
+use Appsolutely\Sdk\Model\OrganisationBillingOperation;
+use Appsolutely\Sdk\Model\OrganisationReplacementReview;
+use Appsolutely\Sdk\Model\OrganisationReplacementSetup;
 
+/**
+ * Reviewed organisation plan replacements and their setup state.
+ */
 final readonly class Replacements
 {
     /** @internal */
     public function __construct(private Caller $caller) {}
 
-    /** @return \Appsolutely\Sdk\Api\KeyedResult<\Appsolutely\Sdk\Model\OrganisationBillingOperation> */
+    /** @return KeyedResult<OrganisationBillingOperation> */
     #[Endpoint(Operation::CreateMeOrganisationReplacement)]
-    public function create(string $organisation, string $pool, string $revision, string $successUrl, string $cancelUrl, ?string $idempotencyKey = null): \Appsolutely\Sdk\Api\KeyedResult
+    public function create(string $organisation, string $pool, string $revision, string $successUrl, string $cancelUrl, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::CreateMeOrganisationReplacement, \Appsolutely\Sdk\Model\OrganisationBillingOperation::class, ['organisation' => $organisation], ['pool' => $pool, 'revision' => $revision, 'success_url' => $successUrl, 'cancel_url' => $cancelUrl], $idempotencyKey);
+        return $this->caller->keyed(Operation::CreateMeOrganisationReplacement, OrganisationBillingOperation::class, ['organisation' => $organisation], ['pool' => $pool, 'revision' => $revision, 'success_url' => $successUrl, 'cancel_url' => $cancelUrl], $idempotencyKey);
     }
 
     #[Endpoint(Operation::CurrentMeOrganisationReplacement)]
-    public function current(string $organisation, string $pool): \Appsolutely\Sdk\Model\OrganisationReplacementSetup
+    public function current(string $organisation, string $pool): OrganisationReplacementSetup
     {
-        return $this->caller->read(Operation::CurrentMeOrganisationReplacement, \Appsolutely\Sdk\Model\OrganisationReplacementSetup::class, ['organisation' => $organisation, 'pool' => $pool]);
+        return $this->caller->read(Operation::CurrentMeOrganisationReplacement, OrganisationReplacementSetup::class, ['organisation' => $organisation, 'pool' => $pool]);
     }
 
     #[Endpoint(Operation::ReviewMeOrganisationReplacement)]
-    public function review(string $organisation, string $pool): \Appsolutely\Sdk\Model\OrganisationReplacementReview
+    public function review(string $organisation, string $pool): OrganisationReplacementReview
     {
-        return $this->caller->read(Operation::ReviewMeOrganisationReplacement, \Appsolutely\Sdk\Model\OrganisationReplacementReview::class, ['organisation' => $organisation, 'pool' => $pool]);
+        return $this->caller->read(Operation::ReviewMeOrganisationReplacement, OrganisationReplacementReview::class, ['organisation' => $organisation, 'pool' => $pool]);
     }
 
     #[Endpoint(Operation::GetMeOrganisationReplacement)]
-    public function get(string $organisation, string $setup): \Appsolutely\Sdk\Model\OrganisationReplacementSetup
+    public function get(string $organisation, string $setup): OrganisationReplacementSetup
     {
-        return $this->caller->read(Operation::GetMeOrganisationReplacement, \Appsolutely\Sdk\Model\OrganisationReplacementSetup::class, ['organisation' => $organisation, 'setup' => $setup]);
+        return $this->caller->read(Operation::GetMeOrganisationReplacement, OrganisationReplacementSetup::class, ['organisation' => $organisation, 'setup' => $setup]);
     }
 
-    /** @return \Appsolutely\Sdk\Api\KeyedResult<\Appsolutely\Sdk\Model\OrganisationBillingOperation> */
+    /** @return KeyedResult<OrganisationBillingOperation> */
     #[Endpoint(Operation::CloseMeOrganisationReplacement)]
-    public function close(string $organisation, string $setup, ?string $idempotencyKey = null): \Appsolutely\Sdk\Api\KeyedResult
+    public function close(string $organisation, string $setup, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::CloseMeOrganisationReplacement, \Appsolutely\Sdk\Model\OrganisationBillingOperation::class, ['organisation' => $organisation, 'setup' => $setup], [], $idempotencyKey);
+        return $this->caller->keyed(Operation::CloseMeOrganisationReplacement, OrganisationBillingOperation::class, ['organisation' => $organisation, 'setup' => $setup], [], $idempotencyKey);
     }
 
-    /** @return \Appsolutely\Sdk\Api\KeyedResult<\Appsolutely\Sdk\Model\OrganisationBillingOperation> */
+    /** @return KeyedResult<OrganisationBillingOperation> */
     #[Endpoint(Operation::CompleteMeOrganisationReplacement)]
-    public function complete(string $organisation, string $setup, ?string $idempotencyKey = null): \Appsolutely\Sdk\Api\KeyedResult
+    public function complete(string $organisation, string $setup, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::CompleteMeOrganisationReplacement, \Appsolutely\Sdk\Model\OrganisationBillingOperation::class, ['organisation' => $organisation, 'setup' => $setup], [], $idempotencyKey);
+        return $this->caller->keyed(Operation::CompleteMeOrganisationReplacement, OrganisationBillingOperation::class, ['organisation' => $organisation, 'setup' => $setup], [], $idempotencyKey);
     }
 
-    /** @return \Appsolutely\Sdk\Api\KeyedResult<\Appsolutely\Sdk\Model\OrganisationBillingOperation> */
+    /** @return KeyedResult<OrganisationBillingOperation> */
     #[Endpoint(Operation::ReconcileMeOrganisationReplacement)]
-    public function reconcile(string $organisation, string $setup, ?string $idempotencyKey = null): \Appsolutely\Sdk\Api\KeyedResult
+    public function reconcile(string $organisation, string $setup, ?string $idempotencyKey = null): KeyedResult
     {
-        return $this->caller->keyed(Operation::ReconcileMeOrganisationReplacement, \Appsolutely\Sdk\Model\OrganisationBillingOperation::class, ['organisation' => $organisation, 'setup' => $setup], [], $idempotencyKey);
+        return $this->caller->keyed(Operation::ReconcileMeOrganisationReplacement, OrganisationBillingOperation::class, ['organisation' => $organisation, 'setup' => $setup], [], $idempotencyKey);
     }
 }

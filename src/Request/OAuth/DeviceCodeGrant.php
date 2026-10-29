@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Request\OAuth;
 
 use Appsolutely\Sdk\Exception\NotSerializableException;
+use Appsolutely\Sdk\Support\OptionalFields;
 
 final readonly class DeviceCodeGrant implements TokenGrant
 {
@@ -21,7 +22,7 @@ final readonly class DeviceCodeGrant implements TokenGrant
     /** @return array<string, string> */
     public function fields(): array
     {
-        return array_filter(['grant_type' => 'urn:ietf:params:oauth:grant-type:device_code', 'device_code' => $this->deviceCode, 'scope' => $this->scope], static fn(?string $value): bool => $value !== null);
+        return OptionalFields::withoutNulls(['grant_type' => 'urn:ietf:params:oauth:grant-type:device_code', 'device_code' => $this->deviceCode, 'scope' => $this->scope]);
     }
     /** @return array<string, mixed> */
     public function __debugInfo(): array
