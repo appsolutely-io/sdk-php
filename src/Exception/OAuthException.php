@@ -17,11 +17,14 @@ use RuntimeException;
  */
 final class OAuthException extends RuntimeException implements AppsolutelyException
 {
+    /** @param array<array-key, mixed> $extra */
     public function __construct(
         public readonly string $error,
         public readonly ?string $errorDescription = null,
         public readonly ?string $errorUri = null,
         public readonly ?int $statusCode = null,
+        #[\SensitiveParameter]
+        public readonly array $extra = [],
     ) {
         // The fields came from a redirect or a provider response: kept as
         // received on the properties, made printable and short in the message.
@@ -45,7 +48,7 @@ final class OAuthException extends RuntimeException implements AppsolutelyExcept
         $description = $fields['error_description'] ?? null;
         $uri = $fields['error_uri'] ?? null;
 
-        return new self($error, is_string($description) ? $description : null, is_string($uri) ? $uri : null, $statusCode);
+        return new self($error, is_string($description) ? $description : null, is_string($uri) ? $uri : null, $statusCode, array_diff_key($fields, ['error' => true, 'error_description' => true, 'error_uri' => true]));
     }
 
     /**

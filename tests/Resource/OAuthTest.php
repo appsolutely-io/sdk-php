@@ -64,6 +64,21 @@ final class OAuthTest extends TestCase
         self::assertCount(1, $site->provider->siteRequests());
     }
 
+    public function testOAuthRefusalsKeepHintAndUnknownExtensions(): void
+    {
+        $site = (new SiteRecorder())->json(['error' => 'invalid_grant', 'error_description' => 'Grant refused', 'error_uri' => 'https://site.example.test/errors/grant', 'hint' => 'use the current refresh token', 'future' => ['retryable' => false]], 400);
+        try {
+            $site->provider->client()->api()->oauth()->exchange(new RefreshTokenGrant('old-refresh'), new ClientIdentity('client'));
+            self::fail('The refusal was not thrown.');
+        } catch (OAuthException $error) {
+            self::assertSame(['hint' => 'use the current refresh token', 'future' => ['retryable' => false]], $error->extra);
+            self::assertSame('invalid_grant', $error->error);
+            self::assertSame('Grant refused', $error->errorDescription);
+            self::assertSame('https://site.example.test/errors/grant', $error->errorUri);
+            self::assertSame(400, $error->statusCode);
+        }
+    }
+
     public function testBasicAuthenticationIsEncodedWithoutBodyCredentials(): void
     {
         $site = (new SiteRecorder())->json(['access_token' => 'a', 'token_type' => 'Bearer', 'expires_in' => 40]);
