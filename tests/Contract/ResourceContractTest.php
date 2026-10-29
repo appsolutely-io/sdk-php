@@ -145,6 +145,9 @@ final class ResourceContractTest extends TestCase
      */
     private static array $bodies = [];
 
+    /** @var list<string> */
+    private static array $authorizations = [];
+
     /**
      * What the last drive() threw, null when it returned.
      */
@@ -325,6 +328,29 @@ final class ResourceContractTest extends TestCase
         self::assertSame([], $stale, sprintf('%s has constants for values %s no longer enumerates: %s.', $class, $schema, implode(', ', $stale)));
     }
 
+    /** @return iterable<string, array{string}> */
+    public static function alternativesKeywords(): iterable
+    {
+        yield 'exclusive alternatives' => ['oneOf'];
+        yield 'inclusive alternatives' => ['anyOf'];
+    }
+
+    #[DataProvider('alternativesKeywords')]
+    public function testEnumCollectionIncludesSiblingProperties(string $keyword): void
+    {
+        $enumerated = [];
+        self::collectEnumerated('', [
+            'type' => 'object',
+            'properties' => ['state' => ['type' => 'string', 'enum' => ['common']]],
+            $keyword => [
+                ['properties' => ['kind' => ['type' => 'string', 'enum' => ['first']]]],
+                ['properties' => ['kind' => ['type' => 'string', 'enum' => ['second']]]],
+            ],
+        ], 'Example', $enumerated);
+        ksort($enumerated);
+        self::assertSame(['KIND_FIRST' => 'first', 'KIND_SECOND' => 'second', 'STATE_COMMON' => 'common'], $enumerated);
+    }
+
     /**
      * The name of a model's constant for a value of a field:
      * `STATUS_PAST_DUE` for `status` and `past_due`, `TYPE_STORE_CREDIT` for
@@ -346,16 +372,15 @@ final class ResourceContractTest extends TestCase
      */
     private static function collectEnumerated(string $field, array $declaration, string $where, array &$enumerated): void
     {
-        $alternatives = Document::list($declaration['oneOf'] ?? $declaration['anyOf'] ?? []);
+        $alternatives = [...Document::list($declaration['oneOf'] ?? []), ...Document::list($declaration['anyOf'] ?? [])];
         if ($alternatives !== []) {
             foreach ($alternatives as $alternative) {
                 self::collectEnumerated($field, Document::map($alternative), $where, $enumerated);
             }
-
-            return;
         }
+        unset($declaration['oneOf'], $declaration['anyOf']);
         $node = self::nonNull(Document::resolve($declaration));
-        $named = Document::refName($declaration) !== null || Document::refName(Document::map(Document::list($declaration['oneOf'] ?? $declaration['anyOf'] ?? [])[0] ?? null)) !== null;
+        $named = Document::refName($declaration) !== null;
         if ($named && isset($node['properties'])) {
             return;
         }
@@ -513,6 +538,26 @@ final class ResourceContractTest extends TestCase
                 }
             }
         }
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function formOperations(): iterable
+    {
+        foreach (['exchangeOAuthToken', 'requestDeviceAuthorization', 'revokeOAuthToken'] as $id) {
+            yield $id => [$id];
+        }
+    }
+
+    #[DataProvider('formOperations')]
+    public function testOAuthFormsUseHttpBasicWithoutBodyCredentials(string $id): void
+    {
+        $identity = new \Appsolutely\Sdk\Request\OAuth\ClientIdentity('client:/', 'secret+&', \Appsolutely\Sdk\Oidc\ClientAuthentication::ClientSecretBasic);
+        self::drive(self::endpointOf($id), optional: true, argumentOverrides: ['identity' => $identity]);
+        self::assertSame(['Basic ' . base64_encode(urlencode('client:/') . ':' . urlencode('secret+&'))], self::$authorizations);
+        $body = self::$bodies[0] ?? null;
+        self::assertIsArray($body);
+        self::assertArrayNotHasKey('client_id', $body);
+        self::assertArrayNotHasKey('client_secret', $body);
     }
 
     public function testEverySchemaASuccessAnswersIsReadByAModel(): void
@@ -697,6 +742,9 @@ final class ResourceContractTest extends TestCase
             /** @var list<mixed> */
             public array $bodies = [];
 
+            /** @var list<string> */
+            public array $authorizations = [];
+
             /** @var list<string> each request's method and path, `GET /api/v1/pages` */
             public array $lines = [];
 
@@ -733,6 +781,7 @@ final class ResourceContractTest extends TestCase
                 $page = $this->answer ?? ($this->queries === [] ? [...$this->page, 'data' => [], 'next_cursor' => 'next-page'] : [...$this->page, 'data' => []]);
                 $this->queries[] = $names;
                 $this->lines[] = $request->getMethod() . ' ' . $path;
+                $this->authorizations[] = $request->getHeaderLine(Header::AUTHORIZATION);
                 $body = (string) $request->getBody();
                 if (str_starts_with($request->getHeaderLine(Header::CONTENT_TYPE), MediaType::FORM_URLENCODED)) {
                     parse_str($body, $decoded);
@@ -811,6 +860,7 @@ final class ResourceContractTest extends TestCase
         }
 
         self::$bodies = $site->bodies;
+        self::$authorizations = $site->authorizations;
 
         return $queries;
     }
