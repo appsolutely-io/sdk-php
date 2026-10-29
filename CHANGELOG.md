@@ -7,12 +7,20 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Store purchase answers expose the required `belongsToYou` flag independently of their final outcome or subscription reference.
+- Entitlements expose their required `kind` (`trial` or `paid`).
+
 ### Fixed
 
 - Seat pools accept seats whose member name is null or omitted.
 - Orders awaiting tax preparation accept null tax and total amounts in API answers and typed webhook deliveries.
 
 ### Upgrading
+
+- Handle purchase ownership through `StorePurchaseTransaction::$belongsToYou`, rather than inferring it from `outcome` or `subscriptionId`. Direct constructors must change from `new StorePurchaseTransaction($outcome, $subscriptionId, $status, $kind, $environment, $extra)` to `new StorePurchaseTransaction($outcome, $subscriptionId, $status, $kind, $environment, $belongsToYou, $extra)`.
+- Direct entitlement constructors must change from `new Entitlement($key, $label, $quantity, $expiresAt, $periodStart, $periodEnd, $breakdown, $extra)` to `new Entitlement($key, $label, $quantity, $expiresAt, $periodStart, $periodEnd, $breakdown, $kind, $extra)`. Test answers must include the server's `kind` and purchase `belongs_to_you` fields.
 
 - `Model\Seat::$member` changes from `string` to `?string`. Consumers must handle null when the member name is unavailable.
 - `Model\Order::$taxAmount` and `Model\Order::$totalAmount` change from `int` to `?int`. Consumers must check for null before arithmetic or displaying a final amount; null means the amount is not yet available, rather than zero.

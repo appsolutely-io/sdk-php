@@ -133,7 +133,7 @@ final class BackendTest extends TestCase
 
     public function testAStorePurchaseLeavesOutWhatTheStoreDoesNotUse(): void
     {
-        $site = (new SiteRecorder())->json(['outcome' => 'started', 'subscription_id' => '9', 'status' => 'active', 'kind' => 'subscription', 'environment' => 'sandbox']);
+        $site = (new SiteRecorder())->json(['outcome' => 'recorded', 'belongs_to_you' => true, 'subscription_id' => '9', 'status' => 'active', 'kind' => 'subscription', 'environment' => 'sandbox']);
 
         $transaction = self::backend($site)->storePurchases()->transaction('member-sub', 'app_store', 'member', signedTransaction: 'eyJ.signed');
 
