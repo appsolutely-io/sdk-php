@@ -134,6 +134,25 @@ final readonly class SiteApi
     }
 
     /**
+     * A single form exchange, independent of cached machine credentials.
+     *
+     * @internal
+     * @param array<string, string> $fields
+     * @param array<string, string> $headers
+     */
+    public function form(string $path, #[\SensitiveParameter] array $fields, #[\SensitiveParameter] array $headers = []): ApiResponse
+    {
+        $requestId = Uuid::v4();
+        $response = $this->http->postForm($this->url($path, []), $fields, [...$headers, Header::ACCEPT => self::ACCEPT, Header::REQUEST_ID => $requestId]);
+        if (!HttpTransport::isSuccessful($response)) {
+            throw \Appsolutely\Sdk\Exception\OAuthException::fromResponse($response)
+                ?? ApiException::fromResponse($response, $requestId, $this->clock->now());
+        }
+
+        return $this->answer($response, 'POST', $path, $requestId, null);
+    }
+
+    /**
      * A POST the site runs once however often it arrives: it carries an
      * Idempotency-Key, the same on every retry of this call, and a retry
      * is answered with the first answer (`$replayed` on the result). Use it

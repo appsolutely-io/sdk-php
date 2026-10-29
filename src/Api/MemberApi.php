@@ -42,4 +42,9 @@ final readonly class MemberApi
     {
         return new MemberSync($this->member);
     }
+    #[Endpoint(Operation::GetOAuthUserInfo)]
+    public function userInfo(): \Appsolutely\Sdk\Model\OAuthUserInfo
+    {
+        return $this->member->read(Operation::GetOAuthUserInfo, \Appsolutely\Sdk\Model\OAuthUserInfo::class);
+    }
 }

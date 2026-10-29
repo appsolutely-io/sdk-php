@@ -67,6 +67,17 @@ final readonly class Caller
     }
 
     /**
+     * @param array<string, string> $fields
+     * @internal
+     */
+    public function form(Operation $operation, #[\SensitiveParameter] array $fields, ?\Appsolutely\Sdk\Request\OAuth\ClientIdentity $identity): ApiResponse
+    {
+        $this->assertAudience($operation);
+
+        return $this->api->form($operation->path(), [...$fields, ...($identity?->fields() ?? [])], $identity?->headers() ?? []);
+    }
+
+    /**
      * The JSON object an operation answered.
      *
      * @param array<string, string> $path

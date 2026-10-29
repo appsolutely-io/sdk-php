@@ -89,9 +89,24 @@ enum Operation: string
     case DeleteSeat = 'deleteSeat';
     case ListSeatPools = 'listSeatPools';
 
+    case RequestDeviceAuthorization = 'requestDeviceAuthorization';
+
+    case ExchangeOAuthToken = 'exchangeOAuthToken';
+
+    case RevokeOAuthToken = 'revokeOAuthToken';
+
+    case GetOpenIdSigningKeys = 'getOpenIdSigningKeys';
+
+    case GetOAuthUserInfo = 'getOAuthUserInfo';
+
     public function method(): string
     {
         return match ($this) {
+            self::GetOAuthUserInfo => 'GET',
+            self::GetOpenIdSigningKeys => 'GET',
+            self::RevokeOAuthToken => 'POST',
+            self::ExchangeOAuthToken => 'POST',
+            self::RequestDeviceAuthorization => 'POST',
             self::RequestMagicLink, self::TokenMagicLink,
             self::CreateMeAddress, self::CreateMePushDevice, self::UnregisterMePushDevice,
             self::PushSyncMeAddress,
@@ -109,6 +124,11 @@ enum Operation: string
     public function template(): string
     {
         return match ($this) {
+            self::GetOAuthUserInfo => '/oauth/userinfo',
+            self::GetOpenIdSigningKeys => '/oauth/jwks.json',
+            self::RevokeOAuthToken => '/oauth/revoke',
+            self::ExchangeOAuthToken => '/oauth/token',
+            self::RequestDeviceAuthorization => '/oauth/device/code',
             self::GetApiVersion => '/api/v1',
             self::GetOpenApiDocument => '/api/v1/openapi.json',
             self::RequestMagicLink => '/api/v1/auth/magic-link',
@@ -208,6 +228,11 @@ enum Operation: string
     public function audience(): Audience
     {
         return match ($this) {
+            self::GetOAuthUserInfo => Audience::Member,
+            self::GetOpenIdSigningKeys => Audience::Anyone,
+            self::RevokeOAuthToken => Audience::Anyone,
+            self::ExchangeOAuthToken => Audience::Anyone,
+            self::RequestDeviceAuthorization => Audience::Anyone,
             self::GetApiVersion, self::GetOpenApiDocument, self::RequestMagicLink, self::TokenMagicLink => Audience::Anyone,
             self::GetMe, self::UpdateMe, self::ListMeAddresses, self::CreateMeAddress, self::UpdateMeAddress,
             self::DeleteMeAddress, self::GetMeBillingEntry, self::ListMeEntitlements, self::ListMeOrders,
@@ -235,6 +260,11 @@ enum Operation: string
     public function successStatuses(): array
     {
         return match ($this) {
+            self::GetOAuthUserInfo => [200],
+            self::GetOpenIdSigningKeys => [200],
+            self::RevokeOAuthToken => [200],
+            self::ExchangeOAuthToken => [200],
+            self::RequestDeviceAuthorization => [200],
             self::TokenMagicLink, self::CreateMeAddress, self::CreateSeat, self::CreateWebhookEndpoint, self::StartWebhookEndpointsSecretRotation => [201],
             self::CreateCheckoutSession, self::CreateFeatureKey, self::CreateMeCheckoutSession, self::CreateMePortalSession, self::CreatePortalSession, self::CreateReturnTarget, self::CreateRole => [201, 200],
             self::RequestMagicLink, self::RedeliverDelivery, self::ResumeMeSubscription, self::TestDeliveriesWebhookEndpoint => [202],
@@ -251,6 +281,11 @@ enum Operation: string
     public function takesIdempotencyKey(): bool
     {
         return match ($this) {
+            self::GetOAuthUserInfo => false,
+            self::GetOpenIdSigningKeys => false,
+            self::RevokeOAuthToken => false,
+            self::ExchangeOAuthToken => false,
+            self::RequestDeviceAuthorization => false,
             self::CreateMeAddress,
             self::AdvanceTestClock, self::AttachTestClock, self::CancelMeSubscription, self::ChangeMeSubscription, self::CreateCheckoutSession, self::CreateFulfilment, self::CreateMeCheckoutSession, self::CreateMePortalSession, self::CreatePortalSession, self::CreateWebhookEndpoint, self::RedeliverDelivery, self::ResumeMeSubscription, self::StartWebhookEndpointsSecretRotation => true,
             default => false,
@@ -266,6 +301,11 @@ enum Operation: string
     public function isCursorList(): bool
     {
         return match ($this) {
+            self::GetOAuthUserInfo => false,
+            self::GetOpenIdSigningKeys => false,
+            self::RevokeOAuthToken => false,
+            self::ExchangeOAuthToken => false,
+            self::RequestDeviceAuthorization => false,
             self::ListProducts,
             self::ListMeAddresses, self::ListMeOrders, self::RewardsMeReferral,
             self::ListBackendEntitlements, self::ListDeliveries, self::ListRoleAssignments, self::ListWebhookEndpoints => true,

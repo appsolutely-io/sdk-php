@@ -195,7 +195,7 @@ final class FakeClient
         $path = $request->getUri()->getPath();
         // The backend asks the provider for its token first: the discovery
         // document and the token endpoint are answered here, not recorded.
-        if ($request->getMethod() === 'GET' && $path === '/.well-known/openid-configuration') {
+        if ($request->getMethod() === 'GET' && $path === '/.well-known/openid-configuration' && !isset($this->answers['getOpenIdConfiguration'])) {
             return $this->json([
                 'issuer' => self::BASE_URL,
                 'authorization_endpoint' => self::BASE_URL . '/oauth/authorize',
@@ -211,7 +211,7 @@ final class FakeClient
         // Only the backend's client-credentials grant: a member's code
         // exchange or refresh is sign-in, which this fake does not answer.
         parse_str((string) $request->getBody(), $grant);
-        if ($request->getMethod() === 'POST' && $path === '/oauth/token' && ($grant['grant_type'] ?? null) === 'client_credentials') {
+        if ($request->getMethod() === 'POST' && $path === '/oauth/token' && ($grant['grant_type'] ?? null) === 'client_credentials' && !isset($this->answers['exchangeOAuthToken'])) {
             return $this->json(['access_token' => self::BACKEND_TOKEN, 'token_type' => 'Bearer', 'expires_in' => 3600]);
         }
 
@@ -223,7 +223,11 @@ final class FakeClient
 
         parse_str($request->getUri()->getQuery(), $query);
         $body = (string) $request->getBody();
-        $decoded = $body === '' ? null : json_decode($body, true);
+        if (str_starts_with($request->getHeaderLine(Header::CONTENT_TYPE), MediaType::FORM_URLENCODED)) {
+            parse_str($body, $decoded);
+        } else {
+            $decoded = $body === '' ? null : json_decode($body, true);
+        }
         $authorization = $request->getHeaderLine(Header::AUTHORIZATION);
         $requestId = $request->getHeaderLine(Header::REQUEST_ID);
         $key = self::idempotencyKey($request->getHeaderLine(Header::IDEMPOTENCY_KEY));
