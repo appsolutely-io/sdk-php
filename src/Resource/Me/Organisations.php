@@ -54,4 +54,8 @@ final readonly class Organisations
     {
         return new \Appsolutely\Sdk\Resource\Me\Organisations\Roles($this->caller);
     }
+    public function seats(): \Appsolutely\Sdk\Resource\Me\Organisations\Seats
+    {
+        return new \Appsolutely\Sdk\Resource\Me\Organisations\Seats($this->caller);
+    }
 }
