@@ -23,7 +23,7 @@ final readonly class Roles
     #[Endpoint(Operation::AssignOrganisationRole)]
     public function assign(string $organisation, string $membership, #[\SensitiveParameter] string $key, ?string $idempotencyKey = null): \Appsolutely\Sdk\Api\KeyedResult
     {
-        return $this->caller->keyed(Operation::AssignOrganisationRole, \Appsolutely\Sdk\Model\OrganisationRoles::class, ['organisation' => $organisation, 'membership' => $membership, 'key' => $key], [], $idempotencyKey);
+        return $this->caller->keyed(Operation::AssignOrganisationRole, \Appsolutely\Sdk\Model\OrganisationRoles::class, ['organisation' => $organisation, 'membership' => $membership, 'key' => $key], null, $idempotencyKey);
     }
 
     /** @return \Appsolutely\Sdk\Api\KeyedResult<\Appsolutely\Sdk\Model\OrganisationRoles> */

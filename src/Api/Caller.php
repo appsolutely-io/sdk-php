@@ -48,7 +48,13 @@ final readonly class Caller
                 throw new LogicException(sprintf('%s is a keyed write without a query.', $operation->value));
             }
 
-            return $this->api->idempotent($operation->method(), $url, $operation->method() === 'DELETE' ? null : ($body ?? []), $idempotencyKey);
+            $body = match ($operation->method()) {
+                'POST' => $body ?? [],
+                'DELETE' => null,
+                default => $body,
+            };
+
+            return $this->api->idempotent($operation->method(), $url, $body, $idempotencyKey);
         }
         if ($idempotencyKey !== null) {
             throw new LogicException(sprintf('%s takes no Idempotency-Key.', $operation->value));
@@ -202,10 +208,10 @@ final readonly class Caller
      *
      * @param class-string<T> $model
      * @param array<string, string> $path
-     * @param array<string, mixed> $body
+     * @param array<string, mixed>|null $body
      * @return KeyedResult<T>
      */
-    public function keyed(Operation $operation, string $model, array $path, #[\SensitiveParameter] array $body, ?string $idempotencyKey): KeyedResult
+    public function keyed(Operation $operation, string $model, array $path, #[\SensitiveParameter] ?array $body, ?string $idempotencyKey): KeyedResult
     {
         if (!$operation->takesIdempotencyKey()) {
             throw new LogicException(sprintf('%s takes no Idempotency-Key.', $operation->value));
