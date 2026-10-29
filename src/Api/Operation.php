@@ -129,9 +129,21 @@ enum Operation: string
 
     case RevokeMeOrganisationInvitation = 'revokeMeOrganisationInvitation';
 
+    case GetOrganisationRole = 'getOrganisationRole';
+
+    case AssignOrganisationRole = 'assignOrganisationRole';
+
+    case RevokeOrganisationRole = 'revokeOrganisationRole';
+
+    case ListOrganisationRoles = 'listOrganisationRoles';
+
     public function method(): string
     {
         return match ($this) {
+            self::ListOrganisationRoles => 'GET',
+            self::RevokeOrganisationRole => 'DELETE',
+            self::AssignOrganisationRole => 'PUT',
+            self::GetOrganisationRole => 'GET',
             self::RevokeMeOrganisationInvitation => 'POST',
             self::ResendMeOrganisationInvitation => 'POST',
             self::DeclineMeOrganisationInvitation => 'POST',
@@ -169,6 +181,10 @@ enum Operation: string
     public function template(): string
     {
         return match ($this) {
+            self::ListOrganisationRoles => '/api/v1/me/organisations/{organisation}/roles',
+            self::RevokeOrganisationRole => '/api/v1/me/organisations/{organisation}/members/{membership}/roles/{key}',
+            self::AssignOrganisationRole => '/api/v1/me/organisations/{organisation}/members/{membership}/roles/{key}',
+            self::GetOrganisationRole => '/api/v1/me/organisations/{organisation}/members/{membership}/roles',
             self::RevokeMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/revoke',
             self::ResendMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/resend',
             self::DeclineMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/decline',
@@ -288,6 +304,10 @@ enum Operation: string
     public function audience(): Audience
     {
         return match ($this) {
+            self::ListOrganisationRoles => Audience::Member,
+            self::RevokeOrganisationRole => Audience::Member,
+            self::AssignOrganisationRole => Audience::Member,
+            self::GetOrganisationRole => Audience::Member,
             self::RevokeMeOrganisationInvitation => Audience::Member,
             self::ResendMeOrganisationInvitation => Audience::Member,
             self::DeclineMeOrganisationInvitation => Audience::Member,
@@ -335,6 +355,10 @@ enum Operation: string
     public function successStatuses(): array
     {
         return match ($this) {
+            self::ListOrganisationRoles => [200],
+            self::RevokeOrganisationRole => [200],
+            self::AssignOrganisationRole => [200],
+            self::GetOrganisationRole => [200],
             self::RevokeMeOrganisationInvitation => [204],
             self::ResendMeOrganisationInvitation => [200],
             self::DeclineMeOrganisationInvitation => [204],
@@ -371,6 +395,10 @@ enum Operation: string
     public function takesIdempotencyKey(): bool
     {
         return match ($this) {
+            self::ListOrganisationRoles => false,
+            self::RevokeOrganisationRole => true,
+            self::AssignOrganisationRole => true,
+            self::GetOrganisationRole => false,
             self::RevokeMeOrganisationInvitation => true,
             self::ResendMeOrganisationInvitation => true,
             self::DeclineMeOrganisationInvitation => true,
@@ -406,6 +434,10 @@ enum Operation: string
     public function isCursorList(): bool
     {
         return match ($this) {
+            self::ListOrganisationRoles => false,
+            self::RevokeOrganisationRole => false,
+            self::AssignOrganisationRole => false,
+            self::GetOrganisationRole => false,
             self::RevokeMeOrganisationInvitation => false,
             self::ResendMeOrganisationInvitation => false,
             self::DeclineMeOrganisationInvitation => false,

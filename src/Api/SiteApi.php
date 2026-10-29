@@ -166,12 +166,24 @@ final readonly class SiteApi
      */
     public function postIdempotent(string $path, #[\SensitiveParameter] array $body = [], ?string $idempotencyKey = null, ?string $requestId = null): ApiResponse
     {
+        return $this->idempotent('POST', $path, $body, $idempotencyKey, $requestId);
+    }
+
+    /**
+     * @internal
+     * @param array<string, mixed>|null $body
+     */
+    public function idempotent(string $method, string $path, #[\SensitiveParameter] ?array $body, ?string $idempotencyKey = null, ?string $requestId = null): ApiResponse
+    {
+        if (!in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            throw new InvalidArgumentValueException('An idempotent operation must use a write method.');
+        }
         $idempotencyKey ??= Uuid::v4();
         if (preg_match('/^[\x20-\x7E]{1,255}$/D', $idempotencyKey) !== 1) {
             throw new InvalidArgumentValueException('An Idempotency-Key must be 1 to 255 printable ASCII characters.');
         }
 
-        return $this->call('POST', $path, [], $body, $requestId, retryable: true, idempotencyKey: $idempotencyKey);
+        return $this->call($method, $path, [], $body, $requestId, retryable: true, idempotencyKey: $idempotencyKey);
     }
 
     /**

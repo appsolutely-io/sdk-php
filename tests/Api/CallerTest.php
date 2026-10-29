@@ -12,9 +12,8 @@ use LogicException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * A keyed write is sent as a POST under an Idempotency-Key and nothing
- * else: an operation that would need another method or a query is refused
- * before anything is sent, rather than sent without them.
+ * A keyed write preserves its documented verb and key, and refuses a query
+ * before sending rather than silently dropping it.
  */
 final class CallerTest extends TestCase
 {
@@ -33,11 +32,11 @@ final class CallerTest extends TestCase
         self::assertSame([], $provider->siteRequests());
     }
 
-    public function testEveryKeyedOperationIsAPost(): void
+    public function testEveryKeyedOperationUsesASupportedWriteMethod(): void
     {
         foreach (Operation::cases() as $operation) {
             if ($operation->takesIdempotencyKey()) {
-                self::assertSame('POST', $operation->method(), $operation->value);
+                self::assertContains($operation->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], $operation->value);
             }
         }
     }
