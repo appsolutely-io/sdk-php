@@ -40,9 +40,9 @@ final readonly class Seats
      * @param string $member the member's public name
      */
     #[Endpoint(Operation::DeleteSeat)]
-    public function take(string $member): void
+    public function take(string $member, ?string $pool = null): void
     {
-        $this->caller->send(Operation::DeleteSeat, ['sub' => $member]);
+        $this->caller->send(Operation::DeleteSeat, ['sub' => $member], ['pool' => $pool]);
     }
 
     /**

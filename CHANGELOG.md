@@ -9,6 +9,8 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Backend seat removal accepts an optional pool reference.
+
 - Store purchase answers expose the required `belongsToYou` flag independently of their final outcome or subscription reference.
 - Entitlements expose their required `kind` (`trial` or `paid`).
 
@@ -18,6 +20,8 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Orders awaiting tax preparation accept null tax and total amounts in API answers and typed webhook deliveries.
 
 ### Upgrading
+
+- Where seat removal must target a pool, pass its reference to `backend()->seats()->take($member, $pool)`; the existing `take($member)` call remains available without a pool filter.
 
 - Handle purchase ownership through `StorePurchaseTransaction::$belongsToYou`, rather than inferring it from `outcome` or `subscriptionId`. Direct constructors must change from `new StorePurchaseTransaction($outcome, $subscriptionId, $status, $kind, $environment, $extra)` to `new StorePurchaseTransaction($outcome, $subscriptionId, $status, $kind, $environment, $belongsToYou, $extra)`.
 - Direct entitlement constructors must change from `new Entitlement($key, $label, $quantity, $expiresAt, $periodStart, $periodEnd, $breakdown, $extra)` to `new Entitlement($key, $label, $quantity, $expiresAt, $periodStart, $periodEnd, $breakdown, $kind, $extra)`. Test answers must include the server's `kind` and purchase `belongs_to_you` fields.

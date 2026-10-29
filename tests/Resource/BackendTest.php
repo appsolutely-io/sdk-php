@@ -354,6 +354,17 @@ final class BackendTest extends TestCase
         self::assertSame('4f6a8c0e-2b4d-4f6a-8c0e-2b4d6f8a0c2e', $intent->mayStillBill[0]->subscriptionId);
     }
 
+    public function testASeatRemovalCanSelectAPoolWithoutChangingUnscopedCalls(): void
+    {
+        $site = (new SiteRecorder())->empty(204)->empty(204);
+        $seats = self::backend($site)->seats();
+        $seats->take('member', 'pool/1');
+        $seats->take('member');
+        self::assertSame('DELETE /api/v1/seats/member?pool=pool%2F1', $site->line(0));
+        self::assertSame('DELETE /api/v1/seats/member', $site->line(1));
+        self::assertSame('', $site->request(0)->getHeaderLine('Idempotency-Key'));
+    }
+
     private static function backend(SiteRecorder $site): BackendApi
     {
         $site->provider->token = static fn() => $site->provider->json(['access_token' => 'machine-token', 'token_type' => 'Bearer', 'expires_in' => 3600]);
