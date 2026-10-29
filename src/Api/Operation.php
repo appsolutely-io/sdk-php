@@ -99,9 +99,18 @@ enum Operation: string
 
     case GetOAuthUserInfo = 'getOAuthUserInfo';
 
+    case GetOpenIdConfiguration = 'getOpenIdConfiguration';
+
+    case GetDistributionVersion = 'getDistributionVersion';
+
+    case GetDistributionTargetVersion = 'getDistributionTargetVersion';
+
     public function method(): string
     {
         return match ($this) {
+            self::GetDistributionTargetVersion => 'GET',
+            self::GetDistributionVersion => 'GET',
+            self::GetOpenIdConfiguration => 'GET',
             self::GetOAuthUserInfo => 'GET',
             self::GetOpenIdSigningKeys => 'GET',
             self::RevokeOAuthToken => 'POST',
@@ -124,6 +133,9 @@ enum Operation: string
     public function template(): string
     {
         return match ($this) {
+            self::GetDistributionTargetVersion => '/api/distribution-version/{distribution}/{target}',
+            self::GetDistributionVersion => '/api/distribution-version/{distribution}',
+            self::GetOpenIdConfiguration => '/.well-known/openid-configuration',
             self::GetOAuthUserInfo => '/oauth/userinfo',
             self::GetOpenIdSigningKeys => '/oauth/jwks.json',
             self::RevokeOAuthToken => '/oauth/revoke',
@@ -228,6 +240,9 @@ enum Operation: string
     public function audience(): Audience
     {
         return match ($this) {
+            self::GetDistributionTargetVersion => Audience::Anyone,
+            self::GetDistributionVersion => Audience::Anyone,
+            self::GetOpenIdConfiguration => Audience::Anyone,
             self::GetOAuthUserInfo => Audience::Member,
             self::GetOpenIdSigningKeys => Audience::Anyone,
             self::RevokeOAuthToken => Audience::Anyone,
@@ -260,6 +275,9 @@ enum Operation: string
     public function successStatuses(): array
     {
         return match ($this) {
+            self::GetDistributionTargetVersion => [200],
+            self::GetDistributionVersion => [200],
+            self::GetOpenIdConfiguration => [200],
             self::GetOAuthUserInfo => [200],
             self::GetOpenIdSigningKeys => [200],
             self::RevokeOAuthToken => [200],
@@ -281,6 +299,9 @@ enum Operation: string
     public function takesIdempotencyKey(): bool
     {
         return match ($this) {
+            self::GetDistributionTargetVersion => false,
+            self::GetDistributionVersion => false,
+            self::GetOpenIdConfiguration => false,
             self::GetOAuthUserInfo => false,
             self::GetOpenIdSigningKeys => false,
             self::RevokeOAuthToken => false,
@@ -301,6 +322,9 @@ enum Operation: string
     public function isCursorList(): bool
     {
         return match ($this) {
+            self::GetDistributionTargetVersion => false,
+            self::GetDistributionVersion => false,
+            self::GetOpenIdConfiguration => false,
             self::GetOAuthUserInfo => false,
             self::GetOpenIdSigningKeys => false,
             self::RevokeOAuthToken => false,

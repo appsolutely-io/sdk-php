@@ -71,4 +71,14 @@ final readonly class PublicApi
     {
         return $this->anyone->read(Operation::GetOpenIdSigningKeys, \Appsolutely\Sdk\Model\OpenIdJsonWebKeySet::class);
     }
+    public function distributionVersions(): \Appsolutely\Sdk\Resource\DistributionVersions
+    {
+        return new \Appsolutely\Sdk\Resource\DistributionVersions($this->anyone);
+    }
+
+    #[Endpoint(Operation::GetOpenIdConfiguration)]
+    public function openIdConfiguration(): \Appsolutely\Sdk\Model\OpenIdConfiguration
+    {
+        return $this->anyone->read(Operation::GetOpenIdConfiguration, \Appsolutely\Sdk\Model\OpenIdConfiguration::class);
+    }
 }
