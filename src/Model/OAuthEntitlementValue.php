@@ -11,8 +11,11 @@ final readonly class OAuthEntitlementValue
     public const string KIND_QUANTITY = 'quantity';
     public const string KIND_CONFIG = 'config';
 
-    /** @param array<array-key, mixed>|bool|int|null $value */
-    public function __construct(public string $kind, public array|bool|int|null $value) {}
+    /**
+     * @param array<array-key, mixed>|bool|int|null $value
+     * @param array<array-key, mixed> $extra
+     */
+    public function __construct(public string $kind, public array|bool|int|null $value, public array $extra = []) {}
 
     /** @param array<array-key, mixed> $data */
     public static function from(#[\SensitiveParameter] array $data): self
@@ -23,6 +26,6 @@ final readonly class OAuthEntitlementValue
             throw new \Appsolutely\Sdk\Exception\UnexpectedResponseException('The entitlement value has an unexpected shape.', 0, 'OAuthUserInfo');
         }
 
-        return new self($json->string('kind'), $value);
+        return new self($json->string('kind'), $value, $json->extra());
     }
 }

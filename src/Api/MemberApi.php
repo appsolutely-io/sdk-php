@@ -45,6 +45,6 @@ final readonly class MemberApi
     #[Endpoint(Operation::GetOAuthUserInfo)]
     public function userInfo(): \Appsolutely\Sdk\Model\OAuthUserInfo
     {
-        return $this->member->read(Operation::GetOAuthUserInfo, \Appsolutely\Sdk\Model\OAuthUserInfo::class);
+        return \Appsolutely\Sdk\Model\OAuthUserInfo::from(\Appsolutely\Sdk\Model\Fields::of($this->member->oauthGet(Operation::GetOAuthUserInfo), \Appsolutely\Sdk\Model\OAuthUserInfo::SCHEMA));
     }
 }

@@ -144,12 +144,30 @@ final readonly class SiteApi
     {
         $requestId = Uuid::v4();
         $response = $this->http->postForm($this->url($path, []), $fields, [...$headers, Header::ACCEPT => self::ACCEPT, Header::REQUEST_ID => $requestId]);
+        return $this->oauthAnswer($response, 'POST', $path, $requestId);
+    }
+
+    /** @internal */
+    public function oauthGet(string $path): ApiResponse
+    {
+        $requestId = Uuid::v4();
+        $headers = [Header::ACCEPT => self::ACCEPT, Header::REQUEST_ID => $requestId];
+        if ($this->token !== null) {
+            $headers[Header::AUTHORIZATION] = 'Bearer ' . $this->token;
+        }
+        $response = $this->http->get($this->url($path, []), $headers);
+
+        return $this->oauthAnswer($response, 'GET', $path, $requestId);
+    }
+
+    private function oauthAnswer(ResponseInterface $response, string $method, string $path, string $requestId): ApiResponse
+    {
         if (!HttpTransport::isSuccessful($response)) {
             throw \Appsolutely\Sdk\Exception\OAuthException::fromResponse($response)
                 ?? ApiException::fromResponse($response, $requestId, $this->clock->now());
         }
 
-        return $this->answer($response, 'POST', $path, $requestId, null);
+        return $this->answer($response, $method, $path, $requestId, null);
     }
 
     /**

@@ -75,12 +75,29 @@ final class OAuthTest extends TestCase
 
     public function testUserInfoHasItsOwnInlineEntitlementShape(): void
     {
-        $fake = (new FakeClient())->answer(Operation::GetOAuthUserInfo, ['sub' => 'subject', 'roles' => ['editor'], 'entitlements' => [['key' => 'pro', 'label' => 'Pro', 'quantity' => 1, 'expires_at' => null, 'period_start' => null, 'period_end' => null, 'breakdown' => null]], 'entitlement_values' => ['pro' => ['kind' => 'boolean', 'value' => true]]]);
+        $fake = (new FakeClient())->answer(Operation::GetOAuthUserInfo, ['sub' => 'subject', 'roles' => ['editor'], 'entitlements' => [['key' => 'pro', 'label' => 'Pro', 'quantity' => 1, 'expires_at' => null, 'period_start' => null, 'period_end' => null, 'breakdown' => null]], 'entitlement_values' => ['pro' => ['kind' => 'boolean', 'value' => true, 'future' => 'kept']]]);
         $info = $fake->forMember()->api()->userInfo();
         self::assertSame('subject', $info->sub);
         self::assertSame('pro', $info->entitlements[0]->key ?? null);
         self::assertTrue($info->entitlementValues['pro']->value ?? false);
+        self::assertSame('kept', $info->entitlementValues['pro']->extra['future'] ?? null);
         self::assertSame(FakeClient::MEMBER_TOKEN, $fake->lastCall(Operation::GetOAuthUserInfo)->token);
+    }
+
+    public function testUserInfoOAuthErrorsAreExposedWithoutRetrying(): void
+    {
+        foreach ([401 => 'invalid_token', 503 => 'temporarily_unavailable'] as $status => $code) {
+            $site = (new SiteRecorder())->json(['error' => $code], $status);
+            try {
+                $site->provider->client()->forMember('member-token')->api()->userInfo();
+                self::fail('The OAuth refusal was lost.');
+            } catch (OAuthException $error) {
+                self::assertSame($code, $error->error);
+                self::assertSame($status, $error->statusCode);
+            }
+            self::assertCount(1, $site->provider->siteRequests());
+            self::assertSame([], $site->provider->sleeper->sleeps);
+        }
     }
 
     public function testBothSigningKeyShapesAreReadWithoutVerifyingAToken(): void

@@ -75,6 +75,14 @@ final readonly class Caller
         return $this->api->form($operation->path(), [...$fields, ...($identity?->fields() ?? [])], $identity?->headers() ?? []);
     }
 
+    /** @return array<array-key, mixed> */
+    public function oauthGet(Operation $operation): array
+    {
+        $this->assertAudience($operation);
+
+        return self::objectOf($this->api->oauthGet($operation->path()), $operation);
+    }
+
     /**
      * The JSON object an operation answered.
      *
