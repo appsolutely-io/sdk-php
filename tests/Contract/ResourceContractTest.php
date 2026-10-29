@@ -284,9 +284,7 @@ final class ResourceContractTest extends TestCase
     public function testEveryValueAModelsSchemaEnumeratesIsAConstantOfTheModel(string $class, string $schema): void
     {
         $enumerated = [];
-        foreach (Document::map(Document::schema($schema)['properties'] ?? null) as $field => $declaration) {
-            self::collectEnumerated((string) $field, Document::map($declaration), $schema . '.' . $field, $enumerated);
-        }
+        self::collectEnumerated('', Document::schema($schema), $schema, $enumerated);
 
         $constants = [];
         foreach ((new ReflectionClass($class))->getReflectionConstants(\ReflectionClassConstant::IS_PUBLIC) as $constant) {
@@ -348,6 +346,14 @@ final class ResourceContractTest extends TestCase
      */
     private static function collectEnumerated(string $field, array $declaration, string $where, array &$enumerated): void
     {
+        $alternatives = Document::list($declaration['oneOf'] ?? $declaration['anyOf'] ?? []);
+        if ($alternatives !== []) {
+            foreach ($alternatives as $alternative) {
+                self::collectEnumerated($field, Document::map($alternative), $where, $enumerated);
+            }
+
+            return;
+        }
         $node = self::nonNull(Document::resolve($declaration));
         $named = Document::refName($declaration) !== null || Document::refName(Document::map(Document::list($declaration['oneOf'] ?? $declaration['anyOf'] ?? [])[0] ?? null)) !== null;
         if ($named && isset($node['properties'])) {
