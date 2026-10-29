@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Model;
 
+use Appsolutely\Sdk\Exception\NotSerializableException;
+
 final readonly class OAuthToken implements SchemaModel
 {
     /** @internal */
@@ -37,5 +39,22 @@ final readonly class OAuthToken implements SchemaModel
             idToken: $json->nullableString('id_token'),
             extra: $json->extra(),
         );
+    }
+    /** @return array<string, mixed> */
+    public function __debugInfo(): array
+    {
+        return ['accessToken' => '[redacted]', 'tokenType' => $this->tokenType, 'expiresIn' => $this->expiresIn, 'refreshToken' => '[redacted]', 'idToken' => '[redacted]'];
+    }
+
+    /** @return array<string, mixed> */
+    public function __serialize(): array
+    {
+        throw new NotSerializableException('An OAuth credential holder is not serialized.');
+    }
+
+    /** @param array<string, mixed> $data */
+    public function __unserialize(array $data): void
+    {
+        throw new NotSerializableException('An OAuth credential holder is not unserialized.');
     }
 }

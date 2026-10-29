@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Appsolutely\Sdk\Model;
 
+use Appsolutely\Sdk\Exception\NotSerializableException;
+
 final readonly class OAuthDeviceAuthorization implements SchemaModel
 {
     /** @internal */
@@ -36,5 +38,22 @@ final readonly class OAuthDeviceAuthorization implements SchemaModel
             interval: $json->nullableInt('interval'),
             extra: $json->extra(),
         );
+    }
+    /** @return array<string, mixed> */
+    public function __debugInfo(): array
+    {
+        return ['deviceCode' => '[redacted]', 'userCode' => '[redacted]', 'verificationUri' => $this->verificationUri, 'verificationUriComplete' => '[redacted]', 'expiresIn' => $this->expiresIn, 'interval' => $this->interval];
+    }
+
+    /** @return array<string, mixed> */
+    public function __serialize(): array
+    {
+        throw new NotSerializableException('An OAuth credential holder is not serialized.');
+    }
+
+    /** @param array<string, mixed> $data */
+    public function __unserialize(array $data): void
+    {
+        throw new NotSerializableException('An OAuth credential holder is not unserialized.');
     }
 }
