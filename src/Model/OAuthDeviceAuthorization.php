@@ -6,6 +6,10 @@ namespace Appsolutely\Sdk\Model;
 
 use Appsolutely\Sdk\Exception\NotSerializableException;
 
+/**
+ * var_export(), json_encode() and array casts still expose the token fields.
+ * Never log or persist these objects.
+ */
 final readonly class OAuthDeviceAuthorization implements SchemaModel
 {
     /** @internal */
@@ -39,6 +43,7 @@ final readonly class OAuthDeviceAuthorization implements SchemaModel
             extra: $json->extra(),
         );
     }
+
     /** @return array<string, mixed> */
     public function __debugInfo(): array
     {

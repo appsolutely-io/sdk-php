@@ -7,6 +7,10 @@ namespace Appsolutely\Sdk\Request\OAuth;
 use Appsolutely\Sdk\Exception\NotSerializableException;
 use Appsolutely\Sdk\Support\OptionalFields;
 
+/**
+ * var_export(), json_encode() and array casts still expose the token fields.
+ * Never log or persist these objects.
+ */
 final readonly class AuthorizationCodeGrant implements TokenGrant
 {
     public function __construct(
@@ -28,6 +32,7 @@ final readonly class AuthorizationCodeGrant implements TokenGrant
     {
         return OptionalFields::withoutNulls(['grant_type' => 'authorization_code', 'code' => $this->code, 'redirect_uri' => $this->redirectUri, 'code_verifier' => $this->codeVerifier, 'scope' => $this->scope]);
     }
+
     /** @return array<string, mixed> */
     public function __debugInfo(): array
     {

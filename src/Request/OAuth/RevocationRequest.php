@@ -6,6 +6,10 @@ namespace Appsolutely\Sdk\Request\OAuth;
 
 use Appsolutely\Sdk\Exception\NotSerializableException;
 
+/**
+ * var_export(), json_encode() and array casts still expose the token fields.
+ * Never log or persist these objects.
+ */
 final readonly class RevocationRequest
 {
     public function __construct(#[\SensitiveParameter] public string $token, public ?string $tokenTypeHint = null) {}
@@ -15,6 +19,7 @@ final readonly class RevocationRequest
     {
         return $this->tokenTypeHint === null ? ['token' => $this->token] : ['token' => $this->token, 'token_type_hint' => $this->tokenTypeHint];
     }
+
     /** @return array<string, mixed> */
     public function __debugInfo(): array
     {
