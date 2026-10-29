@@ -23,10 +23,10 @@ final class OAuthTest extends TestCase
     public function testEachGrantSendsOnlyItsOwnFormFields(): void
     {
         $grants = [
-            [new AuthorizationCodeGrant('code', 'https://app.example.test/return', 'verifier'), ['grant_type' => 'authorization_code', 'code' => 'code', 'redirect_uri' => 'https://app.example.test/return', 'code_verifier' => 'verifier']],
+            [new AuthorizationCodeGrant('code', 'https://app.example.test/return', 'verifier', 'openid'), ['grant_type' => 'authorization_code', 'code' => 'code', 'redirect_uri' => 'https://app.example.test/return', 'code_verifier' => 'verifier', 'scope' => 'openid']],
             [new RefreshTokenGrant('refresh', 'openid email'), ['grant_type' => 'refresh_token', 'refresh_token' => 'refresh', 'scope' => 'openid email']],
             [new ClientCredentialsGrant('roles:read'), ['grant_type' => 'client_credentials', 'scope' => 'roles:read']],
-            [new DeviceCodeGrant('device'), ['grant_type' => 'urn:ietf:params:oauth:grant-type:device_code', 'device_code' => 'device']],
+            [new DeviceCodeGrant('device', 'profile'), ['grant_type' => 'urn:ietf:params:oauth:grant-type:device_code', 'device_code' => 'device', 'scope' => 'profile']],
         ];
         foreach ($grants as [$grant, $body]) {
             $fake = (new FakeClient())->answer(Operation::ExchangeOAuthToken, ['access_token' => 'access', 'token_type' => 'Bearer', 'expires_in' => 137, 'id_token' => 'raw-id']);

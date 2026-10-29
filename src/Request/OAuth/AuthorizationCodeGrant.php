@@ -13,6 +13,7 @@ final readonly class AuthorizationCodeGrant implements TokenGrant
         public string $redirectUri,
         #[\SensitiveParameter]
         public string $codeVerifier,
+        public ?string $scope = null,
     ) {
         if ($code === '' || $redirectUri === '' || $codeVerifier === '') {
             throw new \Appsolutely\Sdk\Exception\InvalidArgumentValueException('The selected OAuth grant requires non-empty values.');
@@ -22,6 +23,6 @@ final readonly class AuthorizationCodeGrant implements TokenGrant
     /** @return array<string, string> */
     public function fields(): array
     {
-        return array_filter(['grant_type' => 'authorization_code', 'code' => $this->code, 'redirect_uri' => $this->redirectUri, 'code_verifier' => $this->codeVerifier], static fn(?string $value): bool => $value !== null);
+        return array_filter(['grant_type' => 'authorization_code', 'code' => $this->code, 'redirect_uri' => $this->redirectUri, 'code_verifier' => $this->codeVerifier, 'scope' => $this->scope], static fn(?string $value): bool => $value !== null);
     }
 }
