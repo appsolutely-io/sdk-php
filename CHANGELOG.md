@@ -16,6 +16,8 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Installation and configuration guidance describe public client integrations with a site.
+
 - Seat pools accept seats whose member name is null or omitted.
 - Orders awaiting tax preparation accept null tax and total amounts in API answers and typed webhook deliveries.
 

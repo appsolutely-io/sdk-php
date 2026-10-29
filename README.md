@@ -2,9 +2,7 @@
 
 A framework-free PHP client for one app's own site: it signs the site's members in with OpenID Connect, calls the Site API as the site's own backend or as a signed-in member, calls the Administrator API with an administrator credential, and verifies the site's Standard Webhooks deliveries.
 
-A site hosted for you and one you host yourself answer the same paths in the same shapes, so pointing the client from one to the other changes the base URL, the issuer and the credentials, nothing else.
-
-Laravel applications install the bridge, [`appsolutely/sdk-laravel`](https://github.com/appsolutely-io/sdk-laravel), which wires this client into the container, Socialite and the router.
+Every site answers the same paths in the same shapes, so pointing the client at another site changes the base URL, the issuer and the credentials, nothing else.
 
 ## Requirements
 
@@ -565,6 +563,10 @@ Everything marked `@internal` is outside the public API and may change in any re
 ## Security
 
 Report a vulnerability privately, as [SECURITY.md](SECURITY.md) describes, never in a public issue.
+
+## Design decisions
+
+The [decision records](docs/decisions/README.md) explain the implementation choices and their tradeoffs.
 
 ## License
 

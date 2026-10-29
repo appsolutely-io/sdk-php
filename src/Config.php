@@ -22,9 +22,9 @@ use Psr\SimpleCache\CacheInterface;
  * Everything the client needs to talk to one site: where its API answers
  * and, as the integration needs them, the OpenID issuer its members sign in
  * with, the OAuth client that signs them in, and the site backend's machine
- * client. A site hosted for you and one you host yourself answer
- * the same paths in the same shapes, so moving between them changes the base
- * URL, the issuer and the credentials, nothing else.
+ * client. Every site answers the same paths in the same shapes, so moving
+ * between sites changes the base URL, the issuer and the credentials,
+ * nothing else.
  *
  * The issuer is kept exactly as given: OpenID Connect compares it to the
  * discovery document and to every ID token's `iss` as a plain string, so a
