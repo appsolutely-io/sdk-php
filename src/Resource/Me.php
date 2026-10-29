@@ -91,4 +91,8 @@ final readonly class Me
     {
         return new \Appsolutely\Sdk\Resource\Me\Trials($this->caller);
     }
+    public function organisations(): \Appsolutely\Sdk\Resource\Me\Organisations
+    {
+        return new \Appsolutely\Sdk\Resource\Me\Organisations($this->caller);
+    }
 }

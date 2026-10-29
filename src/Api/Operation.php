@@ -107,9 +107,24 @@ enum Operation: string
 
     case CreateMeTrial = 'createMeTrial';
 
+    case ListMeOrganisations = 'listMeOrganisations';
+
+    case CreateMeOrganisation = 'createMeOrganisation';
+
+    case ListMeOrganisationChanges = 'listMeOrganisationChanges';
+
+    case LeaveMeOrganisation = 'leaveMeOrganisation';
+
+    case DissolveMeOrganisation = 'dissolveMeOrganisation';
+
     public function method(): string
     {
         return match ($this) {
+            self::DissolveMeOrganisation => 'POST',
+            self::LeaveMeOrganisation => 'POST',
+            self::ListMeOrganisationChanges => 'GET',
+            self::CreateMeOrganisation => 'POST',
+            self::ListMeOrganisations => 'GET',
             self::CreateMeTrial => 'POST',
             self::GetDistributionTargetVersion => 'GET',
             self::GetDistributionVersion => 'GET',
@@ -136,6 +151,11 @@ enum Operation: string
     public function template(): string
     {
         return match ($this) {
+            self::DissolveMeOrganisation => '/api/v1/me/organisations/{organisation}/dissolve',
+            self::LeaveMeOrganisation => '/api/v1/me/organisations/{organisation}/leave',
+            self::ListMeOrganisationChanges => '/api/v1/me/organisations/{organisation}/changes',
+            self::CreateMeOrganisation => '/api/v1/me/organisations',
+            self::ListMeOrganisations => '/api/v1/me/organisations',
             self::CreateMeTrial => '/api/v1/me/trials',
             self::GetDistributionTargetVersion => '/api/distribution-version/{distribution}/{target}',
             self::GetDistributionVersion => '/api/distribution-version/{distribution}',
@@ -244,6 +264,11 @@ enum Operation: string
     public function audience(): Audience
     {
         return match ($this) {
+            self::DissolveMeOrganisation => Audience::Member,
+            self::LeaveMeOrganisation => Audience::Member,
+            self::ListMeOrganisationChanges => Audience::Member,
+            self::CreateMeOrganisation => Audience::Member,
+            self::ListMeOrganisations => Audience::Member,
             self::CreateMeTrial => Audience::Member,
             self::GetDistributionTargetVersion => Audience::Anyone,
             self::GetDistributionVersion => Audience::Anyone,
@@ -280,6 +305,11 @@ enum Operation: string
     public function successStatuses(): array
     {
         return match ($this) {
+            self::DissolveMeOrganisation => [202],
+            self::LeaveMeOrganisation => [204],
+            self::ListMeOrganisationChanges => [200],
+            self::CreateMeOrganisation => [201],
+            self::ListMeOrganisations => [200],
             self::CreateMeTrial => [200],
             self::GetDistributionTargetVersion => [200],
             self::GetDistributionVersion => [200],
@@ -305,6 +335,11 @@ enum Operation: string
     public function takesIdempotencyKey(): bool
     {
         return match ($this) {
+            self::DissolveMeOrganisation => true,
+            self::LeaveMeOrganisation => true,
+            self::ListMeOrganisationChanges => false,
+            self::CreateMeOrganisation => true,
+            self::ListMeOrganisations => false,
             self::CreateMeTrial => false,
             self::GetDistributionTargetVersion => false,
             self::GetDistributionVersion => false,
@@ -329,6 +364,11 @@ enum Operation: string
     public function isCursorList(): bool
     {
         return match ($this) {
+            self::DissolveMeOrganisation => false,
+            self::LeaveMeOrganisation => false,
+            self::ListMeOrganisationChanges => true,
+            self::CreateMeOrganisation => false,
+            self::ListMeOrganisations => true,
             self::CreateMeTrial => false,
             self::GetDistributionTargetVersion => false,
             self::GetDistributionVersion => false,
