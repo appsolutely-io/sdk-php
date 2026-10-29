@@ -58,4 +58,8 @@ final readonly class Organisations
     {
         return new \Appsolutely\Sdk\Resource\Me\Organisations\Seats($this->caller);
     }
+    public function transfers(): \Appsolutely\Sdk\Resource\Me\Organisations\Transfers
+    {
+        return new \Appsolutely\Sdk\Resource\Me\Organisations\Transfers($this->caller);
+    }
 }

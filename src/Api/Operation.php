@@ -145,9 +145,30 @@ enum Operation: string
 
     case DeleteMeOrganisationSeat = 'deleteMeOrganisationSeat';
 
+    case CreateMeOrganisationTransfer = 'createMeOrganisationTransfer';
+
+    case GetMeOrganisationTransfer = 'getMeOrganisationTransfer';
+
+    case AcceptMeOrganisationTransfer = 'acceptMeOrganisationTransfer';
+
+    case CreateMeOrganisationBinding = 'createMeOrganisationBinding';
+
+    case ReconcileMeOrganisationBinding = 'reconcileMeOrganisationBinding';
+
+    case CancelMeOrganisationTransfer = 'cancelMeOrganisationTransfer';
+
+    case ReviewMeOrganisationTransfer = 'reviewMeOrganisationTransfer';
+
     public function method(): string
     {
         return match ($this) {
+            self::ReviewMeOrganisationTransfer => 'GET',
+            self::CancelMeOrganisationTransfer => 'POST',
+            self::ReconcileMeOrganisationBinding => 'POST',
+            self::CreateMeOrganisationBinding => 'POST',
+            self::AcceptMeOrganisationTransfer => 'POST',
+            self::GetMeOrganisationTransfer => 'GET',
+            self::CreateMeOrganisationTransfer => 'POST',
             self::DeleteMeOrganisationSeat => 'DELETE',
             self::CreateMeOrganisationSeat => 'POST',
             self::ListMeOrganisationPoolSeats => 'GET',
@@ -193,6 +214,13 @@ enum Operation: string
     public function template(): string
     {
         return match ($this) {
+            self::ReviewMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/review',
+            self::CancelMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/cancel',
+            self::ReconcileMeOrganisationBinding => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/bindings/{binding}/reconcile',
+            self::CreateMeOrganisationBinding => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/bindings',
+            self::AcceptMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/accept',
+            self::GetMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}',
+            self::CreateMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers',
             self::DeleteMeOrganisationSeat => '/api/v1/me/organisations/{organisation}/seats/{seat}',
             self::CreateMeOrganisationSeat => '/api/v1/me/organisations/{organisation}/seats',
             self::ListMeOrganisationPoolSeats => '/api/v1/me/organisations/{organisation}/pools/{pool}/seats',
@@ -320,6 +348,13 @@ enum Operation: string
     public function audience(): Audience
     {
         return match ($this) {
+            self::ReviewMeOrganisationTransfer => Audience::Member,
+            self::CancelMeOrganisationTransfer => Audience::Member,
+            self::ReconcileMeOrganisationBinding => Audience::Member,
+            self::CreateMeOrganisationBinding => Audience::Member,
+            self::AcceptMeOrganisationTransfer => Audience::Member,
+            self::GetMeOrganisationTransfer => Audience::Member,
+            self::CreateMeOrganisationTransfer => Audience::Member,
             self::DeleteMeOrganisationSeat => Audience::Member,
             self::CreateMeOrganisationSeat => Audience::Member,
             self::ListMeOrganisationPoolSeats => Audience::Member,
@@ -375,6 +410,13 @@ enum Operation: string
     public function successStatuses(): array
     {
         return match ($this) {
+            self::ReviewMeOrganisationTransfer => [200],
+            self::CancelMeOrganisationTransfer => [202],
+            self::ReconcileMeOrganisationBinding => [202],
+            self::CreateMeOrganisationBinding => [202],
+            self::AcceptMeOrganisationTransfer => [202],
+            self::GetMeOrganisationTransfer => [200],
+            self::CreateMeOrganisationTransfer => [201],
             self::DeleteMeOrganisationSeat => [204],
             self::CreateMeOrganisationSeat => [201],
             self::ListMeOrganisationPoolSeats => [200],
@@ -419,6 +461,13 @@ enum Operation: string
     public function takesIdempotencyKey(): bool
     {
         return match ($this) {
+            self::ReviewMeOrganisationTransfer => false,
+            self::CancelMeOrganisationTransfer => true,
+            self::ReconcileMeOrganisationBinding => true,
+            self::CreateMeOrganisationBinding => true,
+            self::AcceptMeOrganisationTransfer => true,
+            self::GetMeOrganisationTransfer => false,
+            self::CreateMeOrganisationTransfer => true,
             self::DeleteMeOrganisationSeat => true,
             self::CreateMeOrganisationSeat => true,
             self::ListMeOrganisationPoolSeats => false,
@@ -462,6 +511,13 @@ enum Operation: string
     public function isCursorList(): bool
     {
         return match ($this) {
+            self::ReviewMeOrganisationTransfer => false,
+            self::CancelMeOrganisationTransfer => false,
+            self::ReconcileMeOrganisationBinding => false,
+            self::CreateMeOrganisationBinding => false,
+            self::AcceptMeOrganisationTransfer => false,
+            self::GetMeOrganisationTransfer => false,
+            self::CreateMeOrganisationTransfer => false,
             self::DeleteMeOrganisationSeat => false,
             self::CreateMeOrganisationSeat => false,
             self::ListMeOrganisationPoolSeats => true,
