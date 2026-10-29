@@ -62,4 +62,16 @@ final readonly class Organisations
     {
         return new \Appsolutely\Sdk\Resource\Me\Organisations\Transfers($this->caller);
     }
+    public function billing(): \Appsolutely\Sdk\Resource\Me\Organisations\Billing
+    {
+        return new \Appsolutely\Sdk\Resource\Me\Organisations\Billing($this->caller);
+    }
+    public function recoveryBindings(): \Appsolutely\Sdk\Resource\Me\Organisations\RecoveryBindings
+    {
+        return new \Appsolutely\Sdk\Resource\Me\Organisations\RecoveryBindings($this->caller);
+    }
+    public function replacements(): \Appsolutely\Sdk\Resource\Me\Organisations\Replacements
+    {
+        return new \Appsolutely\Sdk\Resource\Me\Organisations\Replacements($this->caller);
+    }
 }

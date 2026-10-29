@@ -159,9 +159,48 @@ enum Operation: string
 
     case ReviewMeOrganisationTransfer = 'reviewMeOrganisationTransfer';
 
+    case GetMeOrganisationBillingOperation = 'getMeOrganisationBillingOperation';
+
+    case ReviewMeOrganisationBilling = 'reviewMeOrganisationBilling';
+
+    case TakeoverMeOrganisationBilling = 'takeoverMeOrganisationBilling';
+
+    case CreateMeOrganisationRecoveryBinding = 'createMeOrganisationRecoveryBinding';
+
+    case CancelMeOrganisationRecoveryBinding = 'cancelMeOrganisationRecoveryBinding';
+
+    case ReconcileMeOrganisationRecoveryBinding = 'reconcileMeOrganisationRecoveryBinding';
+
+    case CreateMeOrganisationReplacement = 'createMeOrganisationReplacement';
+
+    case CurrentMeOrganisationReplacement = 'currentMeOrganisationReplacement';
+
+    case ReviewMeOrganisationReplacement = 'reviewMeOrganisationReplacement';
+
+    case GetMeOrganisationReplacement = 'getMeOrganisationReplacement';
+
+    case CloseMeOrganisationReplacement = 'closeMeOrganisationReplacement';
+
+    case CompleteMeOrganisationReplacement = 'completeMeOrganisationReplacement';
+
+    case ReconcileMeOrganisationReplacement = 'reconcileMeOrganisationReplacement';
+
     public function method(): string
     {
         return match ($this) {
+            self::ReconcileMeOrganisationReplacement => 'POST',
+            self::CompleteMeOrganisationReplacement => 'POST',
+            self::CloseMeOrganisationReplacement => 'POST',
+            self::GetMeOrganisationReplacement => 'GET',
+            self::ReviewMeOrganisationReplacement => 'GET',
+            self::CurrentMeOrganisationReplacement => 'GET',
+            self::CreateMeOrganisationReplacement => 'POST',
+            self::ReconcileMeOrganisationRecoveryBinding => 'POST',
+            self::CancelMeOrganisationRecoveryBinding => 'POST',
+            self::CreateMeOrganisationRecoveryBinding => 'POST',
+            self::TakeoverMeOrganisationBilling => 'POST',
+            self::ReviewMeOrganisationBilling => 'GET',
+            self::GetMeOrganisationBillingOperation => 'GET',
             self::ReviewMeOrganisationTransfer => 'GET',
             self::CancelMeOrganisationTransfer => 'POST',
             self::ReconcileMeOrganisationBinding => 'POST',
@@ -214,6 +253,19 @@ enum Operation: string
     public function template(): string
     {
         return match ($this) {
+            self::ReconcileMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}/reconcile',
+            self::CompleteMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}/complete',
+            self::CloseMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}/close',
+            self::GetMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}',
+            self::ReviewMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{pool}/review',
+            self::CurrentMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{pool}/current',
+            self::CreateMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements',
+            self::ReconcileMeOrganisationRecoveryBinding => '/api/v1/me/organisations/{organisation}/billing/bindings/{binding}/reconcile',
+            self::CancelMeOrganisationRecoveryBinding => '/api/v1/me/organisations/{organisation}/billing/bindings/{binding}/cancel',
+            self::CreateMeOrganisationRecoveryBinding => '/api/v1/me/organisations/{organisation}/billing/bindings',
+            self::TakeoverMeOrganisationBilling => '/api/v1/me/organisations/{organisation}/billing/takeover',
+            self::ReviewMeOrganisationBilling => '/api/v1/me/organisations/{organisation}/billing/review',
+            self::GetMeOrganisationBillingOperation => '/api/v1/me/organisations/{organisation}/billing-operations/{operation}',
             self::ReviewMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/review',
             self::CancelMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/cancel',
             self::ReconcileMeOrganisationBinding => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/bindings/{binding}/reconcile',
@@ -348,6 +400,19 @@ enum Operation: string
     public function audience(): Audience
     {
         return match ($this) {
+            self::ReconcileMeOrganisationReplacement => Audience::Member,
+            self::CompleteMeOrganisationReplacement => Audience::Member,
+            self::CloseMeOrganisationReplacement => Audience::Member,
+            self::GetMeOrganisationReplacement => Audience::Member,
+            self::ReviewMeOrganisationReplacement => Audience::Member,
+            self::CurrentMeOrganisationReplacement => Audience::Member,
+            self::CreateMeOrganisationReplacement => Audience::Member,
+            self::ReconcileMeOrganisationRecoveryBinding => Audience::Member,
+            self::CancelMeOrganisationRecoveryBinding => Audience::Member,
+            self::CreateMeOrganisationRecoveryBinding => Audience::Member,
+            self::TakeoverMeOrganisationBilling => Audience::Member,
+            self::ReviewMeOrganisationBilling => Audience::Member,
+            self::GetMeOrganisationBillingOperation => Audience::Member,
             self::ReviewMeOrganisationTransfer => Audience::Member,
             self::CancelMeOrganisationTransfer => Audience::Member,
             self::ReconcileMeOrganisationBinding => Audience::Member,
@@ -410,6 +475,19 @@ enum Operation: string
     public function successStatuses(): array
     {
         return match ($this) {
+            self::ReconcileMeOrganisationReplacement => [202],
+            self::CompleteMeOrganisationReplacement => [202],
+            self::CloseMeOrganisationReplacement => [202],
+            self::GetMeOrganisationReplacement => [200],
+            self::ReviewMeOrganisationReplacement => [200],
+            self::CurrentMeOrganisationReplacement => [200],
+            self::CreateMeOrganisationReplacement => [202],
+            self::ReconcileMeOrganisationRecoveryBinding => [202],
+            self::CancelMeOrganisationRecoveryBinding => [202],
+            self::CreateMeOrganisationRecoveryBinding => [202],
+            self::TakeoverMeOrganisationBilling => [202],
+            self::ReviewMeOrganisationBilling => [200],
+            self::GetMeOrganisationBillingOperation => [200],
             self::ReviewMeOrganisationTransfer => [200],
             self::CancelMeOrganisationTransfer => [202],
             self::ReconcileMeOrganisationBinding => [202],
@@ -461,6 +539,19 @@ enum Operation: string
     public function takesIdempotencyKey(): bool
     {
         return match ($this) {
+            self::ReconcileMeOrganisationReplacement => true,
+            self::CompleteMeOrganisationReplacement => true,
+            self::CloseMeOrganisationReplacement => true,
+            self::GetMeOrganisationReplacement => false,
+            self::ReviewMeOrganisationReplacement => false,
+            self::CurrentMeOrganisationReplacement => false,
+            self::CreateMeOrganisationReplacement => true,
+            self::ReconcileMeOrganisationRecoveryBinding => true,
+            self::CancelMeOrganisationRecoveryBinding => true,
+            self::CreateMeOrganisationRecoveryBinding => true,
+            self::TakeoverMeOrganisationBilling => true,
+            self::ReviewMeOrganisationBilling => false,
+            self::GetMeOrganisationBillingOperation => false,
             self::ReviewMeOrganisationTransfer => false,
             self::CancelMeOrganisationTransfer => true,
             self::ReconcileMeOrganisationBinding => true,
@@ -511,6 +602,19 @@ enum Operation: string
     public function isCursorList(): bool
     {
         return match ($this) {
+            self::ReconcileMeOrganisationReplacement => false,
+            self::CompleteMeOrganisationReplacement => false,
+            self::CloseMeOrganisationReplacement => false,
+            self::GetMeOrganisationReplacement => false,
+            self::ReviewMeOrganisationReplacement => false,
+            self::CurrentMeOrganisationReplacement => false,
+            self::CreateMeOrganisationReplacement => false,
+            self::ReconcileMeOrganisationRecoveryBinding => false,
+            self::CancelMeOrganisationRecoveryBinding => false,
+            self::CreateMeOrganisationRecoveryBinding => false,
+            self::TakeoverMeOrganisationBilling => false,
+            self::ReviewMeOrganisationBilling => false,
+            self::GetMeOrganisationBillingOperation => false,
             self::ReviewMeOrganisationTransfer => false,
             self::CancelMeOrganisationTransfer => false,
             self::ReconcileMeOrganisationBinding => false,
