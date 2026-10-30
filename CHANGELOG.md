@@ -7,6 +7,8 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-30
+
 ### Added
 
 - Typed public discovery, signing-key and distribution-version reads, including target/channel selection.
@@ -19,7 +21,8 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- PHP client for aio v0.38.0; this release does not run or claim the aio SDK conformance suite. Both API documents are pinned to the same release commit.
+- PHP client for aio v0.39.0; this release does not run or claim the aio SDK conformance suite. Both API documents are pinned to the same release commit. The Site API document changed only in its description text, so no operation or schema differs from v0.38.0.
+- Package versions now follow the aio release the client targets: the major and minor numbers match (0.39.0 targets aio v0.39.0); the patch number is the client's own. The previous release, 0.5.0, targeted aio v0.32.0.
 
 ### Fixed
 

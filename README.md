@@ -11,9 +11,9 @@ Every site answers the same paths in the same shapes, so pointing the client at 
 
 ## Compatibility
 
-PHP client for aio v0.38.0; this release does not run or claim the aio SDK conformance suite.
+PHP client for aio v0.39.0; this release does not run or claim the aio SDK conformance suite.
 
-The client is written and tested against the Site API document of the site software v0.38.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests. `AdminClient` is held to the Administrator API document of the same commit.
+The client is written and tested against the Site API document of the site software v0.39.0, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests. `AdminClient` is held to the Administrator API document of the same commit.
 
 While the site software is below 1.0.0, a minor release of it may change a path of the document's `v1` in a breaking way, and its changelog opens each such entry with `BREAKING`; this client follows such a change in a release of its own, marked the same way in its changelog. Otherwise the site adds paths and fields but never removes or retypes one. From the site software's 1.0.0, a breaking change is announced as deprecated a release ahead and arrives in a new major release. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
 
