@@ -7,8 +7,6 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.39.0] - 2026-10-30
-
 ### Added
 
 - Typed public discovery, signing-key and distribution-version reads, including target/channel selection.
