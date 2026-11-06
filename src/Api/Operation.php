@@ -1,0 +1,777 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Appsolutely\Sdk\Api;
+
+use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
+
+/**
+ * Every operation of the Site API document this client is pinned to
+ * (Contract::REVISION), named by its operationId, with the method, path,
+ * audience and answers the client relies on. Testing\FakeClient arranges
+ * and records calls by these cases.
+ */
+enum Operation: string
+{
+    case GetApiVersion = 'getApiVersion';
+    case GetOpenApiDocument = 'getOpenApiDocument';
+    case RequestMagicLink = 'requestMagicLink';
+    case TokenMagicLink = 'tokenMagicLink';
+
+    case GetMe = 'getMe';
+    case UpdateMe = 'updateMe';
+    case ListMeAddresses = 'listMeAddresses';
+    case CreateMeAddress = 'createMeAddress';
+    case UpdateMeAddress = 'updateMeAddress';
+    case DeleteMeAddress = 'deleteMeAddress';
+    case GetMeBillingEntry = 'getMeBillingEntry';
+    case ListMeEntitlements = 'listMeEntitlements';
+    case ListMeOrders = 'listMeOrders';
+    case GetMeOrder = 'getMeOrder';
+    case CreateMePushDevice = 'createMePushDevice';
+    case UnregisterMePushDevice = 'unregisterMePushDevice';
+    case GetMeReferral = 'getMeReferral';
+    case RewardsMeReferral = 'rewardsMeReferral';
+    case PullSyncMeAddress = 'pullSync.meAddress';
+    case PushSyncMeAddress = 'pushSync.meAddress';
+    case PullSyncMeOrder = 'pullSync.meOrder';
+    case CreateMeCheckoutSession = 'createMeCheckoutSession';
+    case GetMeCheckoutSession = 'getMeCheckoutSession';
+    case CreateMePortalSession = 'createMePortalSession';
+    case IntentsMeStorePurchase = 'intentsMeStorePurchase';
+    case TransactionsMeStorePurchase = 'transactionsMeStorePurchase';
+    case ListMeSubscriptions = 'listMeSubscriptions';
+    case CancelMeSubscription = 'cancelMeSubscription';
+    case ResumeMeSubscription = 'resumeMeSubscription';
+    case ChangeMeSubscription = 'changeMeSubscription';
+
+    case GetClient = 'getClient';
+    case ListProducts = 'listProducts';
+    case GetProduct = 'getProduct';
+    case CreateFulfilment = 'createFulfilment';
+    case ListBackendEntitlements = 'listBackendEntitlements';
+    case GetBackendEntitlement = 'getBackendEntitlement';
+    case ListWebhookEndpoints = 'listWebhookEndpoints';
+    case CreateWebhookEndpoint = 'createWebhookEndpoint';
+    case DisableWebhookEndpoint = 'disableWebhookEndpoint';
+    case EnableWebhookEndpoint = 'enableWebhookEndpoint';
+    case TestDeliveriesWebhookEndpoint = 'test-deliveriesWebhookEndpoint';
+    case StartWebhookEndpointsSecretRotation = 'startWebhookEndpoints.secretRotation';
+    case CompleteWebhookEndpointsSecretRotation = 'completeWebhookEndpoints.secretRotation';
+    case CancelWebhookEndpointsSecretRotation = 'cancelWebhookEndpoints.secretRotation';
+    case ListDeliveries = 'listDeliveries';
+    case RedeliverDelivery = 'redeliverDelivery';
+    case CreateCheckoutSession = 'createCheckoutSession';
+    case GetCheckoutSession = 'getCheckoutSession';
+    case CreatePortalSession = 'createPortalSession';
+    case IntentsStorePurchase = 'intentsStorePurchase';
+    case TransactionsStorePurchase = 'transactionsStorePurchase';
+    case AttachTestClock = 'attachTestClock';
+    case AdvanceTestClock = 'advanceTestClock';
+    case ListReturnTargets = 'listReturnTargets';
+    case CreateReturnTarget = 'createReturnTarget';
+    case DeleteReturnTarget = 'deleteReturnTarget';
+    case ListFeatureKeys = 'listFeatureKeys';
+    case CreateFeatureKey = 'createFeatureKey';
+    case RetireFeatureKey = 'retireFeatureKey';
+    case ListProductFeatureValues = 'listProductFeatureValues';
+    case UpdateProductFeatureValue = 'updateProductFeatureValue';
+    case DeleteProductFeatureValue = 'deleteProductFeatureValue';
+    case ListRoles = 'listRoles';
+    case CreateRole = 'createRole';
+    case RetireRole = 'retireRole';
+    case ListRoleAssignments = 'listRoleAssignments';
+    case GetRoleAssignment = 'getRoleAssignment';
+    case AssignRoleAssignment = 'assignRoleAssignment';
+    case RevokeRoleAssignment = 'revokeRoleAssignment';
+    case CreateSeat = 'createSeat';
+    case DeleteSeat = 'deleteSeat';
+    case ListSeatPools = 'listSeatPools';
+
+    case RequestDeviceAuthorization = 'requestDeviceAuthorization';
+
+    case ExchangeOAuthToken = 'exchangeOAuthToken';
+
+    case RevokeOAuthToken = 'revokeOAuthToken';
+
+    case GetOpenIdSigningKeys = 'getOpenIdSigningKeys';
+
+    case GetOAuthUserInfo = 'getOAuthUserInfo';
+
+    case GetOpenIdConfiguration = 'getOpenIdConfiguration';
+
+    case GetDistributionVersion = 'getDistributionVersion';
+
+    case GetDistributionTargetVersion = 'getDistributionTargetVersion';
+    case GetTauriUpdate = 'getTauriUpdate';
+    case ListAddressCountries = 'listAddressCountries';
+    case ListAddressFormats = 'listAddressFormats';
+    case ListAddressAreas = 'listAddressAreas';
+    case ListAddressPostalCodes = 'listAddressPostalCodes';
+
+    case CreateMeTrial = 'createMeTrial';
+
+    case ListMeOrganisations = 'listMeOrganisations';
+
+    case CreateMeOrganisation = 'createMeOrganisation';
+
+    case ListMeOrganisationChanges = 'listMeOrganisationChanges';
+
+    case LeaveMeOrganisation = 'leaveMeOrganisation';
+
+    case DissolveMeOrganisation = 'dissolveMeOrganisation';
+    case ListMeOrganisationMembers = 'listMeOrganisationMembers';
+    case RemoveMeOrganisationMember = 'removeMeOrganisationMember';
+    case PromoteMeOrganisationMember = 'promoteMeOrganisationMember';
+    case DemoteMeOrganisationMember = 'demoteMeOrganisationMember';
+    case GetMeOrganisationDissolution = 'getMeOrganisationDissolution';
+
+    case ListMeOrganisationInvitations = 'listMeOrganisationInvitations';
+
+    case CreateMeOrganisationInvitation = 'createMeOrganisationInvitation';
+
+    case AcceptMeOrganisationInvitation = 'acceptMeOrganisationInvitation';
+
+    case DeclineMeOrganisationInvitation = 'declineMeOrganisationInvitation';
+
+    case ResendMeOrganisationInvitation = 'resendMeOrganisationInvitation';
+
+    case RevokeMeOrganisationInvitation = 'revokeMeOrganisationInvitation';
+
+    case GetOrganisationRole = 'getOrganisationRole';
+
+    case AssignOrganisationRole = 'assignOrganisationRole';
+
+    case RevokeOrganisationRole = 'revokeOrganisationRole';
+
+    case ListOrganisationRoles = 'listOrganisationRoles';
+
+    case ListMeOrganisationPools = 'listMeOrganisationPools';
+
+    case ListMeOrganisationPoolSeats = 'listMeOrganisationPoolSeats';
+
+    case CreateMeOrganisationSeat = 'createMeOrganisationSeat';
+
+    case DeleteMeOrganisationSeat = 'deleteMeOrganisationSeat';
+
+    case CreateMeOrganisationTransfer = 'createMeOrganisationTransfer';
+
+    case GetMeOrganisationTransfer = 'getMeOrganisationTransfer';
+
+    case AcceptMeOrganisationTransfer = 'acceptMeOrganisationTransfer';
+
+    case CreateMeOrganisationBinding = 'createMeOrganisationBinding';
+
+    case ReconcileMeOrganisationBinding = 'reconcileMeOrganisationBinding';
+
+    case CancelMeOrganisationTransfer = 'cancelMeOrganisationTransfer';
+
+    case ReviewMeOrganisationTransfer = 'reviewMeOrganisationTransfer';
+
+    case GetMeOrganisationBillingOperation = 'getMeOrganisationBillingOperation';
+
+    case ReviewMeOrganisationBilling = 'reviewMeOrganisationBilling';
+
+    case TakeoverMeOrganisationBilling = 'takeoverMeOrganisationBilling';
+
+    case CreateMeOrganisationRecoveryBinding = 'createMeOrganisationRecoveryBinding';
+
+    case CancelMeOrganisationRecoveryBinding = 'cancelMeOrganisationRecoveryBinding';
+
+    case ReconcileMeOrganisationRecoveryBinding = 'reconcileMeOrganisationRecoveryBinding';
+
+    case CreateMeOrganisationReplacement = 'createMeOrganisationReplacement';
+
+    case CurrentMeOrganisationReplacement = 'currentMeOrganisationReplacement';
+
+    case ReviewMeOrganisationReplacement = 'reviewMeOrganisationReplacement';
+
+    case GetMeOrganisationReplacement = 'getMeOrganisationReplacement';
+
+    case CloseMeOrganisationReplacement = 'closeMeOrganisationReplacement';
+
+    case CompleteMeOrganisationReplacement = 'completeMeOrganisationReplacement';
+
+    case ReconcileMeOrganisationReplacement = 'reconcileMeOrganisationReplacement';
+
+    case GetBackendOrganisationRole = 'getBackendOrganisationRole';
+
+    case AssignBackendOrganisationRole = 'assignBackendOrganisationRole';
+
+    case RevokeBackendOrganisationRole = 'revokeBackendOrganisationRole';
+
+    case ListBackendOrganisationRoles = 'listBackendOrganisationRoles';
+
+    case CreateBackendOrganisationRole = 'createBackendOrganisationRole';
+
+    case RetireBackendOrganisationRole = 'retireBackendOrganisationRole';
+
+    public function method(): string
+    {
+        return match ($this) {
+            self::RetireBackendOrganisationRole => 'POST',
+            self::CreateBackendOrganisationRole => 'POST',
+            self::ListBackendOrganisationRoles => 'GET',
+            self::RevokeBackendOrganisationRole => 'DELETE',
+            self::AssignBackendOrganisationRole => 'PUT',
+            self::GetBackendOrganisationRole => 'GET',
+            self::ReconcileMeOrganisationReplacement => 'POST',
+            self::CompleteMeOrganisationReplacement => 'POST',
+            self::CloseMeOrganisationReplacement => 'POST',
+            self::GetMeOrganisationReplacement => 'GET',
+            self::ReviewMeOrganisationReplacement => 'GET',
+            self::CurrentMeOrganisationReplacement => 'GET',
+            self::CreateMeOrganisationReplacement => 'POST',
+            self::ReconcileMeOrganisationRecoveryBinding => 'POST',
+            self::CancelMeOrganisationRecoveryBinding => 'POST',
+            self::CreateMeOrganisationRecoveryBinding => 'POST',
+            self::TakeoverMeOrganisationBilling => 'POST',
+            self::ReviewMeOrganisationBilling => 'GET',
+            self::GetMeOrganisationBillingOperation => 'GET',
+            self::ReviewMeOrganisationTransfer => 'GET',
+            self::CancelMeOrganisationTransfer => 'POST',
+            self::ReconcileMeOrganisationBinding => 'POST',
+            self::CreateMeOrganisationBinding => 'POST',
+            self::AcceptMeOrganisationTransfer => 'POST',
+            self::GetMeOrganisationTransfer => 'GET',
+            self::CreateMeOrganisationTransfer => 'POST',
+            self::DeleteMeOrganisationSeat => 'DELETE',
+            self::CreateMeOrganisationSeat => 'POST',
+            self::ListMeOrganisationPoolSeats => 'GET',
+            self::ListMeOrganisationPools => 'GET',
+            self::ListOrganisationRoles => 'GET',
+            self::RevokeOrganisationRole => 'DELETE',
+            self::AssignOrganisationRole => 'PUT',
+            self::GetOrganisationRole => 'GET',
+            self::RevokeMeOrganisationInvitation => 'POST',
+            self::ResendMeOrganisationInvitation => 'POST',
+            self::DeclineMeOrganisationInvitation => 'POST',
+            self::AcceptMeOrganisationInvitation => 'POST',
+            self::CreateMeOrganisationInvitation => 'POST',
+            self::ListMeOrganisationInvitations => 'GET',
+            self::DissolveMeOrganisation => 'POST',
+            self::ListMeOrganisationMembers => 'GET',
+            self::RemoveMeOrganisationMember => 'DELETE',
+            self::PromoteMeOrganisationMember => 'PUT',
+            self::DemoteMeOrganisationMember => 'DELETE',
+            self::GetMeOrganisationDissolution => 'GET',
+            self::LeaveMeOrganisation => 'POST',
+            self::ListMeOrganisationChanges => 'GET',
+            self::CreateMeOrganisation => 'POST',
+            self::ListMeOrganisations => 'GET',
+            self::CreateMeTrial => 'POST',
+            self::GetDistributionTargetVersion => 'GET',
+            self::GetTauriUpdate => 'GET',
+            self::ListAddressCountries => 'GET',
+            self::ListAddressFormats => 'GET',
+            self::ListAddressAreas => 'GET',
+            self::ListAddressPostalCodes => 'GET',
+            self::GetDistributionVersion => 'GET',
+            self::GetOpenIdConfiguration => 'GET',
+            self::GetOAuthUserInfo => 'GET',
+            self::GetOpenIdSigningKeys => 'GET',
+            self::RevokeOAuthToken => 'POST',
+            self::ExchangeOAuthToken => 'POST',
+            self::RequestDeviceAuthorization => 'POST',
+            self::RequestMagicLink, self::TokenMagicLink,
+            self::CreateMeAddress, self::CreateMePushDevice, self::UnregisterMePushDevice,
+            self::PushSyncMeAddress,
+            self::CreateMeCheckoutSession, self::CreateMePortalSession, self::IntentsMeStorePurchase, self::TransactionsMeStorePurchase, self::CancelMeSubscription, self::ResumeMeSubscription, self::ChangeMeSubscription, self::CreateWebhookEndpoint, self::DisableWebhookEndpoint, self::EnableWebhookEndpoint, self::TestDeliveriesWebhookEndpoint, self::StartWebhookEndpointsSecretRotation, self::CompleteWebhookEndpointsSecretRotation, self::CancelWebhookEndpointsSecretRotation, self::RedeliverDelivery, self::CreateCheckoutSession, self::CreateFulfilment, self::CreatePortalSession, self::IntentsStorePurchase, self::TransactionsStorePurchase, self::AttachTestClock, self::AdvanceTestClock, self::CreateReturnTarget, self::CreateFeatureKey, self::RetireFeatureKey, self::CreateRole, self::RetireRole, self::CreateSeat => 'POST',
+            self::UpdateMe, self::UpdateMeAddress => 'PATCH',
+            self::UpdateProductFeatureValue, self::AssignRoleAssignment => 'PUT',
+            self::DeleteMeAddress, self::DeleteReturnTarget, self::DeleteProductFeatureValue, self::RevokeRoleAssignment, self::DeleteSeat => 'DELETE',
+            default => 'GET',
+        };
+    }
+
+    /**
+     * The path as the document writes it, with `{name}` placeholders.
+     */
+    public function template(): string
+    {
+        return match ($this) {
+            self::RetireBackendOrganisationRole => '/api/v1/organisations/{organisation}/roles/{key}/retirement',
+            self::CreateBackendOrganisationRole => '/api/v1/organisations/{organisation}/roles',
+            self::ListBackendOrganisationRoles => '/api/v1/organisations/{organisation}/roles',
+            self::RevokeBackendOrganisationRole => '/api/v1/organisations/{organisation}/members/{membership}/roles/{key}',
+            self::AssignBackendOrganisationRole => '/api/v1/organisations/{organisation}/members/{membership}/roles/{key}',
+            self::GetBackendOrganisationRole => '/api/v1/organisations/{organisation}/members/{membership}/roles',
+            self::ReconcileMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}/reconcile',
+            self::CompleteMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}/complete',
+            self::CloseMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}/close',
+            self::GetMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{setup}',
+            self::ReviewMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{pool}/review',
+            self::CurrentMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements/{pool}/current',
+            self::CreateMeOrganisationReplacement => '/api/v1/me/organisations/{organisation}/billing/replacements',
+            self::ReconcileMeOrganisationRecoveryBinding => '/api/v1/me/organisations/{organisation}/billing/bindings/{binding}/reconcile',
+            self::CancelMeOrganisationRecoveryBinding => '/api/v1/me/organisations/{organisation}/billing/bindings/{binding}/cancel',
+            self::CreateMeOrganisationRecoveryBinding => '/api/v1/me/organisations/{organisation}/billing/bindings',
+            self::TakeoverMeOrganisationBilling => '/api/v1/me/organisations/{organisation}/billing/takeover',
+            self::ReviewMeOrganisationBilling => '/api/v1/me/organisations/{organisation}/billing/review',
+            self::GetMeOrganisationBillingOperation => '/api/v1/me/organisations/{organisation}/billing-operations/{operation}',
+            self::ReviewMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/review',
+            self::CancelMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/cancel',
+            self::ReconcileMeOrganisationBinding => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/bindings/{binding}/reconcile',
+            self::CreateMeOrganisationBinding => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/bindings',
+            self::AcceptMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}/accept',
+            self::GetMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers/{transfer}',
+            self::CreateMeOrganisationTransfer => '/api/v1/me/organisations/{organisation}/transfers',
+            self::DeleteMeOrganisationSeat => '/api/v1/me/organisations/{organisation}/seats/{seat}',
+            self::CreateMeOrganisationSeat => '/api/v1/me/organisations/{organisation}/seats',
+            self::ListMeOrganisationPoolSeats => '/api/v1/me/organisations/{organisation}/pools/{pool}/seats',
+            self::ListMeOrganisationPools => '/api/v1/me/organisations/{organisation}/pools',
+            self::ListOrganisationRoles => '/api/v1/me/organisations/{organisation}/roles',
+            self::RevokeOrganisationRole => '/api/v1/me/organisations/{organisation}/members/{membership}/roles/{key}',
+            self::AssignOrganisationRole => '/api/v1/me/organisations/{organisation}/members/{membership}/roles/{key}',
+            self::GetOrganisationRole => '/api/v1/me/organisations/{organisation}/members/{membership}/roles',
+            self::RevokeMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/revoke',
+            self::ResendMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/resend',
+            self::DeclineMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/decline',
+            self::AcceptMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations/{invitation}/accept',
+            self::CreateMeOrganisationInvitation => '/api/v1/me/organisations/{organisation}/invitations',
+            self::ListMeOrganisationInvitations => '/api/v1/me/organisations/{organisation}/invitations',
+            self::DissolveMeOrganisation => '/api/v1/me/organisations/{organisation}/dissolve',
+            self::ListMeOrganisationMembers => '/api/v1/me/organisations/{organisation}/members',
+            self::RemoveMeOrganisationMember => '/api/v1/me/organisations/{organisation}/members/{membership}',
+            self::PromoteMeOrganisationMember => '/api/v1/me/organisations/{organisation}/members/{membership}/admin',
+            self::DemoteMeOrganisationMember => '/api/v1/me/organisations/{organisation}/members/{membership}/admin',
+            self::GetMeOrganisationDissolution => '/api/v1/me/organisations/{organisation}/dissolution',
+            self::LeaveMeOrganisation => '/api/v1/me/organisations/{organisation}/leave',
+            self::ListMeOrganisationChanges => '/api/v1/me/organisations/{organisation}/changes',
+            self::CreateMeOrganisation => '/api/v1/me/organisations',
+            self::ListMeOrganisations => '/api/v1/me/organisations',
+            self::CreateMeTrial => '/api/v1/me/trials',
+            self::GetDistributionTargetVersion => '/api/distribution-version/{distribution}/{target}',
+            self::GetTauriUpdate => '/api/tauri/updates/{distribution}/{target}/{version}',
+            self::ListAddressCountries => '/api/v1/reference-data/address/countries',
+            self::ListAddressFormats => '/api/v1/reference-data/address/formats',
+            self::ListAddressAreas => '/api/v1/reference-data/address/areas',
+            self::ListAddressPostalCodes => '/api/v1/reference-data/address/postal-codes',
+            self::GetDistributionVersion => '/api/distribution-version/{distribution}',
+            self::GetOpenIdConfiguration => '/.well-known/openid-configuration',
+            self::GetOAuthUserInfo => '/oauth/userinfo',
+            self::GetOpenIdSigningKeys => '/oauth/jwks.json',
+            self::RevokeOAuthToken => '/oauth/revoke',
+            self::ExchangeOAuthToken => '/oauth/token',
+            self::RequestDeviceAuthorization => '/oauth/device/code',
+            self::GetApiVersion => '/api/v1',
+            self::GetOpenApiDocument => '/api/v1/openapi.json',
+            self::RequestMagicLink => '/api/v1/auth/magic-link',
+            self::TokenMagicLink => '/api/v1/auth/magic-link/token',
+            self::GetMe, self::UpdateMe => '/api/v1/me',
+            self::ListMeAddresses, self::CreateMeAddress => '/api/v1/me/addresses',
+            self::UpdateMeAddress, self::DeleteMeAddress => '/api/v1/me/addresses/{id}',
+            self::GetMeBillingEntry => '/api/v1/me/billing-entry',
+            self::ListMeEntitlements => '/api/v1/me/entitlements',
+            self::ListMeOrders => '/api/v1/me/orders',
+            self::GetMeOrder => '/api/v1/me/orders/{id}',
+            self::CreateMePushDevice => '/api/v1/me/push-devices',
+            self::UnregisterMePushDevice => '/api/v1/me/push-devices/unregister',
+            self::GetMeReferral => '/api/v1/me/referral',
+            self::RewardsMeReferral => '/api/v1/me/referral/rewards',
+            self::PullSyncMeAddress, self::PushSyncMeAddress => '/api/v1/sync/me-addresses',
+            self::PullSyncMeOrder => '/api/v1/sync/me-orders',
+            self::CreateMeCheckoutSession => '/api/v1/me/checkout-sessions',
+            self::GetMeCheckoutSession => '/api/v1/me/checkout-sessions/{session}',
+            self::CreateMePortalSession => '/api/v1/me/portal-sessions',
+            self::IntentsMeStorePurchase => '/api/v1/me/store-purchases/intents',
+            self::TransactionsMeStorePurchase => '/api/v1/me/store-purchases/transactions',
+            self::ListMeSubscriptions => '/api/v1/me/subscriptions',
+            self::CancelMeSubscription => '/api/v1/me/subscriptions/{subscription}/cancellation',
+            self::ResumeMeSubscription => '/api/v1/me/subscriptions/{subscription}/resumption',
+            self::ChangeMeSubscription => '/api/v1/me/subscriptions/{subscription}/changes',
+            self::GetClient => '/api/v1/client',
+            self::ListProducts => '/api/v1/products',
+            self::GetProduct => '/api/v1/products/{id}',
+            self::CreateFulfilment => '/api/v1/fulfilments',
+            self::ListBackendEntitlements => '/api/v1/entitlements',
+            self::GetBackendEntitlement => '/api/v1/entitlements/{sub}',
+            self::ListWebhookEndpoints, self::CreateWebhookEndpoint => '/api/v1/webhook-endpoints',
+            self::DisableWebhookEndpoint => '/api/v1/webhook-endpoints/{endpoint}/disable',
+            self::EnableWebhookEndpoint => '/api/v1/webhook-endpoints/{endpoint}/enable',
+            self::TestDeliveriesWebhookEndpoint => '/api/v1/webhook-endpoints/{endpoint}/test-deliveries',
+            self::StartWebhookEndpointsSecretRotation => '/api/v1/webhook-endpoints/{endpoint}/secret-rotations',
+            self::CompleteWebhookEndpointsSecretRotation => '/api/v1/webhook-endpoints/{endpoint}/secret-rotations/complete',
+            self::CancelWebhookEndpointsSecretRotation => '/api/v1/webhook-endpoints/{endpoint}/secret-rotations/cancel',
+            self::ListDeliveries => '/api/v1/deliveries',
+            self::RedeliverDelivery => '/api/v1/deliveries/{event}/redeliveries',
+            self::CreateCheckoutSession => '/api/v1/checkout-sessions',
+            self::GetCheckoutSession => '/api/v1/checkout-sessions/{session}',
+            self::CreatePortalSession => '/api/v1/portal-sessions',
+            self::IntentsStorePurchase => '/api/v1/store-purchases/intents',
+            self::TransactionsStorePurchase => '/api/v1/store-purchases/transactions',
+            self::AttachTestClock => '/api/v1/subscriptions/{subscription}/test-clock',
+            self::AdvanceTestClock => '/api/v1/subscriptions/{subscription}/test-clock/advance',
+            self::ListReturnTargets, self::CreateReturnTarget => '/api/v1/return-targets',
+            self::DeleteReturnTarget => '/api/v1/return-targets/{target}',
+            self::ListFeatureKeys, self::CreateFeatureKey => '/api/v1/feature-keys',
+            self::RetireFeatureKey => '/api/v1/feature-keys/{key}/retirement',
+            self::ListProductFeatureValues => '/api/v1/products/{product}/feature-values',
+            self::UpdateProductFeatureValue, self::DeleteProductFeatureValue => '/api/v1/products/{product}/feature-values/{key}',
+            self::ListRoles, self::CreateRole => '/api/v1/roles',
+            self::RetireRole => '/api/v1/roles/{key}/retirement',
+            self::ListRoleAssignments => '/api/v1/role-assignments',
+            self::GetRoleAssignment => '/api/v1/role-assignments/{sub}',
+            self::AssignRoleAssignment, self::RevokeRoleAssignment => '/api/v1/role-assignments/{sub}/{key}',
+            self::CreateSeat => '/api/v1/seats',
+            self::DeleteSeat => '/api/v1/seats/{sub}',
+            self::ListSeatPools => '/api/v1/seat-pools/{payer}',
+        };
+    }
+
+    /**
+     * The path with each placeholder filled, percent-encoded as one path
+     * segment.
+     *
+     * @param array<string, string> $parameters a value for each placeholder, and nothing else
+     */
+    public function path(array $parameters = []): string
+    {
+        $missing = [];
+        $path = (string) preg_replace_callback('/\{([a-z_]+)\}/', static function (array $match) use ($parameters, &$missing): string {
+            $value = $parameters[$match[1]] ?? '';
+            if ($value === '') {
+                $missing[] = $match[1];
+            }
+
+            return rawurlencode($value);
+        }, $this->template(), -1, $filled);
+
+        if ($missing !== []) {
+            throw new InvalidArgumentValueException(sprintf('%s needs a non-empty "%s".', $this->value, implode('" and "', $missing)));
+        }
+        if (count($parameters) !== $filled) {
+            throw new InvalidArgumentValueException(sprintf('%s takes only %s in its path.', $this->value, $filled === 0 ? 'no value' : 'the values its placeholders name'));
+        }
+
+        return $path;
+    }
+
+    /**
+     * Whose credentials the site answers it for.
+     */
+    public function audience(): Audience
+    {
+        return match ($this) {
+            self::RetireBackendOrganisationRole => Audience::Backend,
+            self::CreateBackendOrganisationRole => Audience::Backend,
+            self::ListBackendOrganisationRoles => Audience::Backend,
+            self::RevokeBackendOrganisationRole => Audience::Backend,
+            self::AssignBackendOrganisationRole => Audience::Backend,
+            self::GetBackendOrganisationRole => Audience::Backend,
+            self::ReconcileMeOrganisationReplacement => Audience::Member,
+            self::CompleteMeOrganisationReplacement => Audience::Member,
+            self::CloseMeOrganisationReplacement => Audience::Member,
+            self::GetMeOrganisationReplacement => Audience::Member,
+            self::ReviewMeOrganisationReplacement => Audience::Member,
+            self::CurrentMeOrganisationReplacement => Audience::Member,
+            self::CreateMeOrganisationReplacement => Audience::Member,
+            self::ReconcileMeOrganisationRecoveryBinding => Audience::Member,
+            self::CancelMeOrganisationRecoveryBinding => Audience::Member,
+            self::CreateMeOrganisationRecoveryBinding => Audience::Member,
+            self::TakeoverMeOrganisationBilling => Audience::Member,
+            self::ReviewMeOrganisationBilling => Audience::Member,
+            self::GetMeOrganisationBillingOperation => Audience::Member,
+            self::ReviewMeOrganisationTransfer => Audience::Member,
+            self::CancelMeOrganisationTransfer => Audience::Member,
+            self::ReconcileMeOrganisationBinding => Audience::Member,
+            self::CreateMeOrganisationBinding => Audience::Member,
+            self::AcceptMeOrganisationTransfer => Audience::Member,
+            self::GetMeOrganisationTransfer => Audience::Member,
+            self::CreateMeOrganisationTransfer => Audience::Member,
+            self::DeleteMeOrganisationSeat => Audience::Member,
+            self::CreateMeOrganisationSeat => Audience::Member,
+            self::ListMeOrganisationPoolSeats => Audience::Member,
+            self::ListMeOrganisationPools => Audience::Member,
+            self::ListOrganisationRoles => Audience::Member,
+            self::RevokeOrganisationRole => Audience::Member,
+            self::AssignOrganisationRole => Audience::Member,
+            self::GetOrganisationRole => Audience::Member,
+            self::RevokeMeOrganisationInvitation => Audience::Member,
+            self::ResendMeOrganisationInvitation => Audience::Member,
+            self::DeclineMeOrganisationInvitation => Audience::Member,
+            self::AcceptMeOrganisationInvitation => Audience::Member,
+            self::CreateMeOrganisationInvitation => Audience::Member,
+            self::ListMeOrganisationInvitations => Audience::Member,
+            self::DissolveMeOrganisation => Audience::Member,
+            self::ListMeOrganisationMembers => Audience::Member,
+            self::RemoveMeOrganisationMember => Audience::Member,
+            self::PromoteMeOrganisationMember => Audience::Member,
+            self::DemoteMeOrganisationMember => Audience::Member,
+            self::GetMeOrganisationDissolution => Audience::Member,
+            self::LeaveMeOrganisation => Audience::Member,
+            self::ListMeOrganisationChanges => Audience::Member,
+            self::CreateMeOrganisation => Audience::Member,
+            self::ListMeOrganisations => Audience::Member,
+            self::CreateMeTrial => Audience::Member,
+            self::GetDistributionTargetVersion => Audience::Anyone,
+            self::GetTauriUpdate => Audience::Anyone,
+            self::ListAddressCountries => Audience::MemberOrBackend,
+            self::ListAddressFormats => Audience::MemberOrBackend,
+            self::ListAddressAreas => Audience::MemberOrBackend,
+            self::ListAddressPostalCodes => Audience::MemberOrBackend,
+            self::GetDistributionVersion => Audience::Anyone,
+            self::GetOpenIdConfiguration => Audience::Anyone,
+            self::GetOAuthUserInfo => Audience::Member,
+            self::GetOpenIdSigningKeys => Audience::Anyone,
+            self::RevokeOAuthToken => Audience::Anyone,
+            self::ExchangeOAuthToken => Audience::Anyone,
+            self::RequestDeviceAuthorization => Audience::Anyone,
+            self::GetApiVersion, self::GetOpenApiDocument, self::RequestMagicLink, self::TokenMagicLink => Audience::Anyone,
+            self::GetMe, self::UpdateMe, self::ListMeAddresses, self::CreateMeAddress, self::UpdateMeAddress,
+            self::DeleteMeAddress, self::GetMeBillingEntry, self::ListMeEntitlements, self::ListMeOrders,
+            self::GetMeOrder, self::CreateMePushDevice, self::UnregisterMePushDevice, self::GetMeReferral,
+            self::RewardsMeReferral, self::PullSyncMeAddress, self::PushSyncMeAddress, self::PullSyncMeOrder,
+            self::CreateMeCheckoutSession, self::GetMeCheckoutSession, self::CreateMePortalSession, self::IntentsMeStorePurchase, self::TransactionsMeStorePurchase, self::ListMeSubscriptions, self::CancelMeSubscription, self::ResumeMeSubscription, self::ChangeMeSubscription => Audience::Member,
+            self::GetClient, self::ListProducts, self::GetProduct, self::CreateFulfilment, self::ListBackendEntitlements, self::GetBackendEntitlement, self::ListWebhookEndpoints, self::CreateWebhookEndpoint, self::DisableWebhookEndpoint, self::EnableWebhookEndpoint, self::TestDeliveriesWebhookEndpoint, self::StartWebhookEndpointsSecretRotation, self::CompleteWebhookEndpointsSecretRotation, self::CancelWebhookEndpointsSecretRotation, self::ListDeliveries, self::RedeliverDelivery, self::CreateCheckoutSession, self::GetCheckoutSession, self::CreatePortalSession, self::IntentsStorePurchase, self::TransactionsStorePurchase, self::AttachTestClock, self::AdvanceTestClock, self::ListReturnTargets, self::CreateReturnTarget, self::DeleteReturnTarget, self::ListFeatureKeys, self::CreateFeatureKey, self::RetireFeatureKey, self::ListProductFeatureValues, self::UpdateProductFeatureValue, self::DeleteProductFeatureValue, self::ListRoles, self::CreateRole, self::RetireRole, self::ListRoleAssignments, self::GetRoleAssignment, self::AssignRoleAssignment, self::RevokeRoleAssignment, self::CreateSeat, self::DeleteSeat, self::ListSeatPools => Audience::Backend,
+        };
+    }
+
+    /**
+     * The status the site answers a success with.
+     */
+    public function successStatus(): int
+    {
+        return $this->successStatuses()[0];
+    }
+
+    /**
+     * Every status the site answers a success with, the one above first: a
+     * create that finds what it would have made answers it with 200.
+     *
+     * @return non-empty-list<int>
+     */
+    public function successStatuses(): array
+    {
+        return match ($this) {
+            self::RetireBackendOrganisationRole => [200],
+            self::CreateBackendOrganisationRole => [200],
+            self::ListBackendOrganisationRoles => [200],
+            self::RevokeBackendOrganisationRole => [200],
+            self::AssignBackendOrganisationRole => [200],
+            self::GetBackendOrganisationRole => [200],
+            self::ReconcileMeOrganisationReplacement => [202],
+            self::CompleteMeOrganisationReplacement => [202],
+            self::CloseMeOrganisationReplacement => [202],
+            self::GetMeOrganisationReplacement => [200],
+            self::ReviewMeOrganisationReplacement => [200],
+            self::CurrentMeOrganisationReplacement => [200],
+            self::CreateMeOrganisationReplacement => [202],
+            self::ReconcileMeOrganisationRecoveryBinding => [202],
+            self::CancelMeOrganisationRecoveryBinding => [202],
+            self::CreateMeOrganisationRecoveryBinding => [202],
+            self::TakeoverMeOrganisationBilling => [202],
+            self::ReviewMeOrganisationBilling => [200],
+            self::GetMeOrganisationBillingOperation => [200],
+            self::ReviewMeOrganisationTransfer => [200],
+            self::CancelMeOrganisationTransfer => [202],
+            self::ReconcileMeOrganisationBinding => [202],
+            self::CreateMeOrganisationBinding => [202],
+            self::AcceptMeOrganisationTransfer => [202],
+            self::GetMeOrganisationTransfer => [200],
+            self::CreateMeOrganisationTransfer => [201],
+            self::DeleteMeOrganisationSeat => [204],
+            self::CreateMeOrganisationSeat => [201],
+            self::ListMeOrganisationPoolSeats => [200],
+            self::ListMeOrganisationPools => [200],
+            self::ListOrganisationRoles => [200],
+            self::RevokeOrganisationRole => [200],
+            self::AssignOrganisationRole => [200],
+            self::GetOrganisationRole => [200],
+            self::RevokeMeOrganisationInvitation => [204],
+            self::ResendMeOrganisationInvitation => [200],
+            self::DeclineMeOrganisationInvitation => [204],
+            self::AcceptMeOrganisationInvitation => [200],
+            self::CreateMeOrganisationInvitation => [201],
+            self::ListMeOrganisationInvitations => [200],
+            self::DissolveMeOrganisation => [202],
+            self::ListMeOrganisationMembers => [200],
+            self::RemoveMeOrganisationMember => [204],
+            self::PromoteMeOrganisationMember => [204],
+            self::DemoteMeOrganisationMember => [204],
+            self::GetMeOrganisationDissolution => [200],
+            self::LeaveMeOrganisation => [204],
+            self::ListMeOrganisationChanges => [200],
+            self::CreateMeOrganisation => [201],
+            self::ListMeOrganisations => [200],
+            self::CreateMeTrial => [200],
+            self::GetDistributionTargetVersion => [200],
+            self::GetTauriUpdate => [200, 204],
+            self::ListAddressCountries => [200],
+            self::ListAddressFormats => [200],
+            self::ListAddressAreas => [200],
+            self::ListAddressPostalCodes => [200],
+            self::GetDistributionVersion => [200],
+            self::GetOpenIdConfiguration => [200],
+            self::GetOAuthUserInfo => [200],
+            self::GetOpenIdSigningKeys => [200],
+            self::RevokeOAuthToken => [200],
+            self::ExchangeOAuthToken => [200],
+            self::RequestDeviceAuthorization => [200],
+            self::TokenMagicLink, self::CreateMeAddress, self::CreateSeat, self::CreateWebhookEndpoint, self::StartWebhookEndpointsSecretRotation => [201],
+            self::CreateCheckoutSession, self::CreateFeatureKey, self::CreateMeCheckoutSession, self::CreateMePortalSession, self::CreatePortalSession, self::CreateReturnTarget, self::CreateRole => [201, 200],
+            self::RequestMagicLink, self::RedeliverDelivery, self::ResumeMeSubscription, self::TestDeliveriesWebhookEndpoint => [202],
+            self::ChangeMeSubscription => [200, 202],
+            self::DeleteMeAddress, self::UnregisterMePushDevice, self::DeleteProductFeatureValue, self::DeleteReturnTarget, self::DeleteSeat, self::RevokeRoleAssignment => [204],
+            default => [200],
+        };
+    }
+
+    /**
+     * Whether the site honours an Idempotency-Key on it: the client then
+     * always sends one, and retries the write with the same key.
+     */
+    public function takesIdempotencyKey(): bool
+    {
+        return match ($this) {
+            self::RetireBackendOrganisationRole => false,
+            self::CreateBackendOrganisationRole => false,
+            self::ListBackendOrganisationRoles => false,
+            self::RevokeBackendOrganisationRole => false,
+            self::AssignBackendOrganisationRole => false,
+            self::GetBackendOrganisationRole => false,
+            self::ReconcileMeOrganisationReplacement => true,
+            self::CompleteMeOrganisationReplacement => true,
+            self::CloseMeOrganisationReplacement => true,
+            self::GetMeOrganisationReplacement => false,
+            self::ReviewMeOrganisationReplacement => false,
+            self::CurrentMeOrganisationReplacement => false,
+            self::CreateMeOrganisationReplacement => true,
+            self::ReconcileMeOrganisationRecoveryBinding => true,
+            self::CancelMeOrganisationRecoveryBinding => true,
+            self::CreateMeOrganisationRecoveryBinding => true,
+            self::TakeoverMeOrganisationBilling => true,
+            self::ReviewMeOrganisationBilling => false,
+            self::GetMeOrganisationBillingOperation => false,
+            self::ReviewMeOrganisationTransfer => false,
+            self::CancelMeOrganisationTransfer => true,
+            self::ReconcileMeOrganisationBinding => true,
+            self::CreateMeOrganisationBinding => true,
+            self::AcceptMeOrganisationTransfer => true,
+            self::GetMeOrganisationTransfer => false,
+            self::CreateMeOrganisationTransfer => true,
+            self::DeleteMeOrganisationSeat => true,
+            self::CreateMeOrganisationSeat => true,
+            self::ListMeOrganisationPoolSeats => false,
+            self::ListMeOrganisationPools => false,
+            self::ListOrganisationRoles => false,
+            self::RevokeOrganisationRole => true,
+            self::AssignOrganisationRole => true,
+            self::GetOrganisationRole => false,
+            self::RevokeMeOrganisationInvitation => true,
+            self::ResendMeOrganisationInvitation => true,
+            self::DeclineMeOrganisationInvitation => true,
+            self::AcceptMeOrganisationInvitation => true,
+            self::CreateMeOrganisationInvitation => true,
+            self::ListMeOrganisationInvitations => false,
+            self::DissolveMeOrganisation => true,
+            self::ListMeOrganisationMembers => false,
+            self::RemoveMeOrganisationMember => true,
+            self::PromoteMeOrganisationMember => true,
+            self::DemoteMeOrganisationMember => true,
+            self::GetMeOrganisationDissolution => false,
+            self::LeaveMeOrganisation => true,
+            self::ListMeOrganisationChanges => false,
+            self::CreateMeOrganisation => true,
+            self::ListMeOrganisations => false,
+            self::CreateMeTrial => false,
+            self::GetDistributionTargetVersion => false,
+            self::GetTauriUpdate => false,
+            self::ListAddressCountries => false,
+            self::ListAddressFormats => false,
+            self::ListAddressAreas => false,
+            self::ListAddressPostalCodes => false,
+            self::GetDistributionVersion => false,
+            self::GetOpenIdConfiguration => false,
+            self::GetOAuthUserInfo => false,
+            self::GetOpenIdSigningKeys => false,
+            self::RevokeOAuthToken => false,
+            self::ExchangeOAuthToken => false,
+            self::RequestDeviceAuthorization => false,
+            self::CreateMeAddress,
+            self::AdvanceTestClock, self::AttachTestClock, self::CancelMeSubscription, self::ChangeMeSubscription, self::CreateCheckoutSession, self::CreateFulfilment, self::CreateMeCheckoutSession, self::CreateMePortalSession, self::CreatePortalSession, self::CreateWebhookEndpoint, self::RedeliverDelivery, self::ResumeMeSubscription, self::StartWebhookEndpointsSecretRotation => true,
+            default => false,
+        };
+    }
+
+    /**
+     * Whether it is a list answered a page at a time, as `{data, next_cursor}`
+     * with `limit` and `cursor`. A list the site answers whole, as one page
+     * that never has a cursor, is not one, and nor is a sync pull, which
+     * pages a change feed by its own rules.
+     */
+    public function isCursorList(): bool
+    {
+        return match ($this) {
+            self::RetireBackendOrganisationRole => false,
+            self::CreateBackendOrganisationRole => false,
+            self::ListBackendOrganisationRoles => false,
+            self::RevokeBackendOrganisationRole => false,
+            self::AssignBackendOrganisationRole => false,
+            self::GetBackendOrganisationRole => false,
+            self::ReconcileMeOrganisationReplacement => false,
+            self::CompleteMeOrganisationReplacement => false,
+            self::CloseMeOrganisationReplacement => false,
+            self::GetMeOrganisationReplacement => false,
+            self::ReviewMeOrganisationReplacement => false,
+            self::CurrentMeOrganisationReplacement => false,
+            self::CreateMeOrganisationReplacement => false,
+            self::ReconcileMeOrganisationRecoveryBinding => false,
+            self::CancelMeOrganisationRecoveryBinding => false,
+            self::CreateMeOrganisationRecoveryBinding => false,
+            self::TakeoverMeOrganisationBilling => false,
+            self::ReviewMeOrganisationBilling => false,
+            self::GetMeOrganisationBillingOperation => false,
+            self::ReviewMeOrganisationTransfer => false,
+            self::CancelMeOrganisationTransfer => false,
+            self::ReconcileMeOrganisationBinding => false,
+            self::CreateMeOrganisationBinding => false,
+            self::AcceptMeOrganisationTransfer => false,
+            self::GetMeOrganisationTransfer => false,
+            self::CreateMeOrganisationTransfer => false,
+            self::DeleteMeOrganisationSeat => false,
+            self::CreateMeOrganisationSeat => false,
+            self::ListMeOrganisationPoolSeats => true,
+            self::ListMeOrganisationPools => true,
+            self::ListOrganisationRoles => false,
+            self::RevokeOrganisationRole => false,
+            self::AssignOrganisationRole => false,
+            self::GetOrganisationRole => false,
+            self::RevokeMeOrganisationInvitation => false,
+            self::ResendMeOrganisationInvitation => false,
+            self::DeclineMeOrganisationInvitation => false,
+            self::AcceptMeOrganisationInvitation => false,
+            self::CreateMeOrganisationInvitation => false,
+            self::ListMeOrganisationInvitations => true,
+            self::DissolveMeOrganisation => false,
+            self::ListMeOrganisationMembers => true,
+            self::RemoveMeOrganisationMember => false,
+            self::PromoteMeOrganisationMember => false,
+            self::DemoteMeOrganisationMember => false,
+            self::GetMeOrganisationDissolution => false,
+            self::LeaveMeOrganisation => false,
+            self::ListMeOrganisationChanges => true,
+            self::CreateMeOrganisation => false,
+            self::ListMeOrganisations => true,
+            self::CreateMeTrial => false,
+            self::GetDistributionTargetVersion => false,
+            self::GetTauriUpdate => false,
+            self::ListAddressCountries => true,
+            self::ListAddressFormats => true,
+            self::ListAddressAreas => true,
+            self::ListAddressPostalCodes => true,
+            self::GetDistributionVersion => false,
+            self::GetOpenIdConfiguration => false,
+            self::GetOAuthUserInfo => false,
+            self::GetOpenIdSigningKeys => false,
+            self::RevokeOAuthToken => false,
+            self::ExchangeOAuthToken => false,
+            self::RequestDeviceAuthorization => false,
+            self::ListProducts,
+            self::ListMeAddresses, self::ListMeOrders, self::RewardsMeReferral,
+            self::ListBackendEntitlements, self::ListDeliveries, self::ListRoleAssignments, self::ListWebhookEndpoints => true,
+            default => false,
+        };
+    }
+}

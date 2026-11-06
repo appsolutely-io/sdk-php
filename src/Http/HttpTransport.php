@@ -1,0 +1,138 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Appsolutely\Sdk\Http;
+
+use Appsolutely\Sdk\Config;
+use Appsolutely\Sdk\Exception\InvalidConfigException;
+use Appsolutely\Sdk\Exception\TransportException;
+use Appsolutely\Sdk\Sdk;
+use Appsolutely\Sdk\Support\Untrusted;
+use Http\Discovery\Exception\NotFoundException;
+use Http\Discovery\Psr17FactoryDiscovery;
+use Http\Discovery\Psr18ClientDiscovery;
+use Psr\Http\Client\ClientExceptionInterface;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamFactoryInterface;
+use Psr\Log\LoggerInterface;
+
+/**
+ * @internal
+ */
+final readonly class HttpTransport
+{
+    public function __construct(
+        private ClientInterface $client,
+        private RequestFactoryInterface $requests,
+        private StreamFactoryInterface $streams,
+    ) {}
+
+    /**
+     * The transport a Config describes: its HTTP client and factories, or
+     * the ones installed, the client given the Config's timeouts.
+     */
+    public static function forConfig(Config $config, LoggerInterface $logger): self
+    {
+        try {
+            return new self(
+                $config->httpClient ?? ClientTimeouts::apply(Psr18ClientDiscovery::find(), $config->timeout, $config->connectTimeout, $logger),
+                $config->requestFactory ?? Psr17FactoryDiscovery::findRequestFactory(),
+                $config->streamFactory ?? Psr17FactoryDiscovery::findStreamFactory(),
+            );
+        } catch (NotFoundException $exception) {
+            throw new InvalidConfigException(
+                'No PSR-18 HTTP client or PSR-17 factory was passed in or found installed; require one, such as guzzlehttp/guzzle or symfony/http-client with nyholm/psr7.',
+                0,
+                $exception,
+            );
+        }
+    }
+
+    public static function isSuccessful(ResponseInterface $response): bool
+    {
+        $status = $response->getStatusCode();
+
+        return $status >= 200 && $status < 300;
+    }
+
+    /**
+     * @param array<string, string> $headers
+     */
+    public function get(string $url, #[\SensitiveParameter] array $headers = []): ResponseInterface
+    {
+        return $this->send($this->request('GET', $url, $headers));
+    }
+
+    /**
+     * @param array<string, string> $fields
+     * @param array<string, string> $headers
+     */
+    public function postForm(string $url, #[\SensitiveParameter] array $fields, #[\SensitiveParameter] array $headers = []): ResponseInterface
+    {
+        $request = $this->request('POST', $url, $headers)
+            ->withHeader(Header::CONTENT_TYPE, MediaType::FORM_URLENCODED)
+            ->withBody($this->streams->createStream(http_build_query($fields, '', '&', PHP_QUERY_RFC1738)));
+
+        return $this->send($request);
+    }
+
+    /**
+     * Any method, with a JSON body when one is given.
+     *
+     * @param array<string, string> $headers
+     */
+    public function json(string $method, string $url, #[\SensitiveParameter] array $headers = [], ?string $body = null): ResponseInterface
+    {
+        $request = $this->request($method, $url, $headers);
+        if ($body !== null) {
+            $request = $request
+                ->withHeader(Header::CONTENT_TYPE, MediaType::JSON)
+                ->withBody($this->streams->createStream($body));
+        }
+
+        return $this->send($request);
+    }
+
+    /**
+     * @param array<string, string> $headers
+     */
+    private function request(string $method, string $url, #[\SensitiveParameter] array $headers): RequestInterface
+    {
+        $request = $this->requests->createRequest($method, $url)
+            ->withHeader(Header::USER_AGENT, Sdk::userAgent())
+            ->withHeader(Header::ACCEPT, MediaType::JSON);
+
+        foreach ($headers as $name => $value) {
+            $request = $request->withHeader($name, $value);
+        }
+
+        return $request;
+    }
+
+    /**
+     * The URL may be one a discovery document named and the message is the
+     * HTTP client's, so both reach the message only as short printable text;
+     * the client's exception is kept whole as the previous one.
+     */
+    private function send(#[\SensitiveParameter] RequestInterface $request): ResponseInterface
+    {
+        try {
+            return $this->client->sendRequest($request);
+        } catch (ClientExceptionInterface $exception) {
+            throw new TransportException(
+                sprintf(
+                    '%s %s failed: %s',
+                    $request->getMethod(),
+                    Untrusted::text((string) $request->getUri(), Untrusted::MAX_LONG_LENGTH),
+                    Untrusted::text($exception->getMessage(), Untrusted::MAX_LONG_LENGTH),
+                ),
+                0,
+                $exception,
+            );
+        }
+    }
+}

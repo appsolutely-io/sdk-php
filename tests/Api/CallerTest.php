@@ -1,0 +1,43 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Appsolutely\Sdk\Tests\Api;
+
+use Appsolutely\Sdk\Api\Audience;
+use Appsolutely\Sdk\Api\Caller;
+use Appsolutely\Sdk\Api\Operation;
+use Appsolutely\Sdk\Tests\Support\FakeProvider;
+use LogicException;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * A keyed write preserves its documented verb and key, and refuses a query
+ * before sending rather than silently dropping it.
+ */
+final class CallerTest extends TestCase
+{
+    public function testAKeyedWriteWithAQueryIsRefusedBeforeAnythingIsSent(): void
+    {
+        $provider = new FakeProvider();
+        $caller = new Caller($provider->client()->api()->raw(), Audience::Backend);
+
+        try {
+            $caller->send(Operation::CreateFulfilment, query: ['draft' => true], body: ['token' => 'Hello']);
+            self::fail('A keyed write with a query was sent.');
+        } catch (LogicException $exception) {
+            self::assertStringContainsString(Operation::CreateFulfilment->value, $exception->getMessage());
+        }
+
+        self::assertSame([], $provider->siteRequests());
+    }
+
+    public function testEveryKeyedOperationUsesASupportedWriteMethod(): void
+    {
+        foreach (Operation::cases() as $operation) {
+            if ($operation->takesIdempotencyKey()) {
+                self::assertContains($operation->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], $operation->value);
+            }
+        }
+    }
+}
