@@ -1,0 +1,88 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Appsolutely\Sdk\Model;
+
+use DateTimeImmutable;
+
+/**
+ * An order, as an API answer and an `order.*` or `payment.*` delivery both
+ * carry it. Every amount is an integer count of `$currency`'s minor units
+ * (`1999` with `USD` is 19.99).
+ */
+final readonly class Order implements SchemaModel
+{
+    /** @internal */
+    public const string SCHEMA = 'Order';
+
+    /**
+     * @param string|null $subjectReference what the order is for beyond the account that placed it
+     * @param string|null $status such as `pending`, `paid`, `shipped`, `completed`, `cancelled` or `expired`; a status the site adds later is read as it is sent
+     * @param string $reference the order's reference, as the member sees it on receipts and the site's own pages
+     * @param string $mode `production` or `test`: the kind of money behind the order
+     * @param string|null $subscriptionStartState how far the subscription this order buys has got; null when it buys none
+     * @param string|null $subscriptionStartRefusal why that subscription will not start, when it will not
+     * @param string $currency ISO 4217
+     * @param int|null $taxAmount tax in minor units, or null while tax preparation is pending
+     * @param int|null $totalAmount total in minor units, or null while tax preparation is pending
+     * @param bool $taxIncluded whether `$taxAmount` is already part of the other amounts, rather than added to them to reach the total
+     * @param string $totalShown what the buyer was told `$totalAmount` is: `final` for the whole charge, `before_provider_tax` for an amount a payment provider then added its own tax to, `priced_by_provider` for a price sent to a provider that ran its own checkout; `tax_preparation_pending` means no final tax or total is available; only on `final` is it what the buyer paid
+     * @param list<OrderLine> $items
+     * @param string|null $paymentUrl where to send the signed-in member to finish paying an order still awaiting payment, on the site's own address
+     * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
+     */
+    public function __construct(
+        public string $id,
+        public string $reference,
+        public ?string $subjectReference,
+        public ?string $status,
+        public string $mode,
+        public ?string $subscriptionStartState,
+        public ?string $subscriptionStartRefusal,
+        public ?string $summary,
+        public int $amount,
+        public string $currency,
+        public int $discountedAmount,
+        public int $shippingAmount,
+        public ?int $taxAmount,
+        public bool $taxIncluded,
+        public ?int $totalAmount,
+        public string $totalShown,
+        public ?string $note,
+        public ?DateTimeImmutable $createdAt,
+        public DateTimeImmutable $updatedAt,
+        public array $items,
+        public ?string $paymentUrl = null,
+        public array $extra = [],
+    ) {}
+
+    /** @internal */
+    public static function from(#[\SensitiveParameter] Fields $json): self
+    {
+        return new self(
+            id: $json->string('id'),
+            reference: $json->string('reference'),
+            subjectReference: $json->nullableString('subject_reference'),
+            status: $json->nullableString('status'),
+            mode: $json->string('mode'),
+            subscriptionStartState: $json->nullableString('subscription_start_state'),
+            subscriptionStartRefusal: $json->nullableString('subscription_start_refusal'),
+            summary: $json->nullableString('summary'),
+            amount: $json->int('amount'),
+            currency: $json->string('currency'),
+            discountedAmount: $json->int('discounted_amount'),
+            shippingAmount: $json->int('shipping_amount'),
+            taxAmount: $json->nullableInt('tax_amount'),
+            taxIncluded: $json->bool('tax_included'),
+            totalAmount: $json->nullableInt('total_amount'),
+            totalShown: $json->string('total_shown'),
+            note: $json->nullableString('note'),
+            createdAt: $json->nullableTime('created_at'),
+            updatedAt: $json->time('updated_at'),
+            items: array_map(OrderLine::from(...), $json->objects('items')),
+            paymentUrl: $json->nullableString('payment_url'),
+            extra: $json->extra(),
+        );
+    }
+}
