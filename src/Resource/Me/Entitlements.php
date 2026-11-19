@@ -28,4 +28,10 @@ final readonly class Entitlements
     {
         return $this->caller->onlyPage(Operation::ListMeEntitlements, Entitlement::class);
     }
+
+    /** @return \Appsolutely\Sdk\Api\ConditionalResult<\Appsolutely\Sdk\Api\Page<Entitlement>> */
+    public function listConditional(string $ifNoneMatch): \Appsolutely\Sdk\Api\ConditionalResult
+    {
+        return $this->caller->conditionalPage(Operation::ListMeEntitlements, Entitlement::class, $ifNoneMatch);
+    }
 }

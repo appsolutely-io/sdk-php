@@ -115,4 +115,12 @@ final readonly class Organisations
     {
         return new Replacements($this->caller);
     }
+
+    /** @return \Appsolutely\Sdk\Api\ConditionalResult<\Appsolutely\Sdk\Api\Page<Organisation>> */
+    public function listConditional(string $ifNoneMatch, int $limit = SiteApi::DEFAULT_LIMIT, ?string $cursor = null): \Appsolutely\Sdk\Api\ConditionalResult
+    {
+        SiteApi::assertPaging([], $limit);
+
+        return $this->caller->conditionalPage(Operation::ListMeOrganisations, Organisation::class, $ifNoneMatch, ['limit' => $limit, 'cursor' => $cursor]);
+    }
 }

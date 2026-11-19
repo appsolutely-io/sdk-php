@@ -95,4 +95,35 @@ final readonly class Me
     {
         return new \Appsolutely\Sdk\Resource\Me\Organisations($this->caller);
     }
+
+    public function announcements(): \Appsolutely\Sdk\Resource\Me\Announcements
+    {
+        return new \Appsolutely\Sdk\Resource\Me\Announcements($this->caller);
+    }
+
+    public function deletion(): \Appsolutely\Sdk\Resource\Me\Deletion
+    {
+        return new \Appsolutely\Sdk\Resource\Me\Deletion($this->caller);
+    }
+
+    public function messagePreferences(): \Appsolutely\Sdk\Resource\Me\MessagePreferences
+    {
+        return new \Appsolutely\Sdk\Resource\Me\MessagePreferences($this->caller);
+    }
+
+    public function messages(): \Appsolutely\Sdk\Resource\Me\Messages
+    {
+        return new \Appsolutely\Sdk\Resource\Me\Messages($this->caller);
+    }
+
+    public function realtime(): \Appsolutely\Sdk\Resource\Me\Realtime
+    {
+        return new \Appsolutely\Sdk\Resource\Me\Realtime($this->caller);
+    }
+
+    /** @return \Appsolutely\Sdk\Api\ConditionalResult<Member> */
+    public function getConditional(string $ifNoneMatch): \Appsolutely\Sdk\Api\ConditionalResult
+    {
+        return $this->caller->conditionalRead(Operation::GetMe, Member::class, $ifNoneMatch);
+    }
 }

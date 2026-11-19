@@ -58,6 +58,18 @@ final class AdminClientTest extends TestCase
         self::assertSame('Bearer admin-access-1', $site[0]->getHeaderLine('Authorization'));
     }
 
+    public function testMemberMessagesCanBeReadThroughTheRawAdministratorClient(): void
+    {
+        $this->admin(['admin:member-messages:read'])->raw()->get('/api/admin/v1/member-messages');
+
+        $requests = $this->provider->siteRequests();
+        self::assertCount(1, $requests);
+        self::assertSame('/api/admin/v1/member-messages', $requests[0]->getUri()->getPath());
+        self::assertSame('Bearer admin-access-1', $requests[0]->getHeaderLine('Authorization'));
+        $tokenRequests = $this->provider->requestsTo('POST', self::TOKEN_URL);
+        self::assertSame('admin:member-messages:read', FakeProvider::form($tokenRequests[0])['scope']);
+    }
+
     public function testTheTokenIsKeptBetweenCallsAndApartFromTheBackendsToken(): void
     {
         $this->provider->backendClient()->backend()->raw()->get('/api/v1/client');

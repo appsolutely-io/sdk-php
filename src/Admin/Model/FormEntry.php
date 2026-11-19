@@ -20,7 +20,7 @@ final readonly class FormEntry implements AdminModel
 
     /**
      * @param ?int $isSpam `SPAM` or `NOT_SPAM`
-     * @param ?string $data the submitted fields, as the panel holds them
+     * @param array<array-key, mixed>|null $data the submitted fields as a decoded object or list
      * @param array<array-key, mixed> $extra the members the site sent that this class has no property for, as decoded
      */
     public function __construct(
@@ -32,7 +32,7 @@ final readonly class FormEntry implements AdminModel
         public ?string $userName,
         public ?int $isSpam,
         public ?DateTimeImmutable $submittedAt,
-        public ?string $data,
+        public ?array $data,
         public ?string $referer,
         public ?string $userAgent,
         public array $extra = [],
@@ -41,6 +41,11 @@ final readonly class FormEntry implements AdminModel
     /** @internal */
     public static function from(#[\SensitiveParameter] Fields $json): static
     {
+        $data = $json->any('data');
+        if ($data !== null && !is_array($data)) {
+            throw new \Appsolutely\Sdk\Exception\UnexpectedResponseException('FormEntry.data must be an object, a list or null.', 0, self::SCHEMA);
+        }
+
         return new self(
             id: $json->string('id'),
             formName: $json->nullableString('form_name'),
@@ -50,7 +55,7 @@ final readonly class FormEntry implements AdminModel
             userName: $json->nullableString('user_name'),
             isSpam: $json->nullableInt('is_spam'),
             submittedAt: $json->nullableTime('submitted_at'),
-            data: $json->nullableString('data'),
+            data: $data,
             referer: $json->nullableString('referer'),
             userAgent: $json->nullableString('user_agent'),
             extra: $json->extra(),

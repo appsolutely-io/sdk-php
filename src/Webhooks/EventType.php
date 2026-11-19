@@ -26,6 +26,7 @@ final class EventType
     public const string ORDER_SHIPPED = 'order.shipped';
     public const string ORDER_CANCELLED = 'order.cancelled';
     public const string ORDER_STATUS_UPDATED = 'order.status_updated';
+    public const string ORDER_PAYMENT_METHOD_SWITCHED = 'order.payment_method_switched';
 
     /** The shop gave up on being paid for an unpaid order; not a cancellation. */
     public const string ORDER_EXPIRED = 'order.expired';

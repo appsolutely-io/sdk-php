@@ -17,6 +17,7 @@ use Appsolutely\Sdk\Webhooks\Events\ArticleEvent;
 use Appsolutely\Sdk\Webhooks\Events\FormSubmittedEvent;
 use Appsolutely\Sdk\Webhooks\Events\OrderEvent;
 use Appsolutely\Sdk\Webhooks\Events\OrderPaidEvent;
+use Appsolutely\Sdk\Webhooks\Events\OrderPaymentMethodSwitchedEvent;
 use Appsolutely\Sdk\Webhooks\Events\PageEvent;
 use Appsolutely\Sdk\Webhooks\Events\PaymentReturnedEvent;
 use Appsolutely\Sdk\Webhooks\Events\PingEvent;
@@ -593,7 +594,7 @@ final class TypedEventTest extends TestCase
             'page.created', 'page.updated', 'page.deleted',
             'form.submitted',
             'order.paid', 'order.completed', 'order.shipped', 'order.cancelled', 'order.status_updated',
-            'order.expired', 'order.revived', 'order.payment_arrived_late',
+            'order.expired', 'order.revived', 'order.payment_arrived_late', 'order.payment_method_switched',
             'subscription.started', 'subscription.renewed', 'subscription.payment_due', 'subscription.payment_failed',
             'subscription.authentication_required', 'subscription.cancel_scheduled', 'subscription.resumed', 'subscription.ended',
             'refund.requested', 'refund.processed',
@@ -617,6 +618,7 @@ final class TypedEventTest extends TestCase
             FormSubmittedEvent::TYPES,
             OrderEvent::TYPES,
             OrderPaidEvent::TYPES,
+            OrderPaymentMethodSwitchedEvent::TYPES,
             PaymentReturnedEvent::TYPES,
             RefundEvent::TYPES,
             ReferralRewardIssuedEvent::TYPES,
@@ -629,6 +631,18 @@ final class TypedEventTest extends TestCase
         );
         sort($families);
         self::assertSame($expected, $families);
+    }
+
+    public function testAPaymentMethodSwitchCarriesTheOrderAndBothAttemptReferences(): void
+    {
+        $event = self::deliver(EventType::ORDER_PAYMENT_METHOD_SWITCHED, SiteFixture::json('order', ['from_payment' => 'attempt-old', 'to_payment' => 'attempt-new', 'actor' => 'member', 'current_payment' => 'attempt-new']));
+
+        self::assertInstanceOf(OrderPaymentMethodSwitchedEvent::class, $event);
+        self::assertSame('attempt-old', $event->fromPayment);
+        self::assertSame('attempt-new', $event->toPayment);
+        self::assertSame(OrderPaymentMethodSwitchedEvent::ACTOR_MEMBER, $event->actor);
+        self::assertSame('attempt-new', $event->order->currentPayment);
+        self::assertSame([], $event->order->extra);
     }
 
     public function testTheEnvelopeNamesWhetherRealMoneyIsBehindTheEvent(): void

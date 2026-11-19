@@ -140,6 +140,35 @@ final class OrdersTest extends TestCase
         self::api($site)->me()->orders()->get('gone');
     }
 
+    public function testPaymentSwitchUsesTheSelectedMethodCurrentAttemptAndCallersKey(): void
+    {
+        $site = (new SiteRecorder())->json(SiteFixture::record('order', ['current_payment' => 'attempt-new', 'payment_methods' => [['id' => 'method-two', 'title' => 'Card']], 'attempts' => [['reference' => 'attempt-old', 'status' => 'failed', 'end_reason' => 'declined', 'end_reason_label' => 'Declined']]]));
+        $answer = self::api($site)->me()->orders()->switchPaymentMethod('order/one', 'method-two', 'attempt-old', 'switch-once');
+
+        self::assertSame('POST /api/v1/me/orders/order%2Fone/payment-method', $site->line());
+        self::assertSame(['payment_method' => 'method-two', 'from_payment' => 'attempt-old'], $site->body());
+        self::assertSame('switch-once', $answer->idempotencyKey);
+        self::assertSame('attempt-new', $answer->value->currentPayment);
+        self::assertNotNull($answer->value->paymentMethods);
+        self::assertSame('method-two', $answer->value->paymentMethods[0]->id);
+        self::assertSame('declined', $answer->value->attempts[0]->endReason);
+    }
+
+    public function testAPaymentSwitchWithoutACurrentAttemptOmitsItsReference(): void
+    {
+        $site = (new SiteRecorder())->json(self::order());
+        self::api($site)->me()->orders()->switchPaymentMethod('order-one', 'method-two');
+        self::assertSame(['payment_method' => 'method-two'], $site->body());
+        self::assertNotSame('', $site->request()->getHeaderLine('Idempotency-Key'));
+    }
+
+    public function testAStalePaymentSwitchIsNotTreatedAsASuccess(): void
+    {
+        $site = (new SiteRecorder())->problem(409, 'order-payment-changed');
+        $this->expectException(\Appsolutely\Sdk\Exception\ConflictException::class);
+        self::api($site)->me()->orders()->switchPaymentMethod('order-one', 'method-two', 'attempt-old');
+    }
+
     private static function api(SiteRecorder $site): MemberApi
     {
         return $site->provider->client()->forMember('member-access-token')->api();
