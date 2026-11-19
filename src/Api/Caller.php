@@ -159,6 +159,45 @@ final readonly class Caller
     }
 
     /**
+     * @template T of SchemaModel
+     * @param class-string<T> $model
+     * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query
+     * @return ConditionalResult<T>
+     */
+    public function conditionalRead(Operation $operation, string $model, string $ifNoneMatch, #[\SensitiveParameter] array $query = []): ConditionalResult
+    {
+        return $this->conditional($operation, $ifNoneMatch, $query, static fn(ApiResponse $response): SchemaModel => $model::from(Fields::of(self::objectOf($response, $operation), $model::SCHEMA)));
+    }
+
+    /**
+     * @template T of SchemaModel
+     * @param class-string<T> $model
+     * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query
+     * @return ConditionalResult<Page<T>>
+     */
+    public function conditionalPage(Operation $operation, string $model, string $ifNoneMatch, #[\SensitiveParameter] array $query = []): ConditionalResult
+    {
+        return $this->conditional($operation, $ifNoneMatch, $query, static fn(ApiResponse $response): Page => Page::fromResponse($response, $operation->path())->map(static fn(#[\SensitiveParameter] array $item): SchemaModel => $model::from(Fields::of($item, $model::SCHEMA))));
+    }
+
+    /**
+     * @template T
+     * @param array<string, string|int|bool|DateTimeInterface|list<string>|null> $query
+     * @param Closure(ApiResponse): T $decode
+     * @return ConditionalResult<T>
+     */
+    private function conditional(Operation $operation, string $ifNoneMatch, #[\SensitiveParameter] array $query, Closure $decode): ConditionalResult
+    {
+        $this->assertAudience($operation);
+        if (!in_array($operation, [Operation::GetMe, Operation::ListMeEntitlements, Operation::ListMeOrganisations, Operation::ListMeMessages, Operation::DigestMeRealtime], true)) {
+            throw new LogicException(sprintf('%s does not document conditional reads.', $operation->value));
+        }
+        $response = $this->api->getConditional($operation->path(), $ifNoneMatch, self::query($query));
+
+        return new ConditionalResult($response->status === 304 ? null : $decode($response), $response);
+    }
+
+    /**
      * Every item of a cursor list as a model, a page at a time.
      *
      * @template T of SchemaModel

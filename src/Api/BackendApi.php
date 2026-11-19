@@ -149,4 +149,9 @@ final readonly class BackendApi
     {
         return new \Appsolutely\Sdk\Resource\Backend\OrganisationRoles($this->backend);
     }
+
+    public function memberMessages(): \Appsolutely\Sdk\Resource\Backend\MemberMessages
+    {
+        return new \Appsolutely\Sdk\Resource\Backend\MemberMessages($this->backend);
+    }
 }

@@ -25,6 +25,18 @@ final class OrdersTest extends TestCase
         return SiteFixture::record('order', ['id' => $id]);
     }
 
+    public function testTheStatusFilterAndExistingPagingArgumentsAreSentOnEveryPage(): void
+    {
+        $site = (new SiteRecorder())->json(['data' => [], 'next_cursor' => 'next/page'])->json(['data' => [], 'next_cursor' => null]);
+        $orders = self::api($site)->me()->orders()->list('created_at', 'desc', 10, status: 'paid');
+
+        $orders->page();
+        $orders->page('next/page');
+
+        self::assertSame('sort=created_at&order=desc&status=paid&limit=10', $site->request()->getUri()->getQuery());
+        self::assertSame('sort=created_at&order=desc&status=paid&limit=10&cursor=next%2Fpage', $site->request(1)->getUri()->getQuery());
+    }
+
     public function testAnOrderIsReadWithMoneyInMinorUnits(): void
     {
         $site = (new SiteRecorder())->json(self::order('ord-2'));
@@ -138,6 +150,35 @@ final class OrdersTest extends TestCase
         $this->expectException(NotFoundException::class);
 
         self::api($site)->me()->orders()->get('gone');
+    }
+
+    public function testPaymentSwitchUsesTheSelectedMethodCurrentAttemptAndCallersKey(): void
+    {
+        $site = (new SiteRecorder())->json(SiteFixture::record('order', ['current_payment' => 'attempt-new', 'payment_methods' => [['id' => 'method-two', 'title' => 'Card']], 'attempts' => [['reference' => 'attempt-old', 'status' => 'failed', 'end_reason' => 'declined', 'end_reason_label' => 'Declined']]]));
+        $answer = self::api($site)->me()->orders()->switchPaymentMethod('order/one', 'method-two', 'attempt-old', 'switch-once');
+
+        self::assertSame('POST /api/v1/me/orders/order%2Fone/payment-method', $site->line());
+        self::assertSame(['payment_method' => 'method-two', 'from_payment' => 'attempt-old'], $site->body());
+        self::assertSame('switch-once', $answer->idempotencyKey);
+        self::assertSame('attempt-new', $answer->value->currentPayment);
+        self::assertNotNull($answer->value->paymentMethods);
+        self::assertSame('method-two', $answer->value->paymentMethods[0]->id);
+        self::assertSame('declined', $answer->value->attempts[0]->endReason);
+    }
+
+    public function testAPaymentSwitchWithoutACurrentAttemptOmitsItsReference(): void
+    {
+        $site = (new SiteRecorder())->json(self::order());
+        self::api($site)->me()->orders()->switchPaymentMethod('order-one', 'method-two');
+        self::assertSame(['payment_method' => 'method-two'], $site->body());
+        self::assertNotSame('', $site->request()->getHeaderLine('Idempotency-Key'));
+    }
+
+    public function testAStalePaymentSwitchIsNotTreatedAsASuccess(): void
+    {
+        $site = (new SiteRecorder())->problem(409, 'order-payment-changed');
+        $this->expectException(\Appsolutely\Sdk\Exception\ConflictException::class);
+        self::api($site)->me()->orders()->switchPaymentMethod('order-one', 'method-two', 'attempt-old');
     }
 
     private static function api(SiteRecorder $site): MemberApi

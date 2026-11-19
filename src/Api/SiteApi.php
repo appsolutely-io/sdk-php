@@ -107,6 +107,18 @@ final readonly class SiteApi
     }
 
     /**
+     * @param array<string, string|int|bool|list<string>|null> $query
+     */
+    public function getConditional(string $path, string $ifNoneMatch, #[\SensitiveParameter] array $query = [], ?string $requestId = null): ApiResponse
+    {
+        if ($ifNoneMatch === '' || preg_match('/[^\x20-\x7E\x80-\xFF]/', $ifNoneMatch) === 1) {
+            throw new InvalidArgumentValueException('An If-None-Match value must be non-empty and contain no control characters.');
+        }
+
+        return $this->call('GET', $path, $query, null, $requestId, retryable: true, ifNoneMatch: $ifNoneMatch);
+    }
+
+    /**
      * One page of a list.
      *
      * @param array<string, string|int|bool|list<string>|null> $query the list's filters, the same for every page
@@ -312,6 +324,7 @@ final readonly class SiteApi
         bool $retryable = false,
         ?string $idempotencyKey = null,
         ?string $ifMatch = null,
+        ?string $ifNoneMatch = null,
     ): ApiResponse {
         $url = $this->url($path, $query);
         $requestId ??= Uuid::v4();
@@ -330,6 +343,9 @@ final readonly class SiteApi
             self::assertHeaderValue(Header::IF_MATCH, $ifMatch);
             $headers[Header::IF_MATCH] = $ifMatch;
         }
+        if ($ifNoneMatch !== null) {
+            $headers[Header::IF_NONE_MATCH] = $ifNoneMatch;
+        }
         $encoded = $body === null ? null : self::encode($body);
 
         $attempt = 0;
@@ -347,7 +363,7 @@ final readonly class SiteApi
             $context['status'] = $response->getStatusCode();
             $this->logger->debug(sprintf('%s %s answered %d.', $method, $context['path'], $context['status']), $context);
 
-            if (HttpTransport::isSuccessful($response)) {
+            if (HttpTransport::isSuccessful($response) || ($ifNoneMatch !== null && $response->getStatusCode() === 304)) {
                 return $this->answer($response, $method, $path, $requestId, $idempotencyKey);
             }
 
@@ -434,7 +450,7 @@ final readonly class SiteApi
         $status = $response->getStatusCode();
         $body = (string) $response->getBody();
         $data = null;
-        if ($body !== '') {
+        if ($status !== 304 && $body !== '') {
             try {
                 $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
             } catch (JsonException) {

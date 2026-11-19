@@ -532,7 +532,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 191 }, scopes: { type: array, items: { type: string, enum: ['admin:articles:read', 'admin:articles:write', 'admin:articles:delete', 'admin:article-categories:read', 'admin:article-categories:write', 'admin:article-categories:delete', 'admin:article-categories:move', 'admin:article-categories:restore', 'admin:pages:read', 'admin:pages:write', 'admin:pages:delete', 'admin:pages:publish', 'admin:pages:restore', 'admin:pages:bulk-archive', 'admin:menus:read', 'admin:menus:write', 'admin:menus:delete', 'admin:menus:move', 'admin:menu-items:read', 'admin:menu-items:write', 'admin:menu-items:delete', 'admin:menu-profiles:read', 'admin:menu-profiles:write', 'admin:menu-profiles:delete', 'admin:media-files:read', 'admin:media-files:delete', 'admin:media-files:upload', 'admin:media-files:attach', 'admin:file-attachments:read', 'admin:file-attachments:write', 'admin:file-attachments:delete', 'admin:forms:read', 'admin:forms:write', 'admin:forms:delete', 'admin:form-fields:read', 'admin:form-fields:write', 'admin:form-fields:delete', 'admin:form-entries:read', 'admin:form-entries:mark-valid', 'admin:form-entries:mark-spam', 'admin:form-entries:export-csv', 'admin:form-entries:export-files', 'admin:products:read', 'admin:products:write', 'admin:products:delete', 'admin:products:prices', 'admin:products:publish', 'admin:product-categories:read', 'admin:product-categories:write', 'admin:product-categories:delete', 'admin:product-categories:move', 'admin:product-categories:restore', 'admin:product-attributes:read', 'admin:product-attributes:write', 'admin:product-attributes:delete', 'admin:product-reviews:read', 'admin:product-reviews:approve', 'admin:product-reviews:reject', 'admin:inventory-movements:read', 'admin:members:read', 'admin:members:suspend', 'admin:members:reinstate', 'admin:members:cancel-deletion', 'admin:members:grant-entitlement', 'admin:members:revoke-entitlement', 'admin:support-tickets:read', 'admin:support-tickets:reply', 'admin:support-tickets:close', 'admin:referral-rewards:read', 'admin:referral-rewards:withdraw', 'admin:orders:read', 'admin:orders:mark-paid', 'admin:orders:confirm-received', 'admin:orders:not-received', 'admin:orders:mark-shipped', 'admin:orders:mark-completed', 'admin:orders:cancel', 'admin:orders:send-payment-request', 'admin:orders:withdraw-payment-request', 'admin:orders:record-chargeback', 'admin:orders:record-chargeback-won', 'admin:orders:resolve-notice', 'admin:refunds:read', 'admin:refunds:approve', 'admin:refunds:reject', 'admin:refunds:mark-refunded', 'admin:refunds:attribute', 'admin:refunds:record-as-own', 'admin:refunds:dismiss', 'admin:refunds:cover', 'admin:refund-requests:read', 'admin:refund-requests:approve', 'admin:refund-requests:decline', 'admin:invoices:read', 'admin:invoices:download', 'admin:invoices:export', 'admin:credit-notes:read', 'admin:credit-notes:download', 'admin:coupons:read', 'admin:coupons:write', 'admin:coupons:delete', 'admin:coupons:lock-referral-code', 'admin:coupons:clear-referral-code', 'admin:vouchers:read', 'admin:vouchers:refund', 'admin:vouchers:release', 'admin:vouchers:void', 'admin:voucher-allocations:read', 'admin:voucher-allocations:mark-reviewed', 'admin:voucher-allocations:take-back', 'admin:unmatched-settlements:read', 'admin:unmatched-settlements:mark-handled', 'admin:unmatched-settlements:refund', 'admin:unmatched-settlements:replay', 'admin:tax-rates:read', 'admin:tax-rates:write', 'admin:tax-rates:delete', 'admin:shipping-zones:read', 'admin:shipping-zones:write', 'admin:shipping-zones:delete', 'admin:billing-entry-rules:read', 'admin:subscriptions:read', 'admin:subscriptions:end', 'admin:subscriptions:cancel-at-period-end', 'admin:subscriptions:retry-first-payment', 'admin:subscriptions:forgive-period', 'admin:subscriptions:release-held-period', 'admin:subscriptions:end-held-subscription', 'admin:subscriptions:resolve-charged', 'admin:subscriptions:resolve-change-charged', 'admin:subscriptions:send-owed-stop', 'admin:subscriptions:attach-test-clock', 'admin:subscriptions:advance-test-clock', 'admin:webhook-subscriptions:read', 'admin:webhook-subscriptions:write', 'admin:webhook-subscriptions:delete', 'admin:webhook-subscriptions:test', 'admin:webhook-subscriptions:retire-secret', 'admin:webhook-deliveries:read', 'admin:webhook-deliveries:redeliver', 'admin:oauth-clients:read', 'admin:notification-rules:read', 'admin:notification-rules:write', 'admin:notification-rules:delete', 'admin:notification-rules:test', 'admin:notification-templates:read', 'admin:notification-senders:read', 'admin:notification-queues:read', 'admin:notification-queues:retry', 'admin:notification-queues:cancel', 'admin:notification-queues:process-queue', 'admin:notification-queues:retry-failed', 'admin:crash-projects:read', 'admin:crash-projects:write', 'admin:release-versions:read', 'admin:release-builds:read', 'admin:settings:read', 'admin:settings:write', 'admin:settings:switches', 'admin:privacy-settings:read', 'admin:starter-content:read', 'admin:site-domains:read'] } }, allowed_ranges: { type: [array, 'null'], items: { type: string } }, current_password: { type: string, format: password, writeOnly: true } }
+              properties: { name: { type: string, maxLength: 191 }, scopes: { type: array, items: { type: string, enum: ['admin:articles:read', 'admin:articles:write', 'admin:articles:delete', 'admin:article-categories:read', 'admin:article-categories:write', 'admin:article-categories:delete', 'admin:article-categories:move', 'admin:article-categories:restore', 'admin:pages:read', 'admin:pages:write', 'admin:pages:delete', 'admin:pages:publish', 'admin:pages:restore', 'admin:pages:bulk-archive', 'admin:menus:read', 'admin:menus:write', 'admin:menus:delete', 'admin:menus:move', 'admin:menu-items:read', 'admin:menu-items:write', 'admin:menu-items:delete', 'admin:menu-profiles:read', 'admin:menu-profiles:write', 'admin:menu-profiles:delete', 'admin:media-files:read', 'admin:media-files:delete', 'admin:media-files:upload', 'admin:media-files:attach', 'admin:file-attachments:read', 'admin:file-attachments:write', 'admin:file-attachments:delete', 'admin:forms:read', 'admin:forms:write', 'admin:forms:delete', 'admin:form-fields:read', 'admin:form-fields:write', 'admin:form-fields:delete', 'admin:form-entries:read', 'admin:form-entries:mark-valid', 'admin:form-entries:mark-spam', 'admin:form-entries:export-csv', 'admin:form-entries:export-files', 'admin:products:read', 'admin:products:write', 'admin:products:delete', 'admin:products:prices', 'admin:products:publish', 'admin:product-categories:read', 'admin:product-categories:write', 'admin:product-categories:delete', 'admin:product-categories:move', 'admin:product-categories:restore', 'admin:product-attributes:read', 'admin:product-attributes:write', 'admin:product-attributes:delete', 'admin:product-reviews:read', 'admin:product-reviews:approve', 'admin:product-reviews:reject', 'admin:inventory-movements:read', 'admin:members:read', 'admin:members:suspend', 'admin:members:reinstate', 'admin:members:cancel-deletion', 'admin:members:grant-entitlement', 'admin:members:revoke-entitlement', 'admin:support-tickets:read', 'admin:support-tickets:reply', 'admin:support-tickets:close', 'admin:referral-rewards:read', 'admin:referral-rewards:withdraw', 'admin:orders:read', 'admin:orders:mark-paid', 'admin:orders:confirm-received', 'admin:orders:not-received', 'admin:orders:mark-shipped', 'admin:orders:mark-completed', 'admin:orders:cancel', 'admin:orders:send-payment-request', 'admin:orders:withdraw-payment-request', 'admin:orders:record-chargeback', 'admin:orders:record-chargeback-won', 'admin:orders:resolve-notice', 'admin:refunds:read', 'admin:refunds:approve', 'admin:refunds:reject', 'admin:refunds:mark-refunded', 'admin:refunds:attribute', 'admin:refunds:record-as-own', 'admin:refunds:dismiss', 'admin:refunds:cover', 'admin:refund-requests:read', 'admin:refund-requests:approve', 'admin:refund-requests:decline', 'admin:invoices:read', 'admin:invoices:download', 'admin:invoices:export', 'admin:credit-notes:read', 'admin:credit-notes:download', 'admin:coupons:read', 'admin:coupons:write', 'admin:coupons:delete', 'admin:coupons:lock-referral-code', 'admin:coupons:clear-referral-code', 'admin:vouchers:read', 'admin:vouchers:refund', 'admin:vouchers:release', 'admin:vouchers:void', 'admin:voucher-allocations:read', 'admin:voucher-allocations:mark-reviewed', 'admin:voucher-allocations:take-back', 'admin:unmatched-settlements:read', 'admin:unmatched-settlements:mark-handled', 'admin:unmatched-settlements:refund', 'admin:unmatched-settlements:replay', 'admin:tax-rates:read', 'admin:tax-rates:write', 'admin:tax-rates:delete', 'admin:shipping-zones:read', 'admin:shipping-zones:write', 'admin:shipping-zones:delete', 'admin:billing-entry-rules:read', 'admin:subscriptions:read', 'admin:subscriptions:end', 'admin:subscriptions:cancel-at-period-end', 'admin:subscriptions:retry-first-payment', 'admin:subscriptions:forgive-period', 'admin:subscriptions:release-held-period', 'admin:subscriptions:end-held-subscription', 'admin:subscriptions:resolve-charged', 'admin:subscriptions:resolve-change-charged', 'admin:subscriptions:send-owed-stop', 'admin:subscriptions:attach-test-clock', 'admin:subscriptions:advance-test-clock', 'admin:webhook-subscriptions:read', 'admin:webhook-subscriptions:write', 'admin:webhook-subscriptions:delete', 'admin:webhook-subscriptions:test', 'admin:webhook-subscriptions:retire-secret', 'admin:webhook-deliveries:read', 'admin:webhook-deliveries:redeliver', 'admin:oauth-clients:read', 'admin:notification-rules:read', 'admin:notification-rules:write', 'admin:notification-rules:delete', 'admin:notification-rules:test', 'admin:member-messages:read', 'admin:member-messages:write', 'admin:member-messages:preview', 'admin:member-messages:preview-for-edit', 'admin:member-messages:cancel', 'admin:member-messages:withdraw', 'admin:member-messages:acknowledge-push', 'admin:member-messages:resend-push', 'admin:notification-templates:read', 'admin:notification-senders:read', 'admin:notification-queues:read', 'admin:notification-queues:retry', 'admin:notification-queues:cancel', 'admin:notification-queues:process-queue', 'admin:notification-queues:retry-failed', 'admin:crash-projects:read', 'admin:crash-projects:write', 'admin:release-versions:read', 'admin:release-builds:read', 'admin:settings:read', 'admin:settings:write', 'admin:settings:switches', 'admin:privacy-settings:read', 'admin:starter-content:read', 'admin:site-domains:read'] } }, allowed_ranges: { type: [array, 'null'], items: { type: string } }, current_password: { type: string, format: password, writeOnly: true } }
               required: [name, scopes, current_password]
       responses:
         200:
@@ -1125,6 +1125,271 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
       x-panel-only: true
       description: "Served to the panel's own session only; refused to every credential."
+  /app-clients:
+    get:
+      operationId: app-clients.index
+      tags:
+        - app-clients
+      summary: 'App Clients: list'
+      security:
+        - administratorCredential: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          description: 'Pages by number instead of by cursor; not sent with `limit` or `cursor`.'
+          schema:
+            type: integer
+            minimum: 1
+        - name: per_page
+          in: query
+          required: false
+          description: 'Rows on a numbered page; only with `page`.'
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: total
+          in: query
+          required: false
+          description: 'Counts the filtered rows as well, in either mode, at the cost of a count query.'
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          required: false
+          description: 'By cursor, one of: id. By page number, any of the listed columns.'
+          schema:
+            type: string
+            enum:
+              - name
+              - revoked
+              - created_at
+              - id
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        200:
+          description: 'One page of the list.'
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: array, items: { allOf: [{ $ref: '#/components/schemas/AppClient' }, { type: object, properties: { _permissions: { type: object, additionalProperties: { type: boolean }, description: "What the person may do with the row, by action. Answered to the panel's own session only, never to a credential." } } }] } }, next_cursor: { type: string, description: 'By cursor: absent on the last page.' }, page: { type: integer, description: 'By page number: the page answered.' }, per_page: { type: integer, description: 'By page number: the rows a page holds.' }, next_page: { type: integer, description: 'By page number: absent on the last page.' }, total: { type: integer, description: 'The filtered rows, when `total` was asked for.' } }, required: [data] }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+      x-panel-only: true
+      description: "Served to the panel's own session only; refused to every credential."
+    post:
+      operationId: app-clients.store
+      tags:
+        - app-clients
+      summary: 'App Clients: create'
+      security:
+        - administratorCredential: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: 'One key per intended write, 1 to 255 characters once unquoted and at most 512 on the wire; the same request sent again is answered as the first was.'
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { name: { type: string, maxLength: 255 }, mode: { type: [string, 'null'], enum: [production, test, null] }, redirect_uris: { type: array, items: { type: string } }, scopes: { type: [array, 'null'], items: { type: string, enum: [openid, offline_access, profile, email, roles, 'org:read', 'org:write', 'me:read', 'me:write', 'me-deletion:write', 'me-orders:read', 'me-addresses:read', 'me-addresses:write', 'me-entitlements:read', 'me-push-devices:write', 'me-checkout:write', 'me-store-purchases:write', 'me-subscriptions:read', 'me-subscriptions:write', 'me-referral:read', 'me-billing:read', 'me-messages:read', 'me-messages:write', 'me-realtime:read', 'reference-data:read', 'reference-data:read-retired'] } }, product_id: { type: [string, 'null'], format: uuid }, refresh_reuse_grace_seconds: { type: integer }, session_lifetime_days: { type: integer }, session_idle_timeout_days: { type: [integer, 'null'] }, first_party: { type: boolean } }
+              required: [name, redirect_uris]
+      responses:
+        201:
+          description: 'The record created.'
+          headers:
+            ETag:
+              description: 'The version answered, to send back in `If-Match`.'
+              schema: { type: string }
+            Location:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppClient' }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+      x-panel-only: true
+      description: "Served to the panel's own session only; refused to every credential."
+  '/app-clients/{app_client}':
+    delete:
+      operationId: app-clients.destroy
+      tags:
+        - app-clients
+      summary: 'App Clients: delete'
+      security:
+        - administratorCredential: []
+      parameters:
+        - name: app_client
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: If-Match
+          in: header
+          required: true
+          description: 'The `ETag` of the version read.'
+          schema:
+            type: string
+      responses:
+        204:
+          description: Deleted.
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+      x-panel-only: true
+      description: "Served to the panel's own session only; refused to every credential."
+    get:
+      operationId: app-clients.show
+      tags:
+        - app-clients
+      summary: 'App Clients: show'
+      security:
+        - administratorCredential: []
+      parameters:
+        - name: app_client
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'The record.'
+          headers:
+            ETag:
+              description: 'The version answered, to send back in `If-Match`.'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppClient' }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+      x-panel-only: true
+      description: "Served to the panel's own session only; refused to every credential."
+    patch:
+      operationId: app-clients.update
+      tags:
+        - app-clients
+      summary: 'App Clients: edit'
+      security:
+        - administratorCredential: []
+      parameters:
+        - name: app_client
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: If-Match
+          in: header
+          required: true
+          description: 'The `ETag` of the version read.'
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { name: { type: string, maxLength: 255 }, redirect_uris: { type: array, items: { type: string } }, scopes: { type: [array, 'null'], items: { type: string, enum: [openid, offline_access, profile, email, roles, 'org:read', 'org:write', 'me:read', 'me:write', 'me-deletion:write', 'me-orders:read', 'me-addresses:read', 'me-addresses:write', 'me-entitlements:read', 'me-push-devices:write', 'me-checkout:write', 'me-store-purchases:write', 'me-subscriptions:read', 'me-subscriptions:write', 'me-referral:read', 'me-billing:read', 'me-messages:read', 'me-messages:write', 'me-realtime:read', 'reference-data:read', 'reference-data:read-retired'] } }, product_id: { type: [string, 'null'], format: uuid }, refresh_reuse_grace_seconds: { type: integer }, session_lifetime_days: { type: integer }, session_idle_timeout_days: { type: [integer, 'null'] }, first_party: { type: boolean } }
+      responses:
+        200:
+          description: 'The record.'
+          headers:
+            ETag:
+              description: 'The version answered, to send back in `If-Match`.'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppClient' }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+      x-panel-only: true
+      description: "Served to the panel's own session only; refused to every credential."
+  '/app-clients/{app_client}/actions/revoke':
+    post:
+      operationId: app-clients.revoke
+      tags:
+        - app-clients
+      summary: 'App Clients: revoke'
+      security:
+        - administratorCredential: []
+      parameters:
+        - name: app_client
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: 'One key per intended write, 1 to 255 characters once unquoted and at most 512 on the wire; the same request sent again is answered as the first was.'
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        200:
+          description: "The action's answer."
+          content:
+            application/json:
+              schema: { type: object }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+      x-panel-only: true
+      description: "Served to the panel's own session only; refused to every credential."
   /article-categories:
     get:
       operationId: article-categories.index
@@ -1647,6 +1912,67 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+  /auth/vouched:
+    post:
+      operationId: vouched.store
+      tags:
+        - panel
+      summary: 'Panel: external-sign-in'
+      description: 'A browser authentication door. A completed sign-in issues an HttpOnly panel cookie; restricted challenges grant no ordinary API authority. Challenge replay is refused and secrets are never replayed.'
+      x-panel-only: true
+      security: []
+      responses:
+        200:
+          description: 'The answer.'
+          content:
+            application/json:
+              schema: { type: object }
+        202:
+          description: 'External identity accepted; choose a password or complete the browser-bound authenticator challenge. No panel credential has been issued.'
+          content:
+            application/json:
+              schema: { oneOf: [{ type: object, required: [authentication, expires_at, submit_url], additionalProperties: false, properties: { authentication: { type: string, enum: [password] }, expires_at: { type: integer, description: 'Absolute expiry as a Unix timestamp in seconds.' }, submit_url: { type: string, format: uri } } }, { type: object, required: [authentication, challenge], properties: { authentication: { type: string, enum: [totp] }, challenge: { type: object, required: [id, expires_at], properties: { id: { type: string, format: uuid }, expires_at: { type: integer, description: 'Expiry as a Unix timestamp in seconds.' } } } }, additionalProperties: false }] }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { code: { type: string, writeOnly: true, maxLength: 512 } }
+              required: [code]
+  /auth/vouched/password:
+    post:
+      operationId: vouched.password.store
+      tags:
+        - panel
+      summary: 'Panel: external-password-sign-in'
+      description: 'A browser authentication door. A completed sign-in issues an HttpOnly panel cookie; restricted challenges grant no ordinary API authority. Challenge replay is refused and secrets are never replayed.'
+      x-panel-only: true
+      security: []
+      responses:
+        200:
+          description: 'The answer.'
+          content:
+            application/json:
+              schema: { type: object }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { password: { type: string, writeOnly: true, minLength: 8 }, password_confirmation: { type: string, writeOnly: true, minLength: 8, description: 'Must exactly match password.' }, code: { type: string, writeOnly: true, description: 'The native authenticator code when the server-held password permission requires it.' } }
+              required: [password, password_confirmation]
   /backend-clients:
     get:
       operationId: backend-clients.index
@@ -1743,7 +2069,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 255 }, mode: { type: [string, 'null'], enum: [production, test] }, product_id: { type: [string, 'null'], format: uuid }, scopes: { type: array, items: { type: string, enum: ['entitlements:read', 'checkout:write', 'store-purchases:write', 'roles:read', 'roles:write', 'seats:read', 'seats:write', 'catalogue:read', 'catalogue:write', 'endpoints:read', 'endpoints:write', 'deliveries:read', 'deliveries:redeliver', 'return-targets:write', 'test-clock:write', 'fulfilments:write', 'reference:read', 'reference:read-retired'] } } }
+              properties: { name: { type: string, maxLength: 255 }, mode: { type: [string, 'null'], enum: [production, test, null] }, product_id: { type: [string, 'null'], format: uuid }, scopes: { type: array, items: { type: string, enum: ['entitlements:read', 'checkout:write', 'store-purchases:write', 'roles:read', 'roles:write', 'seats:read', 'seats:write', 'catalogue:read', 'catalogue:write', 'endpoints:read', 'endpoints:write', 'deliveries:read', 'deliveries:redeliver', 'return-targets:write', 'test-clock:write', 'fulfilments:write', 'messages:write', 'reference:read', 'reference:read-retired'] } } }
               required: [name, scopes]
       responses:
         201:
@@ -2319,6 +2645,8 @@ paths:
           application/json:
             schema:
               type: object
+              properties: { subject: { type: string } }
+              required: [subject]
       responses:
         200:
           description: "The action's answer."
@@ -2361,6 +2689,8 @@ paths:
           application/json:
             schema:
               type: object
+              properties: { subject: { type: string } }
+              required: [subject]
       responses:
         200:
           description: "The action's answer."
@@ -2403,6 +2733,8 @@ paths:
           application/json:
             schema:
               type: object
+              properties: { subject: { type: string }, provider_reference: { type: string, maxLength: 255 } }
+              required: [subject, provider_reference]
       responses:
         200:
           description: "The action's answer."
@@ -3879,7 +4211,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { type: { type: [string, 'null'], maxLength: 255 }, title: { type: [string, 'null'], maxLength: 255 }, status: { type: [integer, 'null'], enum: [1, 0] }, sort_order: { type: [integer, 'null'] }, keyword: { type: [string, 'null'], maxLength: 255 }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, description: { type: [string, 'null'] }, content: { type: [string, 'null'] }, config: { type: [string, 'null'] } }
+              properties: { type: { type: [string, 'null'], maxLength: 255 }, title: { type: [string, 'null'], maxLength: 255 }, status: { type: [integer, 'null'], enum: [1, 0, null] }, sort_order: { type: [integer, 'null'] }, keyword: { type: [string, 'null'], maxLength: 255 }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, description: { type: [string, 'null'] }, content: { type: [string, 'null'] }, config: { type: [object, array, 'null'] } }
       responses:
         200:
           description: 'The record.'
@@ -4503,7 +4835,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 191 }, slug: { type: string, maxLength: 191 }, status: { type: integer, enum: [1, 0] }, description: { type: [string, 'null'] }, target_table: { type: [string, 'null'], maxLength: 191 }, meta_keys_to_collect: { type: [string, 'null'] }, api_access_token: { type: [string, 'null'], maxLength: 64 } }
+              properties: { name: { type: string, maxLength: 191 }, slug: { type: string, maxLength: 191 }, status: { type: integer, enum: [1, 0] }, description: { type: [string, 'null'] }, target_table: { type: [string, 'null'], maxLength: 191 }, meta_keys_to_collect: { type: [object, array, 'null'] }, api_access_token: { type: [string, 'null'], maxLength: 64 } }
               required: [name, slug, status]
       responses:
         201:
@@ -4609,7 +4941,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 191 }, slug: { type: string, maxLength: 191 }, status: { type: integer, enum: [1, 0] }, description: { type: [string, 'null'] }, target_table: { type: [string, 'null'], maxLength: 191 }, meta_keys_to_collect: { type: [string, 'null'] }, api_access_token: { type: [string, 'null'], maxLength: 64 } }
+              properties: { name: { type: string, maxLength: 191 }, slug: { type: string, maxLength: 191 }, status: { type: integer, enum: [1, 0] }, description: { type: [string, 'null'] }, target_table: { type: [string, 'null'], maxLength: 191 }, meta_keys_to_collect: { type: [object, array, 'null'] }, api_access_token: { type: [string, 'null'], maxLength: 64 } }
       responses:
         200:
           description: 'The record.'
@@ -5389,6 +5721,432 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
       x-panel-only: true
       description: "Served to the panel's own session only; refused to every credential."
+  /member-messages:
+    get:
+      operationId: member-messages.index
+      tags:
+        - member-messages
+      summary: 'Member messages: list'
+      security:
+        - administratorCredential:
+            - 'admin:member-messages:read'
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          description: 'Pages by number instead of by cursor; not sent with `limit` or `cursor`.'
+          schema:
+            type: integer
+            minimum: 1
+        - name: per_page
+          in: query
+          required: false
+          description: 'Rows on a numbered page; only with `page`.'
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: total
+          in: query
+          required: false
+          description: 'Counts the filtered rows as well, in either mode, at the cost of a count query.'
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          required: false
+          description: 'By cursor, one of: id. By page number, any of the listed columns.'
+          schema:
+            type: string
+            enum:
+              - send_at
+              - created_at
+              - id
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        200:
+          description: 'One page of the list.'
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: array, items: { allOf: [{ $ref: '#/components/schemas/MemberMessage' }, { type: object, properties: { _permissions: { type: object, additionalProperties: { type: boolean }, description: "What the person may do with the row, by action. Answered to the panel's own session only, never to a credential." } } }] } }, next_cursor: { type: string, description: 'By cursor: absent on the last page.' }, page: { type: integer, description: 'By page number: the page answered.' }, per_page: { type: integer, description: 'By page number: the rows a page holds.' }, next_page: { type: integer, description: 'By page number: absent on the last page.' }, total: { type: integer, description: 'The filtered rows, when `total` was asked for.' } }, required: [data] }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    post:
+      operationId: member-messages.store
+      tags:
+        - member-messages
+      summary: 'Member messages: create'
+      security:
+        - administratorCredential:
+            - 'admin:member-messages:write'
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: 'One key per intended write, 1 to 255 characters once unquoted and at most 512 on the wire; the same request sent again is answered as the first was.'
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { category: { type: string, enum: [security, account, service, maintenance, product_updates, promotional] }, title: { type: string, maxLength: 120 }, body: { type: string, maxLength: 4000 }, link: { type: [string, 'null'], maxLength: 2048 }, data: { type: [object, 'null'], maxProperties: 20, additionalProperties: { type: [string, number, boolean, 'null'] }, description: 'Flat named values (text, number, true or false, or empty), at most 20 of them and 2048 bytes once written as JSON.' }, channels: { type: [array, 'null'], items: { type: string, enum: [in_app, push] } }, audience_kind: { type: string, enum: [member, segment, everyone] }, audience_member: { type: [string, 'null'], maxLength: 255 }, audience: { type: [object, 'null'], properties: { match: { type: string, enum: [all, any], description: 'Whether a member must meet all of the conditions or any of them.' }, conditions: { type: array, minItems: 1, maxItems: 50, items: { oneOf: [{ type: object, properties: { kind: { const: everyone } }, required: [kind], additionalProperties: false }, { type: object, properties: { kind: { const: subscription }, products: { type: array, minItems: 1, maxItems: 50, items: { type: string }, description: 'Product references.' }, statuses: { type: array, minItems: 1, maxItems: 50, items: { type: string, enum: [trialing, active, past_due, on_hold, incomplete, canceled] }, description: 'Subscription statuses; by default those that entitle.' } }, required: [kind, products], additionalProperties: false }, { type: object, properties: { kind: { const: entitlement }, key: { type: string, minLength: 1, maxLength: 191, pattern: \S } }, required: [kind, key], additionalProperties: false }, { type: object, properties: { kind: { const: feature }, key: { type: string, minLength: 1, maxLength: 191, pattern: '^[a-z0-9_]+(?:\.[a-z0-9_]+)*$' }, value: { type: [boolean, integer], minimum: 0, description: 'A switch, or a whole number of zero or more.' } }, required: [kind, key], additionalProperties: false }, { type: object, properties: { kind: { const: organisation }, organisations: { type: array, minItems: 1, maxItems: 50, items: { type: string }, description: 'Organisation references.' } }, required: [kind, organisations], additionalProperties: false }, { type: object, properties: { kind: { const: role }, roles: { type: array, minItems: 1, maxItems: 50, items: { type: string, minLength: 1, maxLength: 48, pattern: '^[a-z0-9_]+$' }, description: 'Member role keys.' } }, required: [kind, roles], additionalProperties: false }, { type: object, properties: { kind: { const: member }, member: { type: string, minLength: 1, maxLength: 255, pattern: \S, description: 'An account subject.' } }, required: [kind, member], additionalProperties: false }] } } }, required: [match, conditions], additionalProperties: false }, kind: { type: [string, 'null'], enum: [message, announcement, null] }, send_at: { type: [string, 'null'], format: date-time }, starts_at: { type: [string, 'null'], format: date-time }, ends_at: { type: [string, 'null'], format: date-time }, public: { type: boolean }, _confirmations: { type: array, items: { type: string }, description: 'The confirmation key the 409 answer named.' } }
+              required: [category, title, body, audience_kind]
+      responses:
+        201:
+          description: 'The record created.'
+          headers:
+            ETag:
+              description: 'The version answered, to send back in `If-Match`.'
+              schema: { type: string }
+            Location:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberMessage' }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        409:
+          description: 'The message is held until it is confirmed. Nothing was written. The answer says how many members it reaches, with a sample, and the key that confirms exactly this message, its audience and when it goes out; send the same request again with that key in `_confirmations`. Any other conflict is answered as a problem of its own type. A confirmation is a different body, so a keyed endpoint takes it under the same Idempotency-Key only because nothing was kept for the first.'
+          content:
+            application/problem+json:
+              schema: { oneOf: [{ $ref: '#/components/schemas/MemberMessageConfirmation' }, { allOf: [{ $ref: '#/components/schemas/Problem' }, { not: { required: [type], properties: { type: { const: 'https://appsolutely.io/problems/confirmation-required' } } } }] }] }
+  /member-messages/actions/preview:
+    post:
+      operationId: member-messages.preview
+      tags:
+        - member-messages
+      summary: 'Member messages: preview'
+      security:
+        - administratorCredential:
+            - 'admin:member-messages:preview'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { audience_kind: { type: string, enum: [member, segment, everyone] }, audience_member: { type: [string, 'null'], maxLength: 255 }, audience: { type: [object, 'null'], properties: { match: { type: string, enum: [all, any], description: 'Whether a member must meet all of the conditions or any of them.' }, conditions: { type: array, minItems: 1, maxItems: 50, items: { oneOf: [{ type: object, properties: { kind: { const: everyone } }, required: [kind], additionalProperties: false }, { type: object, properties: { kind: { const: subscription }, products: { type: array, minItems: 1, maxItems: 50, items: { type: string }, description: 'Product references.' }, statuses: { type: array, minItems: 1, maxItems: 50, items: { type: string, enum: [trialing, active, past_due, on_hold, incomplete, canceled] }, description: 'Subscription statuses; by default those that entitle.' } }, required: [kind, products], additionalProperties: false }, { type: object, properties: { kind: { const: entitlement }, key: { type: string, minLength: 1, maxLength: 191, pattern: \S } }, required: [kind, key], additionalProperties: false }, { type: object, properties: { kind: { const: feature }, key: { type: string, minLength: 1, maxLength: 191, pattern: '^[a-z0-9_]+(?:\.[a-z0-9_]+)*$' }, value: { type: [boolean, integer], minimum: 0, description: 'A switch, or a whole number of zero or more.' } }, required: [kind, key], additionalProperties: false }, { type: object, properties: { kind: { const: organisation }, organisations: { type: array, minItems: 1, maxItems: 50, items: { type: string }, description: 'Organisation references.' } }, required: [kind, organisations], additionalProperties: false }, { type: object, properties: { kind: { const: role }, roles: { type: array, minItems: 1, maxItems: 50, items: { type: string, minLength: 1, maxLength: 48, pattern: '^[a-z0-9_]+$' }, description: 'Member role keys.' } }, required: [kind, roles], additionalProperties: false }, { type: object, properties: { kind: { const: member }, member: { type: string, minLength: 1, maxLength: 255, pattern: \S, description: 'An account subject.' } }, required: [kind, member], additionalProperties: false }] } } }, required: [match, conditions], additionalProperties: false } }
+              required: [audience_kind]
+      responses:
+        200:
+          description: "The action's answer."
+          content:
+            application/json:
+              schema: { type: object, properties: { count: { type: integer, minimum: 0, description: 'Members the audience reaches now.' }, sample: { type: array, maxItems: 10, items: { type: string }, description: 'Some of them, by account subject.' } }, required: [count, sample], additionalProperties: false }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+      description: 'Shows how many members the audience on the create page reaches now, with a sample of them by account subject. It needs the permission to send to that audience. Display only: it returns no key, writes nothing, and a save asks for its own confirmation whether or not it was used.'
+  /member-messages/actions/preview-for-edit:
+    post:
+      operationId: member-messages.preview-for-edit
+      tags:
+        - member-messages
+      summary: 'Member messages: preview-for-edit'
+      security:
+        - administratorCredential:
+            - 'admin:member-messages:preview-for-edit'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { audience_kind: { type: string, enum: [member, segment, everyone] }, audience_member: { type: [string, 'null'], maxLength: 255 }, audience: { type: [object, 'null'], properties: { match: { type: string, enum: [all, any], description: 'Whether a member must meet all of the conditions or any of them.' }, conditions: { type: array, minItems: 1, maxItems: 50, items: { oneOf: [{ type: object, properties: { kind: { const: everyone } }, required: [kind], additionalProperties: false }, { type: object, properties: { kind: { const: subscription }, products: { type: array, minItems: 1, maxItems: 50, items: { type: string }, description: 'Product references.' }, statuses: { type: array, minItems: 1, maxItems: 50, items: { type: string, enum: [trialing, active, past_due, on_hold, incomplete, canceled] }, description: 'Subscription statuses; by default those that entitle.' } }, required: [kind, products], additionalProperties: false }, { type: object, properties: { kind: { const: entitlement }, key: { type: string, minLength: 1, maxLength: 191, pattern: \S } }, required: [kind, key], additionalProperties: false }, { type: object, properties: { kind: { const: feature }, key: { type: string, minLength: 1, maxLength: 191, pattern: '^[a-z0-9_]+(?:\.[a-z0-9_]+)*$' }, value: { type: [boolean, integer], minimum: 0, description: 'A switch, or a whole number of zero or more.' } }, required: [kind, key], additionalProperties: false }, { type: object, properties: { kind: { const: organisation }, organisations: { type: array, minItems: 1, maxItems: 50, items: { type: string }, description: 'Organisation references.' } }, required: [kind, organisations], additionalProperties: false }, { type: object, properties: { kind: { const: role }, roles: { type: array, minItems: 1, maxItems: 50, items: { type: string, minLength: 1, maxLength: 48, pattern: '^[a-z0-9_]+$' }, description: 'Member role keys.' } }, required: [kind, roles], additionalProperties: false }, { type: object, properties: { kind: { const: member }, member: { type: string, minLength: 1, maxLength: 255, pattern: \S, description: 'An account subject.' } }, required: [kind, member], additionalProperties: false }] } } }, required: [match, conditions], additionalProperties: false } }
+              required: [audience_kind]
+      responses:
+        200:
+          description: "The action's answer."
+          content:
+            application/json:
+              schema: { type: object, properties: { count: { type: integer, minimum: 0, description: 'Members the audience reaches now.' }, sample: { type: array, maxItems: 10, items: { type: string }, description: 'Some of them, by account subject.' } }, required: [count, sample], additionalProperties: false }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+      description: 'Shows how many members the audience on the edit page reaches now, with a sample of them by account subject. It needs the permission to send to that audience. Display only: it returns no key, writes nothing, and a save asks for its own confirmation whether or not it was used.'
+  '/member-messages/{member_message}':
+    get:
+      operationId: member-messages.show
+      tags:
+        - member-messages
+      summary: 'Member messages: show'
+      security:
+        - administratorCredential:
+            - 'admin:member-messages:read'
+      parameters:
+        - name: member_message
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'The record.'
+          headers:
+            ETag:
+              description: 'The version answered, to send back in `If-Match`.'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberMessage' }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    patch:
+      operationId: member-messages.update
+      tags:
+        - member-messages
+      summary: 'Member messages: edit'
+      security:
+        - administratorCredential:
+            - 'admin:member-messages:write'
+      parameters:
+        - name: member_message
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: If-Match
+          in: header
+          required: true
+          description: 'The `ETag` of the version read.'
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { category: { type: string, enum: [security, account, service, maintenance, product_updates, promotional] }, title: { type: string, maxLength: 120 }, body: { type: string, maxLength: 4000 }, link: { type: [string, 'null'], maxLength: 2048 }, data: { type: [object, 'null'], maxProperties: 20, additionalProperties: { type: [string, number, boolean, 'null'] }, description: 'Flat named values (text, number, true or false, or empty), at most 20 of them and 2048 bytes once written as JSON.' }, channels: { type: [array, 'null'], items: { type: string, enum: [in_app, push] } }, audience_kind: { type: string, enum: [member, segment, everyone] }, audience_member: { type: [string, 'null'], maxLength: 255 }, audience: { type: [object, 'null'], properties: { match: { type: string, enum: [all, any], description: 'Whether a member must meet all of the conditions or any of them.' }, conditions: { type: array, minItems: 1, maxItems: 50, items: { oneOf: [{ type: object, properties: { kind: { const: everyone } }, required: [kind], additionalProperties: false }, { type: object, properties: { kind: { const: subscription }, products: { type: array, minItems: 1, maxItems: 50, items: { type: string }, description: 'Product references.' }, statuses: { type: array, minItems: 1, maxItems: 50, items: { type: string, enum: [trialing, active, past_due, on_hold, incomplete, canceled] }, description: 'Subscription statuses; by default those that entitle.' } }, required: [kind, products], additionalProperties: false }, { type: object, properties: { kind: { const: entitlement }, key: { type: string, minLength: 1, maxLength: 191, pattern: \S } }, required: [kind, key], additionalProperties: false }, { type: object, properties: { kind: { const: feature }, key: { type: string, minLength: 1, maxLength: 191, pattern: '^[a-z0-9_]+(?:\.[a-z0-9_]+)*$' }, value: { type: [boolean, integer], minimum: 0, description: 'A switch, or a whole number of zero or more.' } }, required: [kind, key], additionalProperties: false }, { type: object, properties: { kind: { const: organisation }, organisations: { type: array, minItems: 1, maxItems: 50, items: { type: string }, description: 'Organisation references.' } }, required: [kind, organisations], additionalProperties: false }, { type: object, properties: { kind: { const: role }, roles: { type: array, minItems: 1, maxItems: 50, items: { type: string, minLength: 1, maxLength: 48, pattern: '^[a-z0-9_]+$' }, description: 'Member role keys.' } }, required: [kind, roles], additionalProperties: false }, { type: object, properties: { kind: { const: member }, member: { type: string, minLength: 1, maxLength: 255, pattern: \S, description: 'An account subject.' } }, required: [kind, member], additionalProperties: false }] } } }, required: [match, conditions], additionalProperties: false }, send_at: { type: [string, 'null'], format: date-time }, starts_at: { type: [string, 'null'], format: date-time }, ends_at: { type: [string, 'null'], format: date-time }, public: { type: boolean }, _confirmations: { type: array, items: { type: string }, description: 'The confirmation key the 409 answer named.' } }
+      responses:
+        200:
+          description: 'The record.'
+          headers:
+            ETag:
+              description: 'The version answered, to send back in `If-Match`.'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberMessage' }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        409:
+          description: 'The message is held until it is confirmed. Nothing was written. The answer says how many members it reaches, with a sample, and the key that confirms exactly this message, its audience and when it goes out; send the same request again with that key in `_confirmations`. Any other conflict is answered as a problem of its own type. A confirmation is a different body, so a keyed endpoint takes it under the same Idempotency-Key only because nothing was kept for the first.'
+          content:
+            application/problem+json:
+              schema: { oneOf: [{ $ref: '#/components/schemas/MemberMessageConfirmation' }, { allOf: [{ $ref: '#/components/schemas/Problem' }, { not: { required: [type], properties: { type: { const: 'https://appsolutely.io/problems/confirmation-required' } } } }] }] }
+  '/member-messages/{member_message}/actions/acknowledge-push':
+    post:
+      operationId: member-messages.acknowledge-push
+      tags:
+        - member-messages
+      summary: 'Member messages: acknowledge-push'
+      security:
+        - administratorCredential:
+            - 'admin:member-messages:acknowledge-push'
+      parameters:
+        - name: member_message
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: 'One key per intended write, 1 to 255 characters once unquoted and at most 512 on the wire; the same request sent again is answered as the first was.'
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { delivery: { type: string }, _step_up_code: { type: string, format: password, writeOnly: true, description: 'A new verification code, needed when the server asks you to confirm it is you.' }, _confirmations: { type: array, items: { type: string }, description: 'Confirmation keys acknowledged for this request.' } }
+              required: [delivery]
+              additionalProperties: false
+      responses:
+        200:
+          description: "The action's answer."
+          content:
+            application/json:
+              schema: { type: object }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  '/member-messages/{member_message}/actions/cancel':
+    post:
+      operationId: member-messages.cancel
+      tags:
+        - member-messages
+      summary: 'Member messages: cancel'
+      security:
+        - administratorCredential:
+            - 'admin:member-messages:cancel'
+      parameters:
+        - name: member_message
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: 'One key per intended write, 1 to 255 characters once unquoted and at most 512 on the wire; the same request sent again is answered as the first was.'
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        200:
+          description: "The action's answer."
+          content:
+            application/json:
+              schema: { type: object }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  '/member-messages/{member_message}/actions/resend-push':
+    post:
+      operationId: member-messages.resend-push
+      tags:
+        - member-messages
+      summary: 'Member messages: resend-push'
+      security:
+        - administratorCredential:
+            - 'admin:member-messages:resend-push'
+      parameters:
+        - name: member_message
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: 'One key per intended write, 1 to 255 characters once unquoted and at most 512 on the wire; the same request sent again is answered as the first was.'
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { delivery: { type: string }, _step_up_code: { type: string, format: password, writeOnly: true, description: 'A new verification code, needed when the server asks you to confirm it is you.' }, _confirmations: { type: array, items: { type: string }, description: 'Confirmation keys acknowledged for this request.' } }
+              required: [delivery]
+              additionalProperties: false
+      responses:
+        200:
+          description: "The action's answer."
+          content:
+            application/json:
+              schema: { type: object }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  '/member-messages/{member_message}/actions/withdraw':
+    post:
+      operationId: member-messages.withdraw
+      tags:
+        - member-messages
+      summary: 'Member messages: withdraw'
+      security:
+        - administratorCredential:
+            - 'admin:member-messages:withdraw'
+      parameters:
+        - name: member_message
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: 'One key per intended write, 1 to 255 characters once unquoted and at most 512 on the wire; the same request sent again is answered as the first was.'
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        200:
+          description: "The action's answer."
+          content:
+            application/json:
+              schema: { type: object }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /members:
     get:
       operationId: members.index
@@ -5807,7 +6565,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 255 }, abilities: { type: array, items: { type: string, enum: ['me:read', 'me:write', 'me-orders:read', 'me-addresses:read', 'me-addresses:write', 'me-entitlements:read', 'me-push-devices:write', 'me-checkout:write', 'me-store-purchases:write', 'me-subscriptions:read', 'me-subscriptions:write', 'me-referral:read', 'me-billing:read', 'reference-data:read-retired'] } }, expires_at: { type: [string, 'null'], format: date-time } }
+              properties: { name: { type: string, maxLength: 255 }, abilities: { type: array, items: { type: string, enum: ['me:read', 'me:write', 'me-orders:read', 'me-addresses:read', 'me-addresses:write', 'me-entitlements:read', 'me-push-devices:write', 'me-checkout:write', 'me-store-purchases:write', 'me-subscriptions:read', 'me-subscriptions:write', 'me-referral:read', 'me-billing:read', 'me-messages:read', 'me-messages:write', 'me-realtime:read', 'reference-data:read-retired'] } }, expires_at: { type: [string, 'null'], format: date-time } }
               required: [name, abilities]
       responses:
         200:
@@ -6700,7 +7458,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string, maxLength: 255 }, reference: { type: [string, 'null'], maxLength: 191 }, url: { type: [string, 'null'], maxLength: 255 }, target_kind: { type: [string, 'null'], enum: [page, feature] }, target_reference: { type: [string, 'null'], maxLength: 191 }, type: { type: [string, 'null'], enum: [link, dropdown, divider, label, custom] }, target: { type: [string, 'null'], enum: [_self, _blank, _parent, _top, modal, iframe] }, is_external: { type: boolean }, icon: { type: [string, 'null'], maxLength: 64 }, thumbnail: { type: [string, 'null'] }, permission_key: { type: [string, 'null'], maxLength: 191 }, status: { type: integer, enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'], maxLength: 255 }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { title: { type: string, maxLength: 255 }, reference: { type: [string, 'null'], maxLength: 191 }, url: { type: [string, 'null'], maxLength: 255 }, target_kind: { type: [string, 'null'], enum: [page, feature, null] }, target_reference: { type: [string, 'null'], maxLength: 191 }, type: { type: [string, 'null'], enum: [link, dropdown, divider, label, custom, null] }, target: { type: [string, 'null'], enum: [_self, _blank, _parent, _top, modal, iframe, null] }, is_external: { type: boolean }, icon: { type: [string, 'null'], maxLength: 64 }, thumbnail: { type: [string, 'null'] }, permission_key: { type: [string, 'null'], maxLength: 191 }, status: { type: integer, enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'], maxLength: 255 }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
               required: [title, status]
       responses:
         201:
@@ -6806,7 +7564,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string, maxLength: 255 }, reference: { type: [string, 'null'], maxLength: 191 }, url: { type: [string, 'null'], maxLength: 255 }, target_kind: { type: [string, 'null'], enum: [page, feature] }, target_reference: { type: [string, 'null'], maxLength: 191 }, type: { type: [string, 'null'], enum: [link, dropdown, divider, label, custom] }, target: { type: [string, 'null'], enum: [_self, _blank, _parent, _top, modal, iframe] }, is_external: { type: boolean }, icon: { type: [string, 'null'], maxLength: 64 }, thumbnail: { type: [string, 'null'] }, permission_key: { type: [string, 'null'], maxLength: 191 }, status: { type: integer, enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'], maxLength: 255 }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { title: { type: string, maxLength: 255 }, reference: { type: [string, 'null'], maxLength: 191 }, url: { type: [string, 'null'], maxLength: 255 }, target_kind: { type: [string, 'null'], enum: [page, feature, null] }, target_reference: { type: [string, 'null'], maxLength: 191 }, type: { type: [string, 'null'], enum: [link, dropdown, divider, label, custom, null] }, target: { type: [string, 'null'], enum: [_self, _blank, _parent, _top, modal, iframe, null] }, is_external: { type: boolean }, icon: { type: [string, 'null'], maxLength: 64 }, thumbnail: { type: [string, 'null'] }, permission_key: { type: [string, 'null'], maxLength: 191 }, status: { type: integer, enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'], maxLength: 255 }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
       responses:
         200:
           description: 'The record.'
@@ -7541,7 +8299,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 255 }, template_id: { type: string, format: uuid }, sender_id: { type: [string, 'null'], format: uuid }, trigger_type: { type: string, enum: [form_submission, user_registration, order_placed, support_ticket_member_message, support_ticket_admin_reply, order_revived, payment_arrived_late, payment_approval_lapsed, carried_payment_closed, refund_requested, refund_approved, refund_declined, refund_paid, subscription_started, subscription_renewed, subscription_payment_due, subscription_payment_failed, subscription_ended, subscription_extended, subscription_seats_freed, subscription_plan_change_withdrawn, subscription_authentication_required, admin_api_failed_authentication, admin_api_new_address, admin_api_volume, admin_api_out_of_scope] }, trigger_reference: { type: [string, 'null'], maxLength: 255 }, delay_minutes: { type: [integer, 'null'] }, recipient_type: { type: string, enum: [admin, user, custom, conditional] }, status: { type: [integer, 'null'], enum: [1, 0] }, recipient_emails: { type: [array, 'null'], items: { type: string } }, conditions: { type: [string, 'null'] } }
+              properties: { name: { type: string, maxLength: 255 }, template_id: { type: string, format: uuid }, sender_id: { type: [string, 'null'], format: uuid }, trigger_type: { type: string, enum: [form_submission, user_registration, order_placed, support_ticket_member_message, support_ticket_admin_reply, order_revived, payment_arrived_late, payment_approval_lapsed, carried_payment_closed, second_payment_returned, second_payment_owed, second_payment_delayed, refund_requested, refund_approved, refund_declined, refund_paid, subscription_started, subscription_renewed, subscription_payment_due, subscription_payment_failed, subscription_ended, subscription_extended, subscription_seats_freed, subscription_plan_change_withdrawn, subscription_authentication_required, admin_api_failed_authentication, admin_api_new_address, admin_api_volume, admin_api_out_of_scope] }, trigger_reference: { type: [string, 'null'], maxLength: 255 }, delay_minutes: { type: [integer, 'null'] }, recipient_type: { type: string, enum: [admin, user, custom, conditional] }, status: { type: [integer, 'null'], enum: [1, 0, null] }, recipient_emails: { type: [array, 'null'], items: { type: string } }, conditions: { type: [object, array, 'null'] } }
               required: [name, template_id, trigger_type, recipient_type]
       responses:
         201:
@@ -7649,7 +8407,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 255 }, template_id: { type: string, format: uuid }, sender_id: { type: [string, 'null'], format: uuid }, trigger_type: { type: string, enum: [form_submission, user_registration, order_placed, support_ticket_member_message, support_ticket_admin_reply, order_revived, payment_arrived_late, payment_approval_lapsed, carried_payment_closed, refund_requested, refund_approved, refund_declined, refund_paid, subscription_started, subscription_renewed, subscription_payment_due, subscription_payment_failed, subscription_ended, subscription_extended, subscription_seats_freed, subscription_plan_change_withdrawn, subscription_authentication_required, admin_api_failed_authentication, admin_api_new_address, admin_api_volume, admin_api_out_of_scope] }, trigger_reference: { type: [string, 'null'], maxLength: 255 }, delay_minutes: { type: [integer, 'null'] }, recipient_type: { type: string, enum: [admin, user, custom, conditional] }, status: { type: [integer, 'null'], enum: [1, 0] }, recipient_emails: { type: [array, 'null'], items: { type: string } }, conditions: { type: [string, 'null'] } }
+              properties: { name: { type: string, maxLength: 255 }, template_id: { type: string, format: uuid }, sender_id: { type: [string, 'null'], format: uuid }, trigger_type: { type: string, enum: [form_submission, user_registration, order_placed, support_ticket_member_message, support_ticket_admin_reply, order_revived, payment_arrived_late, payment_approval_lapsed, carried_payment_closed, second_payment_returned, second_payment_owed, second_payment_delayed, refund_requested, refund_approved, refund_declined, refund_paid, subscription_started, subscription_renewed, subscription_payment_due, subscription_payment_failed, subscription_ended, subscription_extended, subscription_seats_freed, subscription_plan_change_withdrawn, subscription_authentication_required, admin_api_failed_authentication, admin_api_new_address, admin_api_volume, admin_api_out_of_scope] }, trigger_reference: { type: [string, 'null'], maxLength: 255 }, delay_minutes: { type: [integer, 'null'] }, recipient_type: { type: string, enum: [admin, user, custom, conditional] }, status: { type: [integer, 'null'], enum: [1, 0, null] }, recipient_emails: { type: [array, 'null'], items: { type: string } }, conditions: { type: [object, array, 'null'] } }
       responses:
         200:
           description: 'The record.'
@@ -7808,7 +8566,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 255 }, slug: { type: string, maxLength: 255 }, category: { type: string, enum: [internal, external, system] }, type: { type: string, enum: [smtp, sendmail, mailgun, ses, postmark, resend, log, apns, fcm] }, priority: { type: [integer, 'null'] }, from_address: { type: [string, 'null'], format: email, maxLength: 255 }, from_name: { type: [string, 'null'], maxLength: 255 }, smtp_host: { type: [string, 'null'], maxLength: 255 }, smtp_port: { type: [integer, 'null'] }, smtp_encryption: { type: [string, 'null'], enum: [tls, ssl] }, smtp_username: { type: [string, 'null'], maxLength: 255 }, smtp_password: { type: [string, 'null'], format: password, writeOnly: true, maxLength: 255 }, service_config: { type: [string, 'null'] }, is_default: { type: [boolean, 'null'] }, is_active: { type: [boolean, 'null'] }, daily_limit: { type: [integer, 'null'] }, hourly_limit: { type: [integer, 'null'] }, description: { type: [string, 'null'] } }
+              properties: { name: { type: string, maxLength: 255 }, slug: { type: string, maxLength: 255 }, category: { type: string, enum: [internal, external, system] }, type: { type: string, enum: [smtp, sendmail, mailgun, ses, postmark, resend, log, apns, fcm] }, priority: { type: [integer, 'null'] }, from_address: { type: [string, 'null'], format: email, maxLength: 255 }, from_name: { type: [string, 'null'], maxLength: 255 }, smtp_host: { type: [string, 'null'], maxLength: 255 }, smtp_port: { type: [integer, 'null'] }, smtp_encryption: { type: [string, 'null'], enum: [tls, ssl, null] }, smtp_username: { type: [string, 'null'], maxLength: 255 }, smtp_password: { type: [string, 'null'], format: password, writeOnly: true, maxLength: 255 }, service_config: { type: [object, array, 'null'] }, is_default: { type: [boolean, 'null'] }, is_active: { type: [boolean, 'null'] }, daily_limit: { type: [integer, 'null'] }, hourly_limit: { type: [integer, 'null'] }, description: { type: [string, 'null'] } }
               required: [name, slug, category, type]
       responses:
         201:
@@ -7916,7 +8674,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 255 }, slug: { type: string, maxLength: 255 }, category: { type: string, enum: [internal, external, system] }, type: { type: string, enum: [smtp, sendmail, mailgun, ses, postmark, resend, log, apns, fcm] }, priority: { type: [integer, 'null'] }, from_address: { type: [string, 'null'], format: email, maxLength: 255 }, from_name: { type: [string, 'null'], maxLength: 255 }, smtp_host: { type: [string, 'null'], maxLength: 255 }, smtp_port: { type: [integer, 'null'] }, smtp_encryption: { type: [string, 'null'], enum: [tls, ssl] }, smtp_username: { type: [string, 'null'], maxLength: 255 }, smtp_password: { type: [string, 'null'], format: password, writeOnly: true, maxLength: 255 }, service_config: { type: [string, 'null'] }, is_default: { type: [boolean, 'null'] }, is_active: { type: [boolean, 'null'] }, daily_limit: { type: [integer, 'null'] }, hourly_limit: { type: [integer, 'null'] }, description: { type: [string, 'null'] } }
+              properties: { name: { type: string, maxLength: 255 }, slug: { type: string, maxLength: 255 }, category: { type: string, enum: [internal, external, system] }, type: { type: string, enum: [smtp, sendmail, mailgun, ses, postmark, resend, log, apns, fcm] }, priority: { type: [integer, 'null'] }, from_address: { type: [string, 'null'], format: email, maxLength: 255 }, from_name: { type: [string, 'null'], maxLength: 255 }, smtp_host: { type: [string, 'null'], maxLength: 255 }, smtp_port: { type: [integer, 'null'] }, smtp_encryption: { type: [string, 'null'], enum: [tls, ssl, null] }, smtp_username: { type: [string, 'null'], maxLength: 255 }, smtp_password: { type: [string, 'null'], format: password, writeOnly: true, maxLength: 255 }, service_config: { type: [object, array, 'null'] }, is_default: { type: [boolean, 'null'] }, is_active: { type: [boolean, 'null'] }, daily_limit: { type: [integer, 'null'] }, hourly_limit: { type: [integer, 'null'] }, description: { type: [string, 'null'] } }
       responses:
         200:
           description: 'The record.'
@@ -8032,7 +8790,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 191 }, slug: { type: string, maxLength: 191 }, category: { type: [string, 'null'], maxLength: 64 }, status: { type: integer, enum: [1, 0] }, subject: { type: [string, 'null'], maxLength: 255 }, body_html: { type: [string, 'null'] }, body_text: { type: [string, 'null'] }, variables: { type: [string, 'null'] } }
+              properties: { name: { type: string, maxLength: 191 }, slug: { type: string, maxLength: 191 }, category: { type: [string, 'null'], maxLength: 64 }, status: { type: integer, enum: [1, 0] }, subject: { type: [string, 'null'], maxLength: 255 }, body_html: { type: [string, 'null'] }, body_text: { type: [string, 'null'] }, variables: { type: [object, array, 'null'] } }
               required: [name, slug, status]
       responses:
         201:
@@ -8140,7 +8898,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 191 }, slug: { type: string, maxLength: 191 }, category: { type: [string, 'null'], maxLength: 64 }, status: { type: integer, enum: [1, 0] }, subject: { type: [string, 'null'], maxLength: 255 }, body_html: { type: [string, 'null'] }, body_text: { type: [string, 'null'] }, variables: { type: [string, 'null'] } }
+              properties: { name: { type: string, maxLength: 191 }, slug: { type: string, maxLength: 191 }, category: { type: [string, 'null'], maxLength: 64 }, status: { type: integer, enum: [1, 0] }, subject: { type: [string, 'null'], maxLength: 255 }, body_html: { type: [string, 'null'] }, body_text: { type: [string, 'null'] }, variables: { type: [object, array, 'null'] } }
       responses:
         200:
           description: 'The record.'
@@ -8296,7 +9054,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 255 }, redirect_uris: { type: array, items: { type: string } }, scopes: { type: array, items: { type: string, enum: ['*', openid, profile, email, entitlements, roles, offline_access, account_export, 'org:read', 'org:write', 'me:read', 'me:write', 'me-orders:read', 'me-addresses:read', 'me-addresses:write', 'me-entitlements:read', 'me-push-devices:write', 'me-checkout:write', 'me-store-purchases:write', 'me-subscriptions:read', 'me-subscriptions:write', 'me-referral:read', 'me-billing:read', 'reference-data:read', 'reference-data:read-retired'] } }, post_logout_redirect_uris: { type: [array, 'null'], items: { type: string } }, backchannel_logout_uri: { type: [string, 'null'], maxLength: 2048 }, initiate_login_uri: { type: [string, 'null'], maxLength: 2048 }, app_return_uri: { type: [string, 'null'], maxLength: 2048 }, product_id: { type: [string, 'null'], format: uuid }, refresh_reuse_grace_seconds: { type: integer }, session_lifetime_days: { type: integer }, session_idle_timeout_days: { type: [integer, 'null'] }, first_party: { type: boolean }, mode: { type: [string, 'null'], enum: [production, test] }, revoked: { type: boolean } }
+              properties: { name: { type: string, maxLength: 255 }, redirect_uris: { type: array, items: { type: string } }, scopes: { type: array, items: { type: string, enum: ['*', openid, profile, email, entitlements, roles, offline_access, account_export, 'org:read', 'org:write', 'me:read', 'me:write', 'me-deletion:write', 'me-orders:read', 'me-addresses:read', 'me-addresses:write', 'me-entitlements:read', 'me-push-devices:write', 'me-checkout:write', 'me-store-purchases:write', 'me-subscriptions:read', 'me-subscriptions:write', 'me-referral:read', 'me-billing:read', 'me-messages:read', 'me-messages:write', 'me-realtime:read', 'reference-data:read', 'reference-data:read-retired'] } }, post_logout_redirect_uris: { type: [array, 'null'], items: { type: string } }, backchannel_logout_uri: { type: [string, 'null'], maxLength: 2048 }, initiate_login_uri: { type: [string, 'null'], maxLength: 2048 }, app_return_uri: { type: [string, 'null'], maxLength: 2048 }, product_id: { type: [string, 'null'], format: uuid }, refresh_reuse_grace_seconds: { type: integer }, session_lifetime_days: { type: integer }, session_idle_timeout_days: { type: [integer, 'null'] }, first_party: { type: boolean }, mode: { type: [string, 'null'], enum: [production, test, null] }, revoked: { type: boolean } }
               required: [name, redirect_uris, scopes]
       responses:
         201:
@@ -8404,7 +9162,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 255 }, redirect_uris: { type: array, items: { type: string } }, scopes: { type: array, items: { type: string, enum: ['*', openid, profile, email, entitlements, roles, offline_access, account_export, 'org:read', 'org:write', 'me:read', 'me:write', 'me-orders:read', 'me-addresses:read', 'me-addresses:write', 'me-entitlements:read', 'me-push-devices:write', 'me-checkout:write', 'me-store-purchases:write', 'me-subscriptions:read', 'me-subscriptions:write', 'me-referral:read', 'me-billing:read', 'reference-data:read', 'reference-data:read-retired'] } }, post_logout_redirect_uris: { type: [array, 'null'], items: { type: string } }, backchannel_logout_uri: { type: [string, 'null'], maxLength: 2048 }, initiate_login_uri: { type: [string, 'null'], maxLength: 2048 }, app_return_uri: { type: [string, 'null'], maxLength: 2048 }, product_id: { type: [string, 'null'], format: uuid }, refresh_reuse_grace_seconds: { type: integer }, session_lifetime_days: { type: integer }, session_idle_timeout_days: { type: [integer, 'null'] }, first_party: { type: boolean }, revoked: { type: boolean } }
+              properties: { name: { type: string, maxLength: 255 }, redirect_uris: { type: array, items: { type: string } }, scopes: { type: array, items: { type: string, enum: ['*', openid, profile, email, entitlements, roles, offline_access, account_export, 'org:read', 'org:write', 'me:read', 'me:write', 'me-deletion:write', 'me-orders:read', 'me-addresses:read', 'me-addresses:write', 'me-entitlements:read', 'me-push-devices:write', 'me-checkout:write', 'me-store-purchases:write', 'me-subscriptions:read', 'me-subscriptions:write', 'me-referral:read', 'me-billing:read', 'me-messages:read', 'me-messages:write', 'me-realtime:read', 'reference-data:read', 'reference-data:read-retired'] } }, post_logout_redirect_uris: { type: [array, 'null'], items: { type: string } }, backchannel_logout_uri: { type: [string, 'null'], maxLength: 2048 }, initiate_login_uri: { type: [string, 'null'], maxLength: 2048 }, app_return_uri: { type: [string, 'null'], maxLength: 2048 }, product_id: { type: [string, 'null'], format: uuid }, refresh_reuse_grace_seconds: { type: integer }, session_lifetime_days: { type: integer }, session_idle_timeout_days: { type: [integer, 'null'] }, first_party: { type: boolean }, revoked: { type: boolean } }
       responses:
         200:
           description: 'The record.'
@@ -9996,7 +10754,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string, maxLength: 255 }, remark: { type: [string, 'null'], maxLength: 255 }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] } }
+              properties: { title: { type: string, maxLength: 255 }, remark: { type: [string, 'null'], maxLength: 255 }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0, null] } }
               required: [title]
       responses:
         201:
@@ -10105,7 +10863,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string, maxLength: 255 }, remark: { type: [string, 'null'], maxLength: 255 }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] } }
+              properties: { title: { type: string, maxLength: 255 }, remark: { type: [string, 'null'], maxLength: 255 }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0, null] } }
       responses:
         200:
           description: 'The record.'
@@ -10286,7 +11044,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { type: { type: [string, 'null'], maxLength: 255 }, remark: { type: [string, 'null'], maxLength: 255 }, view_style: { type: [string, 'null'], maxLength: 255 }, anchor_label: { type: [string, 'null'], maxLength: 255 }, name: { type: [string, 'null'], maxLength: 255 }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time } }
+              properties: { type: { type: [string, 'null'], maxLength: 255 }, remark: { type: [string, 'null'], maxLength: 255 }, view_style: { type: [string, 'null'], maxLength: 255 }, anchor_label: { type: [string, 'null'], maxLength: 255 }, name: { type: [string, 'null'], maxLength: 255 }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0, null] }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time } }
       responses:
         200:
           description: 'The record.'
@@ -10402,7 +11160,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { block_group_id: { type: string, format: uuid }, title: { type: string, maxLength: 255 }, class: { type: string, maxLength: 255 }, remark: { type: [string, 'null'], maxLength: 255 }, description: { type: [string, 'null'] }, instruction: { type: [string, 'null'] }, scope: { type: string, enum: [page, global] }, droppable: { type: [boolean, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] }, template: { type: [string, 'null'] }, query_options: { type: [string, 'null'] }, query_options_definition: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { block_group_id: { type: string, format: uuid }, title: { type: string, maxLength: 255 }, class: { type: string, maxLength: 255 }, remark: { type: [string, 'null'], maxLength: 255 }, description: { type: [string, 'null'] }, instruction: { type: [string, 'null'] }, scope: { type: string, enum: [page, global] }, droppable: { type: [boolean, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0, null] }, template: { type: [string, 'null'] }, query_options: { type: [object, array, 'null'] }, query_options_definition: { type: [object, array, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
               required: [block_group_id, title, class, scope]
       responses:
         201:
@@ -10511,7 +11269,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { block_group_id: { type: string, format: uuid }, title: { type: string, maxLength: 255 }, class: { type: string, maxLength: 255 }, remark: { type: [string, 'null'], maxLength: 255 }, description: { type: [string, 'null'] }, instruction: { type: [string, 'null'] }, scope: { type: string, enum: [page, global] }, droppable: { type: [boolean, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0] }, template: { type: [string, 'null'] }, query_options: { type: [string, 'null'] }, query_options_definition: { type: [string, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
+              properties: { block_group_id: { type: string, format: uuid }, title: { type: string, maxLength: 255 }, class: { type: string, maxLength: 255 }, remark: { type: [string, 'null'], maxLength: 255 }, description: { type: [string, 'null'] }, instruction: { type: [string, 'null'] }, scope: { type: string, enum: [page, global] }, droppable: { type: [boolean, 'null'] }, sort: { type: [integer, 'null'] }, status: { type: [integer, 'null'], enum: [1, 0, null] }, template: { type: [string, 'null'] }, query_options: { type: [object, array, 'null'] }, query_options_definition: { type: [object, array, 'null'] }, setting: { type: [object, 'null'], additionalProperties: { type: string } } }
       responses:
         200:
           description: 'The record.'
@@ -11544,6 +12302,60 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+  /panel/preferences:
+    get:
+      operationId: panel.preferences.show
+      tags:
+        - panel
+      summary: 'Panel: preferences'
+      description: "Served to the panel's own session only; refused to every credential."
+      x-panel-only: true
+      security:
+        - administratorCredential: []
+      responses:
+        200:
+          description: 'The preferences as saved.'
+          content:
+            application/json:
+              schema: { type: object, required: [keepUndoOpen], properties: { keepUndoOpen: { type: boolean, description: 'Whether a message offering Undo stays open until the administrator dismisses it.' } } }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    patch:
+      operationId: panel.preferences.update
+      tags:
+        - panel
+      summary: 'Panel: preferences'
+      description: "Served to the panel's own session only; refused to every credential."
+      x-panel-only: true
+      security:
+        - administratorCredential: []
+      responses:
+        200:
+          description: 'The preferences as saved.'
+          content:
+            application/json:
+              schema: { type: object, required: [keepUndoOpen], properties: { keepUndoOpen: { type: boolean, description: 'Whether a message offering Undo stays open until the administrator dismisses it.' } } }
+        default:
+          description: 'A refusal, as problem details.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        422:
+          description: 'The value is not true or false.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [keepUndoOpen]
+              properties: { keepUndoOpen: { type: boolean, description: 'Whether a message offering Undo stays open until the administrator dismisses it.' } }
   /panel/profile:
     get:
       operationId: panel.profile.show
@@ -12751,7 +13563,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string, maxLength: 255 }, display: { type: string, maxLength: 255 }, provider: { type: string, enum: [stripe, paypal, bank, manual, alipay, wechat_pay, crypto, creem, paddle, lemon_squeezy, klarna, afterpay, square, adyen, mollie, razorpay, mercado_pago, btcpay_server, apple_pay, google_pay] }, payment_method: { type: string, enum: [credit_card, debit_card, bank_transfer, e_wallet, qr_code, crypto, cash_on_delivery, buy_now_pay_later] }, is_test_mode: { type: boolean }, currency: { type: [string, 'null'], enum: [AED, AFN, ALL, AMD, ANG, AOA, ARS, AUD, AWG, AZN, BAM, BBD, BDT, BGN, BHD, BIF, BMD, BND, BOB, BOV, BRL, BSD, BTN, BWP, BYN, BZD, CAD, CDF, CHE, CHF, CHW, CLF, CLP, CNY, COP, COU, CRC, CUC, CUP, CVE, CZK, DJF, DKK, DOP, DZD, EGP, ERN, ETB, EUR, FJD, FKP, GBP, GEL, GHS, GIP, GMD, GNF, GTQ, GYD, HKD, HNL, HTG, HUF, IDR, ILS, INR, IQD, IRR, ISK, JMD, JOD, JPY, KES, KGS, KHR, KMF, KPW, KRW, KWD, KYD, KZT, LAK, LBP, LKR, LRD, LSL, LYD, MAD, MDL, MGA, MKD, MMK, MNT, MOP, MRU, MUR, MVR, MWK, MXN, MXV, MYR, MZN, NAD, NGN, NIO, NOK, NPR, NZD, OMR, PAB, PEN, PGK, PHP, PKR, PLN, PYG, QAR, RON, RSD, RUB, RWF, SAR, SBD, SCR, SDG, SEK, SGD, SHP, SLE, SOS, SRD, SSP, STN, SVC, SYP, SZL, THB, TJS, TMT, TND, TOP, TRY, TTD, TWD, TZS, UAH, UGX, USD, USN, UYI, UYU, UYW, UZS, VED, VES, VND, VUV, WST, XAF, XCD, XOF, XPF, YER, ZAR, ZMW, ZWG] }, supported_currencies: { type: [array, 'null'], items: { type: string, enum: [AED, AFN, ALL, AMD, ANG, AOA, ARS, AUD, AWG, AZN, BAM, BBD, BDT, BGN, BHD, BIF, BMD, BND, BOB, BOV, BRL, BSD, BTN, BWP, BYN, BZD, CAD, CDF, CHE, CHF, CHW, CLF, CLP, CNY, COP, COU, CRC, CUC, CUP, CVE, CZK, DJF, DKK, DOP, DZD, EGP, ERN, ETB, EUR, FJD, FKP, GBP, GEL, GHS, GIP, GMD, GNF, GTQ, GYD, HKD, HNL, HTG, HUF, IDR, ILS, INR, IQD, IRR, ISK, JMD, JOD, JPY, KES, KGS, KHR, KMF, KPW, KRW, KWD, KYD, KZT, LAK, LBP, LKR, LRD, LSL, LYD, MAD, MDL, MGA, MKD, MMK, MNT, MOP, MRU, MUR, MVR, MWK, MXN, MXV, MYR, MZN, NAD, NGN, NIO, NOK, NPR, NZD, OMR, PAB, PEN, PGK, PHP, PKR, PLN, PYG, QAR, RON, RSD, RUB, RWF, SAR, SBD, SCR, SDG, SEK, SGD, SHP, SLE, SOS, SRD, SSP, STN, SVC, SYP, SZL, THB, TJS, TMT, TND, TOP, TRY, TTD, TWD, TZS, UAH, UGX, USD, USN, UYI, UYU, UYW, UZS, VED, VES, VND, VUV, WST, XAF, XCD, XOF, XPF, YER, ZAR, ZMW, ZWG] } }, fee_percentage: { type: [number, 'null'], multipleOf: 0.01 }, fee_fixed: { type: [integer, 'null'] }, min_amount: { type: [integer, 'null'] }, max_amount: { type: [integer, 'null'] }, hold_hours: { type: [integer, 'null'] }, sort: { type: [integer, 'null'] }, instruction: { type: [string, 'null'] }, remark: { type: [string, 'null'], maxLength: 255 }, merchant_id: { type: [string, 'null'], maxLength: 255 }, merchant_secret: { type: [string, 'null'], format: password, writeOnly: true }, setting.webhook_secret: { type: [string, 'null'], format: password, writeOnly: true }, setting.bank_account: { type: [string, 'null'] }, setting.bank_name: { type: [string, 'null'] }, setting.account_name: { type: [string, 'null'] }, merchant_key: { type: [string, 'null'], format: password, writeOnly: true }, setting.app_id: { type: [string, 'null'] }, setting.serial_no: { type: [string, 'null'], format: password, writeOnly: true }, setting.crypto_provider: { type: [string, 'null'] }, setting.wallet_address: { type: [string, 'null'] }, setting.network: { type: [string, 'null'] }, setting.receive_currency: { type: [string, 'null'] }, setting.product_id: { type: [string, 'null'] }, setting.prices_include_tax: { type: [boolean, 'null'] }, setting.client_token: { type: [string, 'null'] }, setting.store_id: { type: [string, 'null'] }, setting.variant_id: { type: [string, 'null'] }, setting.region: { type: [string, 'null'] }, setting.country_code: { type: [string, 'null'] }, setting.locale: { type: [string, 'null'] }, setting.location_id: { type: [string, 'null'] }, setting.merchant_account: { type: [string, 'null'] }, setting.live_url_prefix: { type: [string, 'null'] }, setting.client_environment: { type: [string, 'null'] }, setting.client_key: { type: [string, 'null'] }, setting.auto_capture: { type: [boolean, 'null'] }, setting.server_url: { type: [string, 'null'] }, setting.backing_provider: { type: [string, 'null'] } }
+              properties: { title: { type: string, maxLength: 255 }, display: { type: string, maxLength: 255 }, provider: { type: string, enum: [stripe, paypal, bank, manual, alipay, wechat_pay, crypto, creem, paddle, lemon_squeezy, klarna, afterpay, square, adyen, mollie, razorpay, mercado_pago, btcpay_server, apple_pay, google_pay] }, payment_method: { type: string, enum: [credit_card, debit_card, bank_transfer, e_wallet, qr_code, crypto, cash_on_delivery, buy_now_pay_later] }, is_test_mode: { type: boolean }, currency: { type: [string, 'null'], enum: [AED, AFN, ALL, AMD, ANG, AOA, ARS, AUD, AWG, AZN, BAM, BBD, BDT, BGN, BHD, BIF, BMD, BND, BOB, BOV, BRL, BSD, BTN, BWP, BYN, BZD, CAD, CDF, CHE, CHF, CHW, CLF, CLP, CNY, COP, COU, CRC, CUC, CUP, CVE, CZK, DJF, DKK, DOP, DZD, EGP, ERN, ETB, EUR, FJD, FKP, GBP, GEL, GHS, GIP, GMD, GNF, GTQ, GYD, HKD, HNL, HTG, HUF, IDR, ILS, INR, IQD, IRR, ISK, JMD, JOD, JPY, KES, KGS, KHR, KMF, KPW, KRW, KWD, KYD, KZT, LAK, LBP, LKR, LRD, LSL, LYD, MAD, MDL, MGA, MKD, MMK, MNT, MOP, MRU, MUR, MVR, MWK, MXN, MXV, MYR, MZN, NAD, NGN, NIO, NOK, NPR, NZD, OMR, PAB, PEN, PGK, PHP, PKR, PLN, PYG, QAR, RON, RSD, RUB, RWF, SAR, SBD, SCR, SDG, SEK, SGD, SHP, SLE, SOS, SRD, SSP, STN, SVC, SYP, SZL, THB, TJS, TMT, TND, TOP, TRY, TTD, TWD, TZS, UAH, UGX, USD, USN, UYI, UYU, UYW, UZS, VED, VES, VND, VUV, WST, XAF, XCD, XOF, XPF, YER, ZAR, ZMW, ZWG, null] }, supported_currencies: { type: [array, 'null'], items: { type: string, enum: [AED, AFN, ALL, AMD, ANG, AOA, ARS, AUD, AWG, AZN, BAM, BBD, BDT, BGN, BHD, BIF, BMD, BND, BOB, BOV, BRL, BSD, BTN, BWP, BYN, BZD, CAD, CDF, CHE, CHF, CHW, CLF, CLP, CNY, COP, COU, CRC, CUC, CUP, CVE, CZK, DJF, DKK, DOP, DZD, EGP, ERN, ETB, EUR, FJD, FKP, GBP, GEL, GHS, GIP, GMD, GNF, GTQ, GYD, HKD, HNL, HTG, HUF, IDR, ILS, INR, IQD, IRR, ISK, JMD, JOD, JPY, KES, KGS, KHR, KMF, KPW, KRW, KWD, KYD, KZT, LAK, LBP, LKR, LRD, LSL, LYD, MAD, MDL, MGA, MKD, MMK, MNT, MOP, MRU, MUR, MVR, MWK, MXN, MXV, MYR, MZN, NAD, NGN, NIO, NOK, NPR, NZD, OMR, PAB, PEN, PGK, PHP, PKR, PLN, PYG, QAR, RON, RSD, RUB, RWF, SAR, SBD, SCR, SDG, SEK, SGD, SHP, SLE, SOS, SRD, SSP, STN, SVC, SYP, SZL, THB, TJS, TMT, TND, TOP, TRY, TTD, TWD, TZS, UAH, UGX, USD, USN, UYI, UYU, UYW, UZS, VED, VES, VND, VUV, WST, XAF, XCD, XOF, XPF, YER, ZAR, ZMW, ZWG] } }, fee_percentage: { type: [number, 'null'], multipleOf: 0.01 }, fee_fixed: { type: [integer, 'null'] }, min_amount: { type: [integer, 'null'] }, max_amount: { type: [integer, 'null'] }, hold_hours: { type: [integer, 'null'] }, sort: { type: [integer, 'null'] }, instruction: { type: [string, 'null'] }, remark: { type: [string, 'null'], maxLength: 255 }, merchant_id: { type: [string, 'null'], maxLength: 255 }, merchant_secret: { type: [string, 'null'], format: password, writeOnly: true }, setting.webhook_secret: { type: [string, 'null'], format: password, writeOnly: true }, setting.bank_account: { type: [string, 'null'] }, setting.bank_name: { type: [string, 'null'] }, setting.account_name: { type: [string, 'null'] }, merchant_key: { type: [string, 'null'], format: password, writeOnly: true }, setting.app_id: { type: [string, 'null'] }, setting.serial_no: { type: [string, 'null'], format: password, writeOnly: true }, setting.crypto_provider: { type: [string, 'null'] }, setting.wallet_address: { type: [string, 'null'] }, setting.network: { type: [string, 'null'] }, setting.receive_currency: { type: [string, 'null'] }, setting.product_id: { type: [string, 'null'] }, setting.prices_include_tax: { type: [boolean, 'null'] }, setting.client_token: { type: [string, 'null'] }, setting.store_id: { type: [string, 'null'] }, setting.variant_id: { type: [string, 'null'] }, setting.region: { type: [string, 'null'] }, setting.country_code: { type: [string, 'null'] }, setting.locale: { type: [string, 'null'] }, setting.location_id: { type: [string, 'null'] }, setting.merchant_account: { type: [string, 'null'] }, setting.live_url_prefix: { type: [string, 'null'] }, setting.client_environment: { type: [string, 'null'] }, setting.client_key: { type: [string, 'null'] }, setting.auto_capture: { type: [boolean, 'null'] }, setting.server_url: { type: [string, 'null'] }, setting.backing_provider: { type: [string, 'null'] } }
               required: [title, display, provider, payment_method]
       responses:
         201:
@@ -12876,7 +13688,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { title: { type: string, maxLength: 255 }, display: { type: string, maxLength: 255 }, provider: { type: string, enum: [stripe, paypal, bank, manual, alipay, wechat_pay, crypto, creem, paddle, lemon_squeezy, klarna, afterpay, square, adyen, mollie, razorpay, mercado_pago, btcpay_server, apple_pay, google_pay] }, payment_method: { type: string, enum: [credit_card, debit_card, bank_transfer, e_wallet, qr_code, crypto, cash_on_delivery, buy_now_pay_later] }, is_test_mode: { type: boolean }, currency: { type: [string, 'null'], enum: [AED, AFN, ALL, AMD, ANG, AOA, ARS, AUD, AWG, AZN, BAM, BBD, BDT, BGN, BHD, BIF, BMD, BND, BOB, BOV, BRL, BSD, BTN, BWP, BYN, BZD, CAD, CDF, CHE, CHF, CHW, CLF, CLP, CNY, COP, COU, CRC, CUC, CUP, CVE, CZK, DJF, DKK, DOP, DZD, EGP, ERN, ETB, EUR, FJD, FKP, GBP, GEL, GHS, GIP, GMD, GNF, GTQ, GYD, HKD, HNL, HTG, HUF, IDR, ILS, INR, IQD, IRR, ISK, JMD, JOD, JPY, KES, KGS, KHR, KMF, KPW, KRW, KWD, KYD, KZT, LAK, LBP, LKR, LRD, LSL, LYD, MAD, MDL, MGA, MKD, MMK, MNT, MOP, MRU, MUR, MVR, MWK, MXN, MXV, MYR, MZN, NAD, NGN, NIO, NOK, NPR, NZD, OMR, PAB, PEN, PGK, PHP, PKR, PLN, PYG, QAR, RON, RSD, RUB, RWF, SAR, SBD, SCR, SDG, SEK, SGD, SHP, SLE, SOS, SRD, SSP, STN, SVC, SYP, SZL, THB, TJS, TMT, TND, TOP, TRY, TTD, TWD, TZS, UAH, UGX, USD, USN, UYI, UYU, UYW, UZS, VED, VES, VND, VUV, WST, XAF, XCD, XOF, XPF, YER, ZAR, ZMW, ZWG] }, supported_currencies: { type: [array, 'null'], items: { type: string, enum: [AED, AFN, ALL, AMD, ANG, AOA, ARS, AUD, AWG, AZN, BAM, BBD, BDT, BGN, BHD, BIF, BMD, BND, BOB, BOV, BRL, BSD, BTN, BWP, BYN, BZD, CAD, CDF, CHE, CHF, CHW, CLF, CLP, CNY, COP, COU, CRC, CUC, CUP, CVE, CZK, DJF, DKK, DOP, DZD, EGP, ERN, ETB, EUR, FJD, FKP, GBP, GEL, GHS, GIP, GMD, GNF, GTQ, GYD, HKD, HNL, HTG, HUF, IDR, ILS, INR, IQD, IRR, ISK, JMD, JOD, JPY, KES, KGS, KHR, KMF, KPW, KRW, KWD, KYD, KZT, LAK, LBP, LKR, LRD, LSL, LYD, MAD, MDL, MGA, MKD, MMK, MNT, MOP, MRU, MUR, MVR, MWK, MXN, MXV, MYR, MZN, NAD, NGN, NIO, NOK, NPR, NZD, OMR, PAB, PEN, PGK, PHP, PKR, PLN, PYG, QAR, RON, RSD, RUB, RWF, SAR, SBD, SCR, SDG, SEK, SGD, SHP, SLE, SOS, SRD, SSP, STN, SVC, SYP, SZL, THB, TJS, TMT, TND, TOP, TRY, TTD, TWD, TZS, UAH, UGX, USD, USN, UYI, UYU, UYW, UZS, VED, VES, VND, VUV, WST, XAF, XCD, XOF, XPF, YER, ZAR, ZMW, ZWG] } }, fee_percentage: { type: [number, 'null'], multipleOf: 0.01 }, fee_fixed: { type: [integer, 'null'] }, min_amount: { type: [integer, 'null'] }, max_amount: { type: [integer, 'null'] }, hold_hours: { type: [integer, 'null'] }, sort: { type: [integer, 'null'] }, instruction: { type: [string, 'null'] }, remark: { type: [string, 'null'], maxLength: 255 }, merchant_id: { type: [string, 'null'], maxLength: 255 }, merchant_secret: { type: [string, 'null'], format: password, writeOnly: true }, setting.webhook_secret: { type: [string, 'null'], format: password, writeOnly: true }, setting.bank_account: { type: [string, 'null'] }, setting.bank_name: { type: [string, 'null'] }, setting.account_name: { type: [string, 'null'] }, merchant_key: { type: [string, 'null'], format: password, writeOnly: true }, setting.app_id: { type: [string, 'null'] }, setting.serial_no: { type: [string, 'null'], format: password, writeOnly: true }, setting.crypto_provider: { type: [string, 'null'] }, setting.wallet_address: { type: [string, 'null'] }, setting.network: { type: [string, 'null'] }, setting.receive_currency: { type: [string, 'null'] }, setting.product_id: { type: [string, 'null'] }, setting.prices_include_tax: { type: [boolean, 'null'] }, setting.client_token: { type: [string, 'null'] }, setting.store_id: { type: [string, 'null'] }, setting.variant_id: { type: [string, 'null'] }, setting.region: { type: [string, 'null'] }, setting.country_code: { type: [string, 'null'] }, setting.locale: { type: [string, 'null'] }, setting.location_id: { type: [string, 'null'] }, setting.merchant_account: { type: [string, 'null'] }, setting.live_url_prefix: { type: [string, 'null'] }, setting.client_environment: { type: [string, 'null'] }, setting.client_key: { type: [string, 'null'] }, setting.auto_capture: { type: [boolean, 'null'] }, setting.server_url: { type: [string, 'null'] }, setting.backing_provider: { type: [string, 'null'] } }
+              properties: { title: { type: string, maxLength: 255 }, display: { type: string, maxLength: 255 }, provider: { type: string, enum: [stripe, paypal, bank, manual, alipay, wechat_pay, crypto, creem, paddle, lemon_squeezy, klarna, afterpay, square, adyen, mollie, razorpay, mercado_pago, btcpay_server, apple_pay, google_pay] }, payment_method: { type: string, enum: [credit_card, debit_card, bank_transfer, e_wallet, qr_code, crypto, cash_on_delivery, buy_now_pay_later] }, is_test_mode: { type: boolean }, currency: { type: [string, 'null'], enum: [AED, AFN, ALL, AMD, ANG, AOA, ARS, AUD, AWG, AZN, BAM, BBD, BDT, BGN, BHD, BIF, BMD, BND, BOB, BOV, BRL, BSD, BTN, BWP, BYN, BZD, CAD, CDF, CHE, CHF, CHW, CLF, CLP, CNY, COP, COU, CRC, CUC, CUP, CVE, CZK, DJF, DKK, DOP, DZD, EGP, ERN, ETB, EUR, FJD, FKP, GBP, GEL, GHS, GIP, GMD, GNF, GTQ, GYD, HKD, HNL, HTG, HUF, IDR, ILS, INR, IQD, IRR, ISK, JMD, JOD, JPY, KES, KGS, KHR, KMF, KPW, KRW, KWD, KYD, KZT, LAK, LBP, LKR, LRD, LSL, LYD, MAD, MDL, MGA, MKD, MMK, MNT, MOP, MRU, MUR, MVR, MWK, MXN, MXV, MYR, MZN, NAD, NGN, NIO, NOK, NPR, NZD, OMR, PAB, PEN, PGK, PHP, PKR, PLN, PYG, QAR, RON, RSD, RUB, RWF, SAR, SBD, SCR, SDG, SEK, SGD, SHP, SLE, SOS, SRD, SSP, STN, SVC, SYP, SZL, THB, TJS, TMT, TND, TOP, TRY, TTD, TWD, TZS, UAH, UGX, USD, USN, UYI, UYU, UYW, UZS, VED, VES, VND, VUV, WST, XAF, XCD, XOF, XPF, YER, ZAR, ZMW, ZWG, null] }, supported_currencies: { type: [array, 'null'], items: { type: string, enum: [AED, AFN, ALL, AMD, ANG, AOA, ARS, AUD, AWG, AZN, BAM, BBD, BDT, BGN, BHD, BIF, BMD, BND, BOB, BOV, BRL, BSD, BTN, BWP, BYN, BZD, CAD, CDF, CHE, CHF, CHW, CLF, CLP, CNY, COP, COU, CRC, CUC, CUP, CVE, CZK, DJF, DKK, DOP, DZD, EGP, ERN, ETB, EUR, FJD, FKP, GBP, GEL, GHS, GIP, GMD, GNF, GTQ, GYD, HKD, HNL, HTG, HUF, IDR, ILS, INR, IQD, IRR, ISK, JMD, JOD, JPY, KES, KGS, KHR, KMF, KPW, KRW, KWD, KYD, KZT, LAK, LBP, LKR, LRD, LSL, LYD, MAD, MDL, MGA, MKD, MMK, MNT, MOP, MRU, MUR, MVR, MWK, MXN, MXV, MYR, MZN, NAD, NGN, NIO, NOK, NPR, NZD, OMR, PAB, PEN, PGK, PHP, PKR, PLN, PYG, QAR, RON, RSD, RUB, RWF, SAR, SBD, SCR, SDG, SEK, SGD, SHP, SLE, SOS, SRD, SSP, STN, SVC, SYP, SZL, THB, TJS, TMT, TND, TOP, TRY, TTD, TWD, TZS, UAH, UGX, USD, USN, UYI, UYU, UYW, UZS, VED, VES, VND, VUV, WST, XAF, XCD, XOF, XPF, YER, ZAR, ZMW, ZWG] } }, fee_percentage: { type: [number, 'null'], multipleOf: 0.01 }, fee_fixed: { type: [integer, 'null'] }, min_amount: { type: [integer, 'null'] }, max_amount: { type: [integer, 'null'] }, hold_hours: { type: [integer, 'null'] }, sort: { type: [integer, 'null'] }, instruction: { type: [string, 'null'] }, remark: { type: [string, 'null'], maxLength: 255 }, merchant_id: { type: [string, 'null'], maxLength: 255 }, merchant_secret: { type: [string, 'null'], format: password, writeOnly: true }, setting.webhook_secret: { type: [string, 'null'], format: password, writeOnly: true }, setting.bank_account: { type: [string, 'null'] }, setting.bank_name: { type: [string, 'null'] }, setting.account_name: { type: [string, 'null'] }, merchant_key: { type: [string, 'null'], format: password, writeOnly: true }, setting.app_id: { type: [string, 'null'] }, setting.serial_no: { type: [string, 'null'], format: password, writeOnly: true }, setting.crypto_provider: { type: [string, 'null'] }, setting.wallet_address: { type: [string, 'null'] }, setting.network: { type: [string, 'null'] }, setting.receive_currency: { type: [string, 'null'] }, setting.product_id: { type: [string, 'null'] }, setting.prices_include_tax: { type: [boolean, 'null'] }, setting.client_token: { type: [string, 'null'] }, setting.store_id: { type: [string, 'null'] }, setting.variant_id: { type: [string, 'null'] }, setting.region: { type: [string, 'null'] }, setting.country_code: { type: [string, 'null'] }, setting.locale: { type: [string, 'null'] }, setting.location_id: { type: [string, 'null'] }, setting.merchant_account: { type: [string, 'null'] }, setting.live_url_prefix: { type: [string, 'null'] }, setting.client_environment: { type: [string, 'null'] }, setting.client_key: { type: [string, 'null'] }, setting.auto_capture: { type: [boolean, 'null'] }, setting.server_url: { type: [string, 'null'] }, setting.backing_provider: { type: [string, 'null'] } }
       responses:
         200:
           description: 'The record.'
@@ -14555,7 +15367,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { type: { type: string, enum: [physical, auto_virtual, manual_virtual, subscription, voucher] }, status: { type: integer, enum: [1, 0] }, voucher_purpose: { type: [string, 'null'], enum: [single_purpose, multi_purpose] }, voucher_supply: { type: [string, 'null'], enum: [goods, services] }, voucher_place: { type: [string, 'null'], maxLength: 2 }, voucher_product_id: { type: [string, 'null'], format: uuid }, voucher_valid_days: { type: [integer, 'null'] }, pack_valid_days: { type: [integer, 'null'] }, per_seat: { type: boolean }, trial_requires_payment_method: { type: boolean }, trial_requires_verified_email: { type: boolean }, trial_start_mode: { type: [string, 'null'], enum: [explicit, automatic] }, trial_product_sku_id: { type: [string, 'null'], format: uuid }, invitation_accept_url: { type: [string, 'null'], maxLength: 2048 }, plan_family: { type: [string, 'null'], maxLength: 64 }, shipment_methods: { type: [array, 'null'], items: { type: string, enum: [App\Models\UserAddress, App\Models\User, Email, Mobile, Whatsapp, Telegram, WeChat, Weixin] } }, categories: { type: [array, 'null'], items: { type: string, format: uuid } }, spec_values: { type: [array, 'null'], items: { type: string, format: uuid } }, title: { type: string, maxLength: 255 }, subtitle: { type: [string, 'null'], maxLength: 255 }, slug: { type: [string, 'null'], maxLength: 255 }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, cover: { type: [string, 'null'] }, keywords: { type: [string, 'null'], maxLength: 255 }, description: { type: [string, 'null'], maxLength: 255 }, payment_methods: { type: [array, 'null'], items: { type: string, enum: [credit_card, debit_card, bank_transfer, e_wallet, qr_code, crypto, cash_on_delivery, buy_now_pay_later] } }, sort: { type: [integer, 'null'] }, content: { type: string }, setting: { type: [object, 'null'], additionalProperties: { type: string } }, additional_columns: { type: [array, 'null'], items: { type: object } }, skus: { type: [array, 'null'], items: { type: object } } }
+              properties: { type: { type: string, enum: [physical, auto_virtual, manual_virtual, subscription, voucher] }, status: { type: integer, enum: [1, 0] }, voucher_purpose: { type: [string, 'null'], enum: [single_purpose, multi_purpose, null] }, voucher_supply: { type: [string, 'null'], enum: [goods, services, null] }, voucher_place: { type: [string, 'null'], maxLength: 2 }, voucher_product_id: { type: [string, 'null'], format: uuid }, voucher_valid_days: { type: [integer, 'null'] }, pack_valid_days: { type: [integer, 'null'] }, per_seat: { type: boolean }, trial_requires_payment_method: { type: boolean }, trial_requires_verified_email: { type: boolean }, trial_start_mode: { type: [string, 'null'], enum: [explicit, automatic, null] }, trial_product_sku_id: { type: [string, 'null'], format: uuid }, invitation_accept_url: { type: [string, 'null'], maxLength: 2048 }, plan_family: { type: [string, 'null'], maxLength: 64 }, shipment_methods: { type: [array, 'null'], items: { type: string, enum: [App\Models\UserAddress, App\Models\User, Email, Mobile, Whatsapp, Telegram, WeChat, Weixin] } }, categories: { type: [array, 'null'], items: { type: string, format: uuid } }, spec_values: { type: [array, 'null'], items: { type: string, format: uuid } }, title: { type: string, maxLength: 255 }, subtitle: { type: [string, 'null'], maxLength: 255 }, slug: { type: [string, 'null'], maxLength: 255 }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, cover: { type: [string, 'null'] }, keywords: { type: [string, 'null'], maxLength: 255 }, description: { type: [string, 'null'], maxLength: 255 }, payment_methods: { type: [array, 'null'], items: { type: string, enum: [credit_card, debit_card, bank_transfer, e_wallet, qr_code, crypto, cash_on_delivery, buy_now_pay_later] } }, sort: { type: [integer, 'null'] }, content: { type: string }, setting: { type: [object, 'null'], additionalProperties: { type: string } }, additional_columns: { type: [array, 'null'], items: { type: object } }, skus: { type: [array, 'null'], items: { type: object } } }
               required: [type, status, title, content]
       responses:
         201:
@@ -14662,7 +15474,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { type: { type: string, enum: [physical, auto_virtual, manual_virtual, subscription, voucher] }, status: { type: integer, enum: [1, 0] }, voucher_purpose: { type: [string, 'null'], enum: [single_purpose, multi_purpose] }, voucher_supply: { type: [string, 'null'], enum: [goods, services] }, voucher_place: { type: [string, 'null'], maxLength: 2 }, voucher_product_id: { type: [string, 'null'], format: uuid }, voucher_valid_days: { type: [integer, 'null'] }, pack_valid_days: { type: [integer, 'null'] }, per_seat: { type: boolean }, trial_requires_payment_method: { type: boolean }, trial_requires_verified_email: { type: boolean }, trial_start_mode: { type: [string, 'null'], enum: [explicit, automatic] }, trial_product_sku_id: { type: [string, 'null'], format: uuid }, invitation_accept_url: { type: [string, 'null'], maxLength: 2048 }, plan_family: { type: [string, 'null'], maxLength: 64 }, shipment_methods: { type: [array, 'null'], items: { type: string, enum: [App\Models\UserAddress, App\Models\User, Email, Mobile, Whatsapp, Telegram, WeChat, Weixin] } }, categories: { type: [array, 'null'], items: { type: string, format: uuid } }, spec_values: { type: [array, 'null'], items: { type: string, format: uuid } }, title: { type: string, maxLength: 255 }, subtitle: { type: [string, 'null'], maxLength: 255 }, slug: { type: [string, 'null'], maxLength: 255 }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, cover: { type: [string, 'null'] }, keywords: { type: [string, 'null'], maxLength: 255 }, description: { type: [string, 'null'], maxLength: 255 }, payment_methods: { type: [array, 'null'], items: { type: string, enum: [credit_card, debit_card, bank_transfer, e_wallet, qr_code, crypto, cash_on_delivery, buy_now_pay_later] } }, sort: { type: [integer, 'null'] }, content: { type: string }, setting: { type: [object, 'null'], additionalProperties: { type: string } }, additional_columns: { type: [array, 'null'], items: { type: object } }, skus: { type: [array, 'null'], items: { type: object } } }
+              properties: { type: { type: string, enum: [physical, auto_virtual, manual_virtual, subscription, voucher] }, status: { type: integer, enum: [1, 0] }, voucher_purpose: { type: [string, 'null'], enum: [single_purpose, multi_purpose, null] }, voucher_supply: { type: [string, 'null'], enum: [goods, services, null] }, voucher_place: { type: [string, 'null'], maxLength: 2 }, voucher_product_id: { type: [string, 'null'], format: uuid }, voucher_valid_days: { type: [integer, 'null'] }, pack_valid_days: { type: [integer, 'null'] }, per_seat: { type: boolean }, trial_requires_payment_method: { type: boolean }, trial_requires_verified_email: { type: boolean }, trial_start_mode: { type: [string, 'null'], enum: [explicit, automatic, null] }, trial_product_sku_id: { type: [string, 'null'], format: uuid }, invitation_accept_url: { type: [string, 'null'], maxLength: 2048 }, plan_family: { type: [string, 'null'], maxLength: 64 }, shipment_methods: { type: [array, 'null'], items: { type: string, enum: [App\Models\UserAddress, App\Models\User, Email, Mobile, Whatsapp, Telegram, WeChat, Weixin] } }, categories: { type: [array, 'null'], items: { type: string, format: uuid } }, spec_values: { type: [array, 'null'], items: { type: string, format: uuid } }, title: { type: string, maxLength: 255 }, subtitle: { type: [string, 'null'], maxLength: 255 }, slug: { type: [string, 'null'], maxLength: 255 }, published_at: { type: [string, 'null'], format: date-time }, expired_at: { type: [string, 'null'], format: date-time }, cover: { type: [string, 'null'] }, keywords: { type: [string, 'null'], maxLength: 255 }, description: { type: [string, 'null'], maxLength: 255 }, payment_methods: { type: [array, 'null'], items: { type: string, enum: [credit_card, debit_card, bank_transfer, e_wallet, qr_code, crypto, cash_on_delivery, buy_now_pay_later] } }, sort: { type: [integer, 'null'] }, content: { type: string }, setting: { type: [object, 'null'], additionalProperties: { type: string } }, additional_columns: { type: [array, 'null'], items: { type: object } }, skus: { type: [array, 'null'], items: { type: object } } }
       responses:
         200:
           description: 'The record.'
@@ -15973,7 +16785,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { version_id: { type: string, format: uuid }, platform: { type: string, enum: [windows, darwin, linux, ios, android, other] }, arch: { type: [string, 'null'], maxLength: 255 }, status: { type: [integer, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, force_update: { type: boolean }, minimum_system_version: { type: [string, 'null'], maxLength: 32 }, applicable_source_versions: { type: [string, 'null'], maxLength: 255 }, release_notes: { type: [string, 'null'] }, gray_strategy: { type: [string, 'null'] } }
+              properties: { version_id: { type: string, format: uuid }, platform: { type: string, enum: [windows, darwin, linux, ios, android, other] }, arch: { type: [string, 'null'], maxLength: 255 }, status: { type: [integer, 'null'], enum: [1, 0, null] }, published_at: { type: [string, 'null'], format: date-time }, force_update: { type: boolean }, minimum_system_version: { type: [string, 'null'], maxLength: 32 }, applicable_source_versions: { type: [string, 'null'], maxLength: 255 }, release_notes: { type: [string, 'null'] }, gray_strategy: { type: [object, array, 'null'] } }
               required: [version_id, platform]
       responses:
         201:
@@ -16081,7 +16893,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { version_id: { type: string, format: uuid }, platform: { type: string, enum: [windows, darwin, linux, ios, android, other] }, arch: { type: [string, 'null'], maxLength: 255 }, status: { type: [integer, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, force_update: { type: boolean }, minimum_system_version: { type: [string, 'null'], maxLength: 32 }, applicable_source_versions: { type: [string, 'null'], maxLength: 255 }, release_notes: { type: [string, 'null'] }, gray_strategy: { type: [string, 'null'] } }
+              properties: { version_id: { type: string, format: uuid }, platform: { type: string, enum: [windows, darwin, linux, ios, android, other] }, arch: { type: [string, 'null'], maxLength: 255 }, status: { type: [integer, 'null'], enum: [1, 0, null] }, published_at: { type: [string, 'null'], format: date-time }, force_update: { type: boolean }, minimum_system_version: { type: [string, 'null'], maxLength: 32 }, applicable_source_versions: { type: [string, 'null'], maxLength: 255 }, release_notes: { type: [string, 'null'] }, gray_strategy: { type: [object, array, 'null'] } }
       responses:
         200:
           description: 'The record.'
@@ -16197,7 +17009,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { version: { type: string, maxLength: 255 }, release_channel: { type: [string, 'null'], enum: [stable, beta, alpha] }, status: { type: [integer, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'], maxLength: 255 } }
+              properties: { version: { type: string, maxLength: 255 }, release_channel: { type: [string, 'null'], enum: [stable, beta, alpha, null] }, status: { type: [integer, 'null'], enum: [1, 0, null] }, published_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'], maxLength: 255 } }
               required: [version]
       responses:
         201:
@@ -16305,7 +17117,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { version: { type: string, maxLength: 255 }, release_channel: { type: [string, 'null'], enum: [stable, beta, alpha] }, status: { type: [integer, 'null'], enum: [1, 0] }, published_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'], maxLength: 255 } }
+              properties: { version: { type: string, maxLength: 255 }, release_channel: { type: [string, 'null'], enum: [stable, beta, alpha, null] }, status: { type: [integer, 'null'], enum: [1, 0, null] }, published_at: { type: [string, 'null'], format: date-time }, remark: { type: [string, 'null'], maxLength: 255 } }
       responses:
         200:
           description: 'The record.'
@@ -20126,7 +20938,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 255 }, type: { type: string, enum: [percentage, fixed] }, country: { type: [string, 'null'], enum: [AD, AE, AF, AG, AI, AL, AM, AO, AQ, AR, AS, AT, AU, AW, AX, AZ, BA, BB, BD, BE, BF, BG, BH, BI, BJ, BL, BM, BN, BO, BQ, BR, BS, BT, BV, BW, BY, BZ, CA, CC, CD, CF, CG, CH, CI, CK, CL, CM, CN, CO, CR, CU, CV, CW, CX, CY, CZ, DE, DJ, DK, DM, DO, DZ, EC, EE, EG, EH, ER, ES, ET, FI, FJ, FK, FM, FO, FR, GA, GB, GD, GE, GF, GG, GH, GI, GL, GM, GN, GP, GQ, GR, GS, GT, GU, GW, GY, HK, HM, HN, HR, HT, HU, ID, IE, IL, IM, IN, IO, IQ, IR, IS, IT, JE, JM, JO, JP, KE, KG, KH, KI, KM, KN, KP, KR, KW, KY, KZ, LA, LB, LC, LI, LK, LR, LS, LT, LU, LV, LY, MA, MC, MD, ME, MF, MG, MH, MK, ML, MM, MN, MO, MP, MQ, MR, MS, MT, MU, MV, MW, MX, MY, MZ, NA, NC, NE, NF, NG, NI, NL, 'NO', NP, NR, NU, NZ, OM, PA, PE, PF, PG, PH, PK, PL, PM, PN, PR, PS, PT, PW, PY, QA, RE, RO, RS, RU, RW, SA, SB, SC, SD, SE, SG, SH, SI, SJ, SK, SL, SM, SN, SO, SR, SS, ST, SV, SX, SY, SZ, TC, TD, TF, TG, TH, TJ, TK, TL, TM, TN, TO, TR, TT, TV, TW, TZ, UA, UG, UM, US, UY, UZ, VA, VC, VE, VG, VI, VN, VU, WF, WS, XI, XK, YE, YT, ZA, ZM, ZW] }, region: { type: [string, 'null'], maxLength: 255 }, rate: { type: integer }, currency: { type: [string, 'null'], maxLength: 3 }, priority: { type: integer }, is_compound: { type: boolean }, is_active: { type: boolean }, effective_from: { type: [string, 'null'], format: date-time }, effective_until: { type: [string, 'null'], format: date-time } }
+              properties: { name: { type: string, maxLength: 255 }, type: { type: string, enum: [percentage, fixed] }, country: { type: [string, 'null'], enum: [AD, AE, AF, AG, AI, AL, AM, AO, AQ, AR, AS, AT, AU, AW, AX, AZ, BA, BB, BD, BE, BF, BG, BH, BI, BJ, BL, BM, BN, BO, BQ, BR, BS, BT, BV, BW, BY, BZ, CA, CC, CD, CF, CG, CH, CI, CK, CL, CM, CN, CO, CR, CU, CV, CW, CX, CY, CZ, DE, DJ, DK, DM, DO, DZ, EC, EE, EG, EH, ER, ES, ET, FI, FJ, FK, FM, FO, FR, GA, GB, GD, GE, GF, GG, GH, GI, GL, GM, GN, GP, GQ, GR, GS, GT, GU, GW, GY, HK, HM, HN, HR, HT, HU, ID, IE, IL, IM, IN, IO, IQ, IR, IS, IT, JE, JM, JO, JP, KE, KG, KH, KI, KM, KN, KP, KR, KW, KY, KZ, LA, LB, LC, LI, LK, LR, LS, LT, LU, LV, LY, MA, MC, MD, ME, MF, MG, MH, MK, ML, MM, MN, MO, MP, MQ, MR, MS, MT, MU, MV, MW, MX, MY, MZ, NA, NC, NE, NF, NG, NI, NL, 'NO', NP, NR, NU, NZ, OM, PA, PE, PF, PG, PH, PK, PL, PM, PN, PR, PS, PT, PW, PY, QA, RE, RO, RS, RU, RW, SA, SB, SC, SD, SE, SG, SH, SI, SJ, SK, SL, SM, SN, SO, SR, SS, ST, SV, SX, SY, SZ, TC, TD, TF, TG, TH, TJ, TK, TL, TM, TN, TO, TR, TT, TV, TW, TZ, UA, UG, UM, US, UY, UZ, VA, VC, VE, VG, VI, VN, VU, WF, WS, XI, XK, YE, YT, ZA, ZM, ZW, null] }, region: { type: [string, 'null'], maxLength: 255 }, rate: { type: integer }, currency: { type: [string, 'null'], maxLength: 3 }, priority: { type: integer }, is_compound: { type: boolean }, is_active: { type: boolean }, effective_from: { type: [string, 'null'], format: date-time }, effective_until: { type: [string, 'null'], format: date-time } }
               required: [name, type, rate, priority]
       responses:
         201:
@@ -20232,7 +21044,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 255 }, type: { type: string, enum: [percentage, fixed] }, country: { type: [string, 'null'], enum: [AD, AE, AF, AG, AI, AL, AM, AO, AQ, AR, AS, AT, AU, AW, AX, AZ, BA, BB, BD, BE, BF, BG, BH, BI, BJ, BL, BM, BN, BO, BQ, BR, BS, BT, BV, BW, BY, BZ, CA, CC, CD, CF, CG, CH, CI, CK, CL, CM, CN, CO, CR, CU, CV, CW, CX, CY, CZ, DE, DJ, DK, DM, DO, DZ, EC, EE, EG, EH, ER, ES, ET, FI, FJ, FK, FM, FO, FR, GA, GB, GD, GE, GF, GG, GH, GI, GL, GM, GN, GP, GQ, GR, GS, GT, GU, GW, GY, HK, HM, HN, HR, HT, HU, ID, IE, IL, IM, IN, IO, IQ, IR, IS, IT, JE, JM, JO, JP, KE, KG, KH, KI, KM, KN, KP, KR, KW, KY, KZ, LA, LB, LC, LI, LK, LR, LS, LT, LU, LV, LY, MA, MC, MD, ME, MF, MG, MH, MK, ML, MM, MN, MO, MP, MQ, MR, MS, MT, MU, MV, MW, MX, MY, MZ, NA, NC, NE, NF, NG, NI, NL, 'NO', NP, NR, NU, NZ, OM, PA, PE, PF, PG, PH, PK, PL, PM, PN, PR, PS, PT, PW, PY, QA, RE, RO, RS, RU, RW, SA, SB, SC, SD, SE, SG, SH, SI, SJ, SK, SL, SM, SN, SO, SR, SS, ST, SV, SX, SY, SZ, TC, TD, TF, TG, TH, TJ, TK, TL, TM, TN, TO, TR, TT, TV, TW, TZ, UA, UG, UM, US, UY, UZ, VA, VC, VE, VG, VI, VN, VU, WF, WS, XI, XK, YE, YT, ZA, ZM, ZW] }, region: { type: [string, 'null'], maxLength: 255 }, rate: { type: integer }, currency: { type: [string, 'null'], maxLength: 3 }, priority: { type: integer }, is_compound: { type: boolean }, is_active: { type: boolean }, effective_from: { type: [string, 'null'], format: date-time }, effective_until: { type: [string, 'null'], format: date-time } }
+              properties: { name: { type: string, maxLength: 255 }, type: { type: string, enum: [percentage, fixed] }, country: { type: [string, 'null'], enum: [AD, AE, AF, AG, AI, AL, AM, AO, AQ, AR, AS, AT, AU, AW, AX, AZ, BA, BB, BD, BE, BF, BG, BH, BI, BJ, BL, BM, BN, BO, BQ, BR, BS, BT, BV, BW, BY, BZ, CA, CC, CD, CF, CG, CH, CI, CK, CL, CM, CN, CO, CR, CU, CV, CW, CX, CY, CZ, DE, DJ, DK, DM, DO, DZ, EC, EE, EG, EH, ER, ES, ET, FI, FJ, FK, FM, FO, FR, GA, GB, GD, GE, GF, GG, GH, GI, GL, GM, GN, GP, GQ, GR, GS, GT, GU, GW, GY, HK, HM, HN, HR, HT, HU, ID, IE, IL, IM, IN, IO, IQ, IR, IS, IT, JE, JM, JO, JP, KE, KG, KH, KI, KM, KN, KP, KR, KW, KY, KZ, LA, LB, LC, LI, LK, LR, LS, LT, LU, LV, LY, MA, MC, MD, ME, MF, MG, MH, MK, ML, MM, MN, MO, MP, MQ, MR, MS, MT, MU, MV, MW, MX, MY, MZ, NA, NC, NE, NF, NG, NI, NL, 'NO', NP, NR, NU, NZ, OM, PA, PE, PF, PG, PH, PK, PL, PM, PN, PR, PS, PT, PW, PY, QA, RE, RO, RS, RU, RW, SA, SB, SC, SD, SE, SG, SH, SI, SJ, SK, SL, SM, SN, SO, SR, SS, ST, SV, SX, SY, SZ, TC, TD, TF, TG, TH, TJ, TK, TL, TM, TN, TO, TR, TT, TV, TW, TZ, UA, UG, UM, US, UY, UZ, VA, VC, VE, VG, VI, VN, VU, WF, WS, XI, XK, YE, YT, ZA, ZM, ZW, null] }, region: { type: [string, 'null'], maxLength: 255 }, rate: { type: integer }, currency: { type: [string, 'null'], maxLength: 3 }, priority: { type: integer }, is_compound: { type: boolean }, is_active: { type: boolean }, effective_from: { type: [string, 'null'], format: date-time }, effective_until: { type: [string, 'null'], format: date-time } }
       responses:
         200:
           description: 'The record.'
@@ -21665,7 +22477,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 255 }, url: { type: string, maxLength: 255 }, events: { type: array, items: { type: string, enum: [article.created, article.updated, article.deleted, page.created, page.updated, page.deleted, form.submitted, order.paid, order.completed, order.shipped, order.cancelled, order.status_updated, order.expired, order.revived, order.payment_arrived_late, subscription.started, subscription.renewed, subscription.payment_due, subscription.payment_failed, subscription.authentication_required, subscription.cancel_scheduled, subscription.resumed, subscription.ended, refund.requested, refund.processed, order.refunded, payment.refunded, payment.reversed, referral.reward_issued, role.assignment_changed, product.created, product.updated, product.deleted, account.suspended, account.reinstated, account.erased, account.entitlements_changed, account.email_changed] } }, mode: { type: [string, 'null'], enum: [production, test] }, is_active: { type: boolean } }
+              properties: { name: { type: string, maxLength: 255 }, url: { type: string, maxLength: 255 }, events: { type: array, items: { type: string, enum: [article.created, article.updated, article.deleted, page.created, page.updated, page.deleted, form.submitted, order.paid, order.completed, order.shipped, order.cancelled, order.status_updated, order.expired, order.revived, order.payment_arrived_late, order.payment_method_switched, subscription.started, subscription.renewed, subscription.payment_due, subscription.payment_failed, subscription.authentication_required, subscription.cancel_scheduled, subscription.resumed, subscription.ended, refund.requested, refund.processed, order.refunded, payment.refunded, payment.reversed, referral.reward_issued, role.assignment_changed, product.created, product.updated, product.deleted, account.suspended, account.reinstated, account.erased, account.entitlements_changed, account.email_changed] } }, mode: { type: [string, 'null'], enum: [production, test, null] }, is_active: { type: boolean } }
               required: [name, url, events]
       responses:
         201:
@@ -21773,7 +22585,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { name: { type: string, maxLength: 255 }, url: { type: string, maxLength: 255 }, events: { type: array, items: { type: string, enum: [article.created, article.updated, article.deleted, page.created, page.updated, page.deleted, form.submitted, order.paid, order.completed, order.shipped, order.cancelled, order.status_updated, order.expired, order.revived, order.payment_arrived_late, subscription.started, subscription.renewed, subscription.payment_due, subscription.payment_failed, subscription.authentication_required, subscription.cancel_scheduled, subscription.resumed, subscription.ended, refund.requested, refund.processed, order.refunded, payment.refunded, payment.reversed, referral.reward_issued, role.assignment_changed, product.created, product.updated, product.deleted, account.suspended, account.reinstated, account.erased, account.entitlements_changed, account.email_changed] } }, is_active: { type: boolean } }
+              properties: { name: { type: string, maxLength: 255 }, url: { type: string, maxLength: 255 }, events: { type: array, items: { type: string, enum: [article.created, article.updated, article.deleted, page.created, page.updated, page.deleted, form.submitted, order.paid, order.completed, order.shipped, order.cancelled, order.status_updated, order.expired, order.revived, order.payment_arrived_late, order.payment_method_switched, subscription.started, subscription.renewed, subscription.payment_due, subscription.payment_failed, subscription.authentication_required, subscription.cancel_scheduled, subscription.resumed, subscription.ended, refund.requested, refund.processed, order.refunded, payment.refunded, payment.reversed, referral.reward_issued, role.assignment_changed, product.created, product.updated, product.deleted, account.suspended, account.reinstated, account.erased, account.entitlements_changed, account.email_changed] } }, is_active: { type: boolean } }
       responses:
         200:
           description: 'The record.'
@@ -21935,6 +22747,7 @@ components:
             - new-address
             - volume
             - out-of-scope
+            - null
         credential_id:
           type:
             - string
@@ -21964,6 +22777,7 @@ components:
           enum:
             - session
             - credential
+            - null
         credential_id:
           type:
             - string
@@ -22022,6 +22836,13 @@ components:
             - string
             - 'null'
           readOnly: true
+        sign_in_origin:
+          type:
+            - string
+            - 'null'
+          enum:
+            - vouched
+            - null
         last_used_at:
           type:
             - string
@@ -22147,6 +22968,86 @@ components:
           format: date-time
       required:
         - id
+    AppClient:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+        mode:
+          type:
+            - string
+            - 'null'
+          enum:
+            - production
+            - test
+            - null
+        redirect_uris:
+          type: array
+          items:
+            type: string
+        scopes:
+          type:
+            - array
+            - 'null'
+          items:
+            type: string
+            enum:
+              - openid
+              - offline_access
+              - profile
+              - email
+              - roles
+              - 'org:read'
+              - 'org:write'
+              - 'me:read'
+              - 'me:write'
+              - 'me-deletion:write'
+              - 'me-orders:read'
+              - 'me-addresses:read'
+              - 'me-addresses:write'
+              - 'me-entitlements:read'
+              - 'me-push-devices:write'
+              - 'me-checkout:write'
+              - 'me-store-purchases:write'
+              - 'me-subscriptions:read'
+              - 'me-subscriptions:write'
+              - 'me-referral:read'
+              - 'me-billing:read'
+              - 'me-messages:read'
+              - 'me-messages:write'
+              - 'me-realtime:read'
+              - 'reference-data:read'
+              - 'reference-data:read-retired'
+        product_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        refresh_reuse_grace_seconds:
+          type: integer
+        session_lifetime_days:
+          type: integer
+        session_idle_timeout_days:
+          type:
+            - integer
+            - 'null'
+        first_party:
+          type: boolean
+        revoked:
+          type: boolean
+        created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+      required:
+        - id
+        - name
+        - redirect_uris
     Article:
       type: object
       properties:
@@ -22328,6 +23229,7 @@ components:
           enum:
             - production
             - test
+            - null
         product_id:
           type:
             - string
@@ -22354,6 +23256,7 @@ components:
               - 'return-targets:write'
               - 'test-clock:write'
               - 'fulfilments:write'
+              - 'messages:write'
               - 'reference:read'
               - 'reference:read-retired'
         revoked:
@@ -22590,6 +23493,7 @@ components:
             - merchant
             - referral
             - reward
+            - null
         programme:
           type:
             - string
@@ -22879,6 +23783,7 @@ components:
           enum:
             - 1
             - 0
+            - null
         sort_order:
           type:
             - integer
@@ -22908,7 +23813,8 @@ components:
             - 'null'
         config:
           type:
-            - string
+            - object
+            - array
             - 'null'
         created_at:
           type:
@@ -22950,7 +23856,8 @@ components:
           maxLength: 191
         meta_keys_to_collect:
           type:
-            - string
+            - object
+            - array
             - 'null'
         api_access_token:
           type:
@@ -23011,6 +23918,7 @@ components:
           enum:
             - 0
             - 1
+            - null
         submitted_at:
           type:
             - string
@@ -23023,7 +23931,8 @@ components:
           maxLength: 45
         data:
           type:
-            - string
+            - object
+            - array
             - 'null'
         meta:
           type:
@@ -23240,6 +24149,7 @@ components:
             - minor
             - major
             - critical
+            - null
         status:
           type:
             - string
@@ -23249,6 +24159,7 @@ components:
             - identified
             - monitoring
             - resolved
+            - null
         visibility:
           type:
             - string
@@ -23256,9 +24167,11 @@ components:
           enum:
             - public
             - internal
+            - null
         components:
           type:
-            - string
+            - object
+            - array
             - 'null'
         source_key:
           type:
@@ -23313,6 +24226,7 @@ components:
             - adjustment
             - reservation
             - cancellation
+            - null
         quantity:
           type:
             - integer
@@ -23495,6 +24409,7 @@ components:
           enum:
             - public
             - private
+            - null
         detached_at:
           type:
             - string
@@ -23515,7 +24430,8 @@ components:
             - 'null'
         metadata:
           type:
-            - string
+            - object
+            - array
             - 'null'
         created_at:
           type:
@@ -23754,7 +24670,9 @@ components:
             - array
             - 'null'
           items:
-            type: string
+            oneOf:
+              - { type: string }
+              - { type: object, properties: { kind: { type: string }, reference: { type: string }, producer: { type: object, properties: { kind: { type: string }, reference: { type: string } }, required: [kind, reference], additionalProperties: false }, revert_of: { type: string } }, required: [kind, reference], additionalProperties: false }
         run_id:
           type:
             - string
@@ -23779,6 +24697,188 @@ components:
             - 'null'
       required:
         - id
+    MemberMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum:
+            - security
+            - account
+            - service
+            - maintenance
+            - product_updates
+            - promotional
+        title:
+          type: string
+          maxLength: 120
+        body:
+          type: string
+          maxLength: 4000
+        link:
+          type:
+            - string
+            - 'null'
+          maxLength: 2048
+        data:
+          type:
+            - object
+            - 'null'
+          maxProperties: 20
+          additionalProperties:
+            type:
+              - string
+              - number
+              - boolean
+              - 'null'
+          description: 'Flat named values (text, number, true or false, or empty), at most 20 of them and 2048 bytes once written as JSON.'
+        channels:
+          type:
+            - array
+            - 'null'
+          items:
+            type: string
+            enum:
+              - in_app
+              - push
+        audience_kind:
+          type: string
+          enum:
+            - member
+            - segment
+            - everyone
+        audience_member:
+          type:
+            - string
+            - 'null'
+          maxLength: 255
+        audience:
+          type:
+            - object
+            - 'null'
+          properties:
+            match:
+              type: string
+              enum: [all, any]
+              description: 'Whether a member must meet all of the conditions or any of them.'
+            conditions:
+              type: array
+              minItems: 1
+              maxItems: 50
+              items: { oneOf: [{ type: object, properties: { kind: { const: everyone } }, required: [kind], additionalProperties: false }, { type: object, properties: { kind: { const: subscription }, products: { type: array, minItems: 1, maxItems: 50, items: { type: string }, description: 'Product references.' }, statuses: { type: array, minItems: 1, maxItems: 50, items: { type: string, enum: [trialing, active, past_due, on_hold, incomplete, canceled] }, description: 'Subscription statuses; by default those that entitle.' } }, required: [kind, products], additionalProperties: false }, { type: object, properties: { kind: { const: entitlement }, key: { type: string, minLength: 1, maxLength: 191, pattern: \S } }, required: [kind, key], additionalProperties: false }, { type: object, properties: { kind: { const: feature }, key: { type: string, minLength: 1, maxLength: 191, pattern: '^[a-z0-9_]+(?:\.[a-z0-9_]+)*$' }, value: { type: [boolean, integer], minimum: 0, description: 'A switch, or a whole number of zero or more.' } }, required: [kind, key], additionalProperties: false }, { type: object, properties: { kind: { const: organisation }, organisations: { type: array, minItems: 1, maxItems: 50, items: { type: string }, description: 'Organisation references.' } }, required: [kind, organisations], additionalProperties: false }, { type: object, properties: { kind: { const: role }, roles: { type: array, minItems: 1, maxItems: 50, items: { type: string, minLength: 1, maxLength: 48, pattern: '^[a-z0-9_]+$' }, description: 'Member role keys.' } }, required: [kind, roles], additionalProperties: false }, { type: object, properties: { kind: { const: member }, member: { type: string, minLength: 1, maxLength: 255, pattern: \S, description: 'An account subject.' } }, required: [kind, member], additionalProperties: false }] }
+          required:
+            - match
+            - conditions
+          additionalProperties: false
+        kind:
+          type:
+            - string
+            - 'null'
+          enum:
+            - message
+            - announcement
+            - null
+        send_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        starts_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        ends_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        public:
+          type: boolean
+        state:
+          type:
+            - string
+            - 'null'
+          enum:
+            - scheduled
+            - missed
+            - sending
+            - sent
+            - cancelled
+            - null
+        cancel_reason:
+          type:
+            - string
+            - 'null'
+        source_kind:
+          type:
+            - string
+            - 'null'
+          enum:
+            - backend
+            - administrator
+            - system
+            - null
+        audience_count:
+          type:
+            - integer
+            - 'null'
+        recipients_count:
+          type:
+            - integer
+            - 'null'
+        sent_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        cancelled_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        delivery_counts:
+          type:
+            - object
+            - 'null'
+        uncertain_pushes:
+          type:
+            - object
+            - 'null'
+        created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+      required:
+        - id
+        - category
+        - title
+        - body
+        - audience_kind
+    MemberMessageConfirmation:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required:
+            - confirmation
+          properties:
+            type:
+              const: 'https://appsolutely.io/problems/confirmation-required'
+            status:
+              const: 409
+            confirmation:
+              type: object
+              required: [key, message, context]
+              properties: { key: { type: string, description: "A fingerprint of this message, its audience and when it goes out (the send time, an announcement's window and visibility): it confirms exactly that, and a key for anything else is answered with a new question. It does not expire, does not cover how many members match and is not tied to a caller: the write is authorised on its own." }, message: { type: string }, context: { type: object, properties: { count: { type: integer, minimum: 0, description: 'Members the audience reaches now.' }, sample: { type: array, maxItems: 10, items: { type: string }, description: 'Some of them, by account subject.' }, confirm_action: { type: string, enum: [send, schedule, publish, save], description: 'What confirming does.' } }, required: [count, sample, confirm_action], additionalProperties: false } }
     Menu:
       type: object
       properties:
@@ -23805,6 +24905,7 @@ components:
           enum:
             - page
             - feature
+            - null
         target_reference:
           type:
             - string
@@ -23825,6 +24926,7 @@ components:
             - divider
             - label
             - custom
+            - null
         target:
           type:
             - string
@@ -23836,6 +24938,7 @@ components:
             - _top
             - modal
             - iframe
+            - null
         is_external:
           type: boolean
         icon:
@@ -24109,6 +25212,7 @@ components:
             - sent
             - failed
             - cancelled
+            - null
         scheduled_at:
           type:
             - string
@@ -24197,7 +25301,8 @@ components:
             - 'null'
         trigger_data:
           type:
-            - string
+            - object
+            - array
             - 'null'
         created_at:
           type:
@@ -24240,6 +25345,9 @@ components:
             - payment_arrived_late
             - payment_approval_lapsed
             - carried_payment_closed
+            - second_payment_returned
+            - second_payment_owed
+            - second_payment_delayed
             - refund_requested
             - refund_approved
             - refund_declined
@@ -24280,6 +25388,7 @@ components:
           enum:
             - 1
             - 0
+            - null
         recipient_emails:
           type:
             - array
@@ -24288,7 +25397,8 @@ components:
             type: string
         conditions:
           type:
-            - string
+            - object
+            - array
             - 'null'
         created_at:
           type:
@@ -24372,6 +25482,7 @@ components:
           enum:
             - tls
             - ssl
+            - null
         smtp_username:
           type:
             - string
@@ -24386,7 +25497,8 @@ components:
           maxLength: 255
         service_config:
           type:
-            - string
+            - object
+            - array
             - 'null'
         is_default:
           type:
@@ -24463,7 +25575,8 @@ components:
             - 'null'
         variables:
           type:
-            - string
+            - object
+            - array
             - 'null'
         created_at:
           type:
@@ -24510,6 +25623,7 @@ components:
               - 'org:write'
               - 'me:read'
               - 'me:write'
+              - 'me-deletion:write'
               - 'me-orders:read'
               - 'me-addresses:read'
               - 'me-addresses:write'
@@ -24521,6 +25635,9 @@ components:
               - 'me-subscriptions:write'
               - 'me-referral:read'
               - 'me-billing:read'
+              - 'me-messages:read'
+              - 'me-messages:write'
+              - 'me-realtime:read'
               - 'reference-data:read'
               - 'reference-data:read-retired'
         post_logout_redirect_uris:
@@ -24566,6 +25683,7 @@ components:
           enum:
             - production
             - test
+            - null
         revoked:
           type: boolean
         created_at:
@@ -24604,6 +25722,7 @@ components:
             - completed
             - cancelled
             - expired
+            - null
         origin:
           type:
             - string
@@ -24611,6 +25730,7 @@ components:
           enum:
             - customer
             - system
+            - null
         summary:
           type:
             - string
@@ -24687,6 +25807,7 @@ components:
             - final
             - before_provider_tax
             - priced_by_provider
+            - null
         coupon_id:
           type:
             - string
@@ -24700,6 +25821,7 @@ components:
             - pending
             - started
             - refused
+            - null
         subscription_start_refusal:
           type:
             - string
@@ -24719,6 +25841,7 @@ components:
             - resolved_by_operator
             - account_deleted
             - organisation_unavailable
+            - null
         subscription_start_refund_flagged:
           type: boolean
         note:
@@ -24729,6 +25852,23 @@ components:
           type:
             - string
             - 'null'
+        payments:
+          type:
+            - array
+            - 'null'
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              reference: { type: [string, 'null'] }
+              vendor: { type: [string, 'null'] }
+              status: { type: [string, 'null'], enum: [pending, paid, failed, refunded, unknown, null] }
+              end_reason: { type: [string, 'null'], enum: [declined, expired, cancelled_by_buyer, provider_error, null] }
+              switched_to_payment_id: { type: [string, 'null'], format: uuid }
+              switched_at: { type: [string, 'null'], format: date-time }
+              created_at: { type: [string, 'null'], format: date-time }
+            required:
+              - id
         operator_notices:
           type:
             - array
@@ -24757,11 +25897,13 @@ components:
           readOnly: true
         delivery_info:
           type:
-            - string
+            - object
+            - array
             - 'null'
         billing_info:
           type:
-            - string
+            - object
+            - array
             - 'null'
         ip:
           type:
@@ -24770,7 +25912,8 @@ components:
           maxLength: 255
         request:
           type:
-            - string
+            - object
+            - array
             - 'null'
         mode:
           type:
@@ -24779,6 +25922,7 @@ components:
           enum:
             - production
             - test
+            - null
         created_at:
           type:
             - string
@@ -24824,7 +25968,9 @@ components:
             - array
             - 'null'
           items:
-            type: string
+            oneOf:
+              - { type: string }
+              - { type: object, properties: { kind: { type: string }, reference: { type: string }, producer: { type: object, properties: { kind: { type: string }, reference: { type: string } }, required: [kind, reference], additionalProperties: false }, revert_of: { type: string } }, required: [kind, reference], additionalProperties: false }
         run_id:
           type:
             - string
@@ -24894,7 +26040,9 @@ components:
             - array
             - 'null'
           items:
-            type: string
+            oneOf:
+              - { type: string }
+              - { type: object, properties: { kind: { type: string }, reference: { type: string }, producer: { type: object, properties: { kind: { type: string }, reference: { type: string } }, required: [kind, reference], additionalProperties: false }, revert_of: { type: string } }, required: [kind, reference], additionalProperties: false }
         run_id:
           type:
             - string
@@ -24987,7 +26135,9 @@ components:
             - array
             - 'null'
           items:
-            type: string
+            oneOf:
+              - { type: string }
+              - { type: object, properties: { kind: { type: string }, reference: { type: string }, producer: { type: object, properties: { kind: { type: string }, reference: { type: string } }, required: [kind, reference], additionalProperties: false }, revert_of: { type: string } }, required: [kind, reference], additionalProperties: false }
         run_id:
           type:
             - string
@@ -25077,6 +26227,7 @@ components:
             - operator
             - system
             - application
+            - null
         actor_reference:
           type:
             - string
@@ -25262,6 +26413,7 @@ components:
           enum:
             - 1
             - 0
+            - null
         reference:
           type:
             - string
@@ -25273,11 +26425,13 @@ components:
             - 'null'
         query_options:
           type:
-            - string
+            - object
+            - array
             - 'null'
         query_options_definition:
           type:
-            - string
+            - object
+            - array
             - 'null'
         setting:
           type:
@@ -25326,6 +26480,7 @@ components:
           enum:
             - 1
             - 0
+            - null
         created_at:
           type:
             - string
@@ -25402,6 +26557,7 @@ components:
           enum:
             - 1
             - 0
+            - null
         published_at:
           type:
             - string
@@ -25643,6 +26799,7 @@ components:
             - ZAR
             - ZMW
             - ZWG
+            - null
         supported_currencies:
           type:
             - array
@@ -25857,6 +27014,7 @@ components:
           enum:
             - 0
             - 1
+            - null
         webhook_url:
           type:
             - string
@@ -26193,6 +27351,10 @@ components:
             - 'https://appsolutely.io/problems/wrong-audience'
             - 'https://appsolutely.io/problems/account-suspended'
             - 'https://appsolutely.io/problems/account-deletion-pending'
+            - 'https://appsolutely.io/problems/deletion-needs-interactive-sign-in'
+            - 'https://appsolutely.io/problems/deletion-refused-in-test-mode'
+            - 'https://appsolutely.io/problems/insufficient-user-authentication'
+            - 'https://appsolutely.io/problems/account-deletion-blocked'
             - 'https://appsolutely.io/problems/mode-from-credential'
             - 'https://appsolutely.io/problems/standing-unavailable'
             - 'https://appsolutely.io/problems/validation-failed'
@@ -26243,6 +27405,15 @@ components:
             - 'https://appsolutely.io/problems/already-seated'
             - 'https://appsolutely.io/problems/no-seat-available'
             - 'https://appsolutely.io/problems/seat-payer-changed'
+            - 'https://appsolutely.io/problems/mandatory-category'
+            - 'https://appsolutely.io/problems/not-editable'
+            - 'https://appsolutely.io/problems/not-cancellable'
+            - 'https://appsolutely.io/problems/audience-too-large'
+            - 'https://appsolutely.io/problems/broadcast-cap'
+            - 'https://appsolutely.io/problems/channel-backlog'
+            - 'https://appsolutely.io/problems/already-acknowledged'
+            - 'https://appsolutely.io/problems/too-many-live-announcements'
+            - 'https://appsolutely.io/problems/public-needs-everyone'
             - 'https://appsolutely.io/problems/admin-api-off'
             - 'https://appsolutely.io/problems/address-not-allowed'
             - 'https://appsolutely.io/problems/credential-suspended'
@@ -26252,6 +27423,7 @@ components:
             - 'https://appsolutely.io/problems/confirmation-required'
             - 'https://appsolutely.io/problems/conflict'
             - 'https://appsolutely.io/problems/step-up-required'
+            - 'https://appsolutely.io/problems/payment-switch-refused'
         title:
           type: string
         status:
@@ -26294,6 +27466,7 @@ components:
           enum:
             - single_purpose
             - multi_purpose
+            - null
         voucher_supply:
           type:
             - string
@@ -26301,6 +27474,7 @@ components:
           enum:
             - goods
             - services
+            - null
         voucher_place:
           type:
             - string
@@ -26332,6 +27506,7 @@ components:
           enum:
             - explicit
             - automatic
+            - null
         trial_product_sku_id:
           type:
             - string
@@ -26644,6 +27819,7 @@ components:
             - pending
             - approved
             - rejected
+            - null
         title:
           type:
             - string
@@ -26779,6 +27955,7 @@ components:
             - update-available
             - unsupported
             - insufficient-capacity
+            - null
         notice:
           type:
             - string
@@ -26822,6 +27999,7 @@ components:
             - paying
             - paid_out
             - withdrawn
+            - null
         reward_type:
           type:
             - string
@@ -26829,6 +28007,7 @@ components:
           enum:
             - credit
             - cashback
+            - null
         value:
           type:
             - integer
@@ -26927,6 +28106,7 @@ components:
           enum:
             - production
             - test
+            - null
         status:
           type:
             - string
@@ -26940,6 +28120,7 @@ components:
             - covered
             - dismissed
             - failed
+            - null
         amount:
           type:
             - integer
@@ -26990,7 +28171,8 @@ components:
           maxLength: 255
         vendor_extra_info:
           type:
-            - string
+            - object
+            - array
             - 'null'
         refunded_at:
           type:
@@ -27047,6 +28229,7 @@ components:
             - approved
             - declined
             - refunded
+            - null
         order_id:
           type:
             - string
@@ -27136,6 +28319,7 @@ components:
           enum:
             - 1
             - 0
+            - null
         published_at:
           type:
             - string
@@ -27159,7 +28343,8 @@ components:
             - 'null'
         gray_strategy:
           type:
-            - string
+            - object
+            - array
             - 'null'
         build_status:
           type:
@@ -27170,6 +28355,7 @@ components:
             - building
             - success
             - failed
+            - null
         path:
           type:
             - string
@@ -27214,6 +28400,7 @@ components:
             - stable
             - beta
             - alpha
+            - null
         status:
           type:
             - integer
@@ -27221,6 +28408,7 @@ components:
           enum:
             - 1
             - 0
+            - null
         published_at:
           type:
             - string
@@ -27414,7 +28602,8 @@ components:
           format: date-time
         resolved_addresses:
           type:
-            - string
+            - object
+            - array
             - 'null'
         checked_at:
           type:
@@ -27444,6 +28633,7 @@ components:
             - running
             - ready
             - failed
+            - null
         created_at:
           type:
             - string
@@ -27564,6 +28754,7 @@ components:
             - applying
             - done
             - failed
+            - null
         notice:
           type:
             - string
@@ -27758,6 +28949,7 @@ components:
             - on_hold
             - incomplete
             - canceled
+            - null
         transition_cause:
           type:
             - string
@@ -27803,6 +28995,7 @@ components:
             - store_test_mark_restored
             - store_registration_removed
             - store_registration_restored
+            - null
         recovery_reason:
           type:
             - string
@@ -27829,6 +29022,7 @@ components:
           enum:
             - month
             - year
+            - null
         interval_count:
           type:
             - integer
@@ -27898,6 +29092,10 @@ components:
           format: date-time
         cancel_at_period_end:
           type: boolean
+        stop_requested_by:
+          type:
+            - string
+            - 'null'
         canceled_at:
           type:
             - string
@@ -28015,6 +29213,7 @@ components:
           enum:
             - production
             - test
+            - null
         periods:
           type:
             - string
@@ -28055,7 +29254,9 @@ components:
             - array
             - 'null'
           items:
-            type: string
+            oneOf:
+              - { type: string }
+              - { type: object, properties: { kind: { type: string }, reference: { type: string }, producer: { type: object, properties: { kind: { type: string }, reference: { type: string } }, required: [kind, reference], additionalProperties: false }, revert_of: { type: string } }, required: [kind, reference], additionalProperties: false }
         run_id:
           type:
             - string
@@ -28122,6 +29323,7 @@ components:
             - open
             - answered
             - closed
+            - null
         last_message_at:
           type:
             - string
@@ -28455,6 +29657,7 @@ components:
             - ZA
             - ZM
             - ZW
+            - null
         region:
           type:
             - string
@@ -28747,6 +29950,7 @@ components:
           enum:
             - single_purpose
             - multi_purpose
+            - null
         face_value:
           type:
             - integer
@@ -28836,6 +30040,7 @@ components:
             - movement
             - void
             - correction
+            - null
         source:
           type:
             - string
@@ -28942,6 +30147,7 @@ components:
             - pending
             - succeeded
             - failed
+            - null
         attempts:
           type:
             - integer
@@ -29013,6 +30219,7 @@ components:
               - order.expired
               - order.revived
               - order.payment_arrived_late
+              - order.payment_method_switched
               - subscription.started
               - subscription.renewed
               - subscription.payment_due
@@ -29043,6 +30250,7 @@ components:
           enum:
             - production
             - test
+            - null
         is_active:
           type: boolean
         last_delivered_at:
@@ -29217,6 +30425,14 @@ components:
             'admin:notification-rules:write': 'Create and edit notification-rules'
             'admin:notification-rules:delete': 'Delete notification-rules'
             'admin:notification-rules:test': 'test on notification-rules'
+            'admin:member-messages:read': 'List and read member-messages'
+            'admin:member-messages:write': 'Create and edit member-messages'
+            'admin:member-messages:preview': "See how many members an audience reaches now, with a sample of them by account subject (the create page's preview): member identifiers. Also needs the permission to send to that audience"
+            'admin:member-messages:preview-for-edit': "See how many members an audience reaches now, with a sample of them by account subject (the edit page's preview): member identifiers. Also needs the permission to send to that audience"
+            'admin:member-messages:cancel': 'cancel on member-messages'
+            'admin:member-messages:withdraw': 'withdraw on member-messages'
+            'admin:member-messages:acknowledge-push': 'acknowledge-push on member-messages'
+            'admin:member-messages:resend-push': 'resend-push on member-messages'
             'admin:notification-templates:read': 'List and read notification-templates'
             'admin:notification-senders:read': 'List and read notification-senders'
             'admin:notification-queues:read': "List and read the outbound mail queue: every recipient's address, the message bodies and the data that triggered them — personal data"

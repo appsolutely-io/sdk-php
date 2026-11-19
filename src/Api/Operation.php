@@ -207,9 +207,52 @@ enum Operation: string
 
     case RetireBackendOrganisationRole = 'retireBackendOrganisationRole';
 
+    case ListAnnouncements = 'listAnnouncements';
+    case ListMeAnnouncements = 'listMeAnnouncements';
+    case DismissMeAnnouncement = 'dismissMeAnnouncement';
+    case GetMeDeletion = 'getMeDeletion';
+    case CreateMeDeletion = 'createMeDeletion';
+    case ListMeMessagePreferences = 'listMeMessagePreferences';
+    case UpdateMeMessagePreference = 'updateMeMessagePreference';
+    case ListMeMessages = 'listMeMessages';
+    case ListMeMessageChanges = 'listMeMessageChanges';
+    case ReadMeInbox = 'readMeInbox';
+    case GetMeMessageUnreadCount = 'getMeMessageUnreadCount';
+    case DeleteMeMessage = 'deleteMeMessage';
+    case ReadMeMessage = 'readMeMessage';
+    case UnreadMeMessage = 'unreadMeMessage';
+    case SwitchMeOrder = 'switchMeOrder';
+    case GetMeRealtime = 'getMeRealtime';
+    case BroadcastingAuthMeRealtime = 'broadcasting-authMeRealtime';
+    case DigestMeRealtime = 'digestMeRealtime';
+    case EventsMeRealtime = 'eventsMeRealtime';
+    case HubTokenMeRealtime = 'hub-tokenMeRealtime';
+    case CreateBackendMemberMessage = 'createBackendMemberMessage';
+
     public function method(): string
     {
         return match ($this) {
+            self::ListAnnouncements => 'GET',
+            self::ListMeAnnouncements => 'GET',
+            self::DismissMeAnnouncement => 'POST',
+            self::GetMeDeletion => 'GET',
+            self::CreateMeDeletion => 'POST',
+            self::ListMeMessagePreferences => 'GET',
+            self::UpdateMeMessagePreference => 'PUT',
+            self::ListMeMessages => 'GET',
+            self::ListMeMessageChanges => 'GET',
+            self::ReadMeInbox => 'POST',
+            self::GetMeMessageUnreadCount => 'GET',
+            self::DeleteMeMessage => 'DELETE',
+            self::ReadMeMessage => 'POST',
+            self::UnreadMeMessage => 'POST',
+            self::SwitchMeOrder => 'POST',
+            self::GetMeRealtime => 'GET',
+            self::BroadcastingAuthMeRealtime => 'POST',
+            self::DigestMeRealtime => 'GET',
+            self::EventsMeRealtime => 'GET',
+            self::HubTokenMeRealtime => 'POST',
+            self::CreateBackendMemberMessage => 'POST',
             self::RetireBackendOrganisationRole => 'POST',
             self::CreateBackendOrganisationRole => 'POST',
             self::ListBackendOrganisationRoles => 'GET',
@@ -291,6 +334,27 @@ enum Operation: string
     public function template(): string
     {
         return match ($this) {
+            self::ListAnnouncements => '/api/v1/announcements',
+            self::ListMeAnnouncements => '/api/v1/me/announcements',
+            self::DismissMeAnnouncement => '/api/v1/me/announcements/{reference}/dismiss',
+            self::GetMeDeletion => '/api/v1/me/deletion',
+            self::CreateMeDeletion => '/api/v1/me/deletion',
+            self::ListMeMessagePreferences => '/api/v1/me/message-preferences',
+            self::UpdateMeMessagePreference => '/api/v1/me/message-preferences',
+            self::ListMeMessages => '/api/v1/me/messages',
+            self::ListMeMessageChanges => '/api/v1/me/messages/changes',
+            self::ReadMeInbox => '/api/v1/me/messages/read-all',
+            self::GetMeMessageUnreadCount => '/api/v1/me/messages/unread-count',
+            self::DeleteMeMessage => '/api/v1/me/messages/{reference}',
+            self::ReadMeMessage => '/api/v1/me/messages/{reference}/read',
+            self::UnreadMeMessage => '/api/v1/me/messages/{reference}/unread',
+            self::SwitchMeOrder => '/api/v1/me/orders/{id}/payment-method',
+            self::GetMeRealtime => '/api/v1/me/realtime',
+            self::BroadcastingAuthMeRealtime => '/api/v1/me/realtime/broadcasting-auth',
+            self::DigestMeRealtime => '/api/v1/me/realtime/digest',
+            self::EventsMeRealtime => '/api/v1/me/realtime/events',
+            self::HubTokenMeRealtime => '/api/v1/me/realtime/hub-token',
+            self::CreateBackendMemberMessage => '/api/v1/members/{sub}/messages',
             self::RetireBackendOrganisationRole => '/api/v1/organisations/{organisation}/roles/{key}/retirement',
             self::CreateBackendOrganisationRole => '/api/v1/organisations/{organisation}/roles',
             self::ListBackendOrganisationRoles => '/api/v1/organisations/{organisation}/roles',
@@ -454,6 +518,27 @@ enum Operation: string
     public function audience(): Audience
     {
         return match ($this) {
+            self::ListAnnouncements => Audience::Anyone,
+            self::ListMeAnnouncements => Audience::Member,
+            self::DismissMeAnnouncement => Audience::Member,
+            self::GetMeDeletion => Audience::Member,
+            self::CreateMeDeletion => Audience::Member,
+            self::ListMeMessagePreferences => Audience::Member,
+            self::UpdateMeMessagePreference => Audience::Member,
+            self::ListMeMessages => Audience::Member,
+            self::ListMeMessageChanges => Audience::Member,
+            self::ReadMeInbox => Audience::Member,
+            self::GetMeMessageUnreadCount => Audience::Member,
+            self::DeleteMeMessage => Audience::Member,
+            self::ReadMeMessage => Audience::Member,
+            self::UnreadMeMessage => Audience::Member,
+            self::SwitchMeOrder => Audience::Member,
+            self::GetMeRealtime => Audience::Member,
+            self::BroadcastingAuthMeRealtime => Audience::Member,
+            self::DigestMeRealtime => Audience::Member,
+            self::EventsMeRealtime => Audience::Member,
+            self::HubTokenMeRealtime => Audience::Member,
+            self::CreateBackendMemberMessage => Audience::Backend,
             self::RetireBackendOrganisationRole => Audience::Backend,
             self::CreateBackendOrganisationRole => Audience::Backend,
             self::ListBackendOrganisationRoles => Audience::Backend,
@@ -545,6 +630,27 @@ enum Operation: string
     public function successStatuses(): array
     {
         return match ($this) {
+            self::ListAnnouncements => [200],
+            self::ListMeAnnouncements => [200],
+            self::DismissMeAnnouncement => [204],
+            self::GetMeDeletion => [200],
+            self::CreateMeDeletion => [200, 202],
+            self::ListMeMessagePreferences => [200],
+            self::UpdateMeMessagePreference => [200],
+            self::ListMeMessages => [200],
+            self::ListMeMessageChanges => [200],
+            self::ReadMeInbox => [204],
+            self::GetMeMessageUnreadCount => [200],
+            self::DeleteMeMessage => [204],
+            self::ReadMeMessage => [204],
+            self::UnreadMeMessage => [204],
+            self::SwitchMeOrder => [200],
+            self::GetMeRealtime => [200],
+            self::BroadcastingAuthMeRealtime => [200],
+            self::DigestMeRealtime => [200],
+            self::EventsMeRealtime => [200],
+            self::HubTokenMeRealtime => [200],
+            self::CreateBackendMemberMessage => [201],
             self::RetireBackendOrganisationRole => [200],
             self::CreateBackendOrganisationRole => [200],
             self::ListBackendOrganisationRoles => [200],
@@ -625,6 +731,27 @@ enum Operation: string
     public function takesIdempotencyKey(): bool
     {
         return match ($this) {
+            self::ListAnnouncements => false,
+            self::ListMeAnnouncements => false,
+            self::DismissMeAnnouncement => false,
+            self::GetMeDeletion => false,
+            self::CreateMeDeletion => true,
+            self::ListMeMessagePreferences => false,
+            self::UpdateMeMessagePreference => false,
+            self::ListMeMessages => false,
+            self::ListMeMessageChanges => false,
+            self::ReadMeInbox => false,
+            self::GetMeMessageUnreadCount => false,
+            self::DeleteMeMessage => false,
+            self::ReadMeMessage => false,
+            self::UnreadMeMessage => false,
+            self::SwitchMeOrder => true,
+            self::GetMeRealtime => false,
+            self::BroadcastingAuthMeRealtime => false,
+            self::DigestMeRealtime => false,
+            self::EventsMeRealtime => false,
+            self::HubTokenMeRealtime => false,
+            self::CreateBackendMemberMessage => true,
             self::RetireBackendOrganisationRole => false,
             self::CreateBackendOrganisationRole => false,
             self::ListBackendOrganisationRoles => false,
@@ -704,6 +831,27 @@ enum Operation: string
     public function isCursorList(): bool
     {
         return match ($this) {
+            self::ListAnnouncements => false,
+            self::ListMeAnnouncements => false,
+            self::DismissMeAnnouncement => false,
+            self::GetMeDeletion => false,
+            self::CreateMeDeletion => false,
+            self::ListMeMessagePreferences => false,
+            self::UpdateMeMessagePreference => false,
+            self::ListMeMessages => true,
+            self::ListMeMessageChanges => false,
+            self::ReadMeInbox => false,
+            self::GetMeMessageUnreadCount => false,
+            self::DeleteMeMessage => false,
+            self::ReadMeMessage => false,
+            self::UnreadMeMessage => false,
+            self::SwitchMeOrder => false,
+            self::GetMeRealtime => false,
+            self::BroadcastingAuthMeRealtime => false,
+            self::DigestMeRealtime => false,
+            self::EventsMeRealtime => false,
+            self::HubTokenMeRealtime => false,
+            self::CreateBackendMemberMessage => false,
             self::RetireBackendOrganisationRole => false,
             self::CreateBackendOrganisationRole => false,
             self::ListBackendOrganisationRoles => false,

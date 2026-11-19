@@ -81,4 +81,9 @@ final readonly class PublicApi
     {
         return $this->anyone->read(Operation::GetOpenIdConfiguration, \Appsolutely\Sdk\Model\OpenIdConfiguration::class);
     }
+
+    public function announcements(): \Appsolutely\Sdk\Resource\Announcements
+    {
+        return new \Appsolutely\Sdk\Resource\Announcements($this->anyone);
+    }
 }

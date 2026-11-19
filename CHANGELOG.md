@@ -7,10 +7,20 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-The first release is being prepared. The client is held to the Site API and Administrator API documents at aio commit `c44982c39` on aio's default branch, after v0.43.0, which no aio release contains yet; use a site running that commit or a newer one.
+The first release is being prepared. The client is held to the Site API and Administrator API documents at aio commit `efbdc4df4` on aio's default branch, after v0.43.0, which no aio release contains yet; use a site running that commit or a newer one.
+
+### Compatibility
+
+- The pinned documents now come from untagged commit `efbdc4df4`. `Contract::RELEASE` follows the existing pin tool's `git describe` convention (`v0.43.0-1843-gefbdc4df48ecc711109c5e565a4bfdc8182d5e12`); this is a commit descriptor, not a released version.
+- BREAKING: `Admin\Model\FormEntry::$data` and its constructor parameter are now `?array`, holding a decoded object or list, rather than `?string`.
+- BREAKING: `Model\Order` requires `attempts` when decoding the target API's answers; optional `paymentMethods` and `currentPayment` describe an individual order. Its added constructor parameters follow the existing parameters and have defaults. `Orders::list()` adds the optional trailing `$status` filter without changing the existing positional arguments.
+- Conditional reads are opt-in and return `ConditionalResult` with the response metadata and a null value on 304. Existing unconditional methods retain their return types and behavior.
 
 ### Added
 
+- Typed Site API resources for public/member announcements, account deletion requests, member message preferences and inbox changes, realtime transport bootstrap/digest/events/credentials, backend member messages, and order payment-method switching.
+- `OrderPaymentMethodSwitchedEvent` reads the order, previous/new payment references and actor from `order.payment_method_switched` deliveries.
+- Conditional member profile, entitlement, organisation, inbox and realtime digest reads preserve validators and distinguish a bodyless 304 from a decoded 200 response, following RFC 9110.
 - `Client` and `Config`, built on the PSR-18/17 HTTP, PSR-16 cache, PSR-20 clock and PSR-3 logger interfaces, with an HTTP client discovered when none is given. `Config` describes one site: its base URL, its OpenID issuer, the member sign-in client and, optionally, the backend's machine client. Request and connect timeouts are applied to a Guzzle or Symfony HttpClient the SDK finds for itself.
 - OpenID Connect sign-in through `Client::oidc()`: discovery and signing keys cached per `Cache-Control` for a day at most, an authorization URL with `state`, `nonce` and PKCE S256, the code exchange with ID token verification, refresh that holds every refreshed ID token to the original authentication (OpenID Connect Core section 12.2), user info and RFC 7009 revocation. `IdToken::toArray()` and `IdToken::fromTrustedStorage()` keep an ID token in a session.
 - The Site API on three clients, by who may call each operation: `Client::api()` for the calls anyone may make, `Client::forMember($accessToken)->api()` for a signed-in member and `Client::backend()` for the site's own backend, whose token is granted by the client-credentials grant, cached, and asked for once more on `invalid-token`. Every operation of the pinned document has one typed method, held to it by the package's contract tests, and `raw()` offers the untyped calls on each client.

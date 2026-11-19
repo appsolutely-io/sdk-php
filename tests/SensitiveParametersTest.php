@@ -56,12 +56,14 @@ final class SensitiveParametersTest extends TestCase
      * Named like a secret, yet not one: a PSR-16 cache key, a key id, the
      * name of what an entitlement grants, of a feature or of a role, the
      * names of the fields a country's address format uses, and the code of
-     * a country or of an area.
+     * a country or of an area, a deletion blocker code, and Reverb's public app key.
      */
     private const array NOT_SENSITIVE = [
         [AddressFormat::class, '__construct', 'fields'],
         [AddressCountry::class, '__construct', 'code'],
         [AddressArea::class, '__construct', 'code'],
+        [\Appsolutely\Sdk\Model\DeletionBlocker::class, '__construct', 'code'],
+        [\Appsolutely\Sdk\Model\RealtimeReverbConnection::class, '__construct', 'key'],
         [Entitlement::class, '__construct', 'key'],
         [FeatureKey::class, '__construct', 'key'],
         [ProductFeatureValue::class, '__construct', 'key'],

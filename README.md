@@ -11,12 +11,47 @@ Every site answers the same paths in the same shapes, so pointing the client at 
 
 ## Compatibility
 
-The client is written and tested against the Site API document of the site software v0.43.0-419-gc44982c39a3f01ca26bfd0b64e9386dd31c00c80, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests. `AdminClient` is held to the Administrator API document of the same commit. That commit is on aio's default branch after v0.43.0, and no aio release contains it yet, so use a site running that commit or a newer one. The client does not run or claim the aio SDK conformance suite.
+The client is written and tested against the Site API document of the site software v0.43.0-1843-gefbdc4df48ecc711109c5e565a4bfdc8182d5e12, the commit `Contract::REVISION` names (`Contract::RELEASE` holds the release; a test fails when this line names another). Every typed method, query parameter, request body and model is held to that document by the package's contract tests. `AdminClient` is held to the Administrator API document of the same commit. That commit is on aio's default branch after v0.43.0, and no aio release contains it yet, so use a site running that commit or a newer one. The client does not run or claim the aio SDK conformance suite.
 
 While the site software is below 1.0.0, a minor release of it may change a path of the document's `v1` in a breaking way, and its changelog opens each such entry with `BREAKING`; this client follows such a change in a release of its own, marked the same way in its changelog. Otherwise the site adds paths and fields but never removes or retypes one. From the site software's 1.0.0, a breaking change is announced as deprecated a release ahead and arrives in a new major release. `$client->api()->version()` reports whether the version is current and, once deprecated, its `deprecatedAt`, `sunsetAt` and `successor`.
 
 - **A newer site** answers everything this client calls. Fields it adds stay readable in each model's `$extra`, an enumerated value it adds reads as the plain string it is (the model's constants name only the values this client knows), and an operation it adds is reachable through the untyped calls of each client's `raw()` until a release of the client types it.
 - **An older site** lacks what was added after it. Calling an operation it does not have is refused with an `Exception\ApiException` (a `NotFoundException` for a path it does not have), and an answer without a field this client requires throws an `Exception\UnexpectedResponseException` naming the schema and the field rather than reading a wrong value. Keep the site at least at the version above.
+
+## Announcements, messages and conditional reads
+
+`api()->announcements()->list()` reads public announcements without a credential. A member's `api()->me()` also exposes `announcements()` (list and dismiss), `messages()` (inbox pages, changes, unread count and read/unread/delete actions), `messagePreferences()` (list and update only the supplied preferences), `deletion()` (status and keyed creation), and `realtime()` (transport bootstrap, broadcast authentication, digest, events and hub credentials). These are typed HTTP calls; scheduling, sockets and refetch policy belong to the caller. Disabled capabilities and expired inbox cursors remain API refusals.
+
+```php
+$me = $client->forMember($accessToken)->api()->me();
+foreach ($me->messages()->list() as $page) {
+    foreach ($page->data as $message) {
+        // Render the message and retain the page's sequence for readAll().
+    }
+}
+$changes = $me->messages()->changes($cursor);
+$me->messages()->readAll($throughSequence);
+$me->messagePreferences()->update([
+    ['category' => 'product_updates', 'channel' => 'push', 'enabled' => false],
+]);
+$result = $me->deletion()->create($idempotencyKey);
+```
+
+An account deletion request can require interactive proof or be blocked; use the returned status/blockers and site URLs rather than inventing a cancellation call. A backend with `messages:write` can use `backend()->memberMessages()->create($subject, $category, $title, $body, idempotencyKey: $key)`. `me()->orders()->switchPaymentMethod($id, $paymentMethod, $fromPayment, $key)` switches using the selected method id and current payment reference from the individual order read.
+
+Conditional reads follow [RFC 9110 conditional requests](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.2). Pass the validator of a cached representation to `me()->getConditional($etag)`, `entitlements()->listConditional($etag)`, `organisations()->listConditional($etag, $limit, $cursor)`, `messages()->listConditional($etag, $limit, $cursor)` or `realtime()->digestConditional($etag)`. Keep the same filters/page when revalidating it. A changed entitlement or organisation list has a `Page` value whose `items` holds its records; a changed inbox list has an `InboxMessagePage` value whose `data` holds messages and whose `sequence` tracks the inbox boundary. Each result's `value` is null on `304`, regardless of its representation type.
+
+```php
+$result = $me->getConditional($etag);
+if (!$result->notModified()) {
+    $member = $result->value;
+    $etag = $result->response->etag();
+}
+```
+
+A 304 has no value and retains the cached representation; a 200 carries the typed model or page plus response metadata. Existing unconditional reads remain available. `raw()->getConditional($path, $etag, $query)` exposes the same HTTP behavior without typed decoding.
+
+The Administrator API's typed subset remains articles, pages, products, orders, form entries and webhook deliveries. New credential-accessible operations are available through `AdminClient::raw()`; document inclusion does not grant access to routes marked `x-panel-only`.
 
 ## Installation
 

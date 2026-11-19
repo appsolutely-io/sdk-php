@@ -24,9 +24,16 @@ final readonly class Orders
      * @return Paginator<Order>
      */
     #[Endpoint(Operation::ListMeOrders)]
-    public function list(?string $sort = null, ?string $order = null, int $limit = SiteApi::DEFAULT_LIMIT): Paginator
+    public function list(?string $sort = null, ?string $order = null, int $limit = SiteApi::DEFAULT_LIMIT, ?string $status = null): Paginator
     {
-        return $this->caller->list(Operation::ListMeOrders, Order::class, ['sort' => $sort, 'order' => $order], $limit);
+        return $this->caller->list(Operation::ListMeOrders, Order::class, ['sort' => $sort, 'order' => $order, 'status' => $status], $limit);
+    }
+
+    /** @return \Appsolutely\Sdk\Api\KeyedResult<Order> */
+    #[Endpoint(Operation::SwitchMeOrder)]
+    public function switchPaymentMethod(string $id, string $paymentMethod, ?string $fromPayment = null, ?string $idempotencyKey = null): \Appsolutely\Sdk\Api\KeyedResult
+    {
+        return $this->caller->keyed(Operation::SwitchMeOrder, Order::class, ['id' => $id], ['payment_method' => $paymentMethod, ...\Appsolutely\Sdk\Support\OptionalFields::withoutNulls(['from_payment' => $fromPayment])], $idempotencyKey);
     }
 
     #[Endpoint(Operation::GetMeOrder)]
