@@ -25,6 +25,18 @@ final class OrdersTest extends TestCase
         return SiteFixture::record('order', ['id' => $id]);
     }
 
+    public function testTheStatusFilterAndExistingPagingArgumentsAreSentOnEveryPage(): void
+    {
+        $site = (new SiteRecorder())->json(['data' => [], 'next_cursor' => 'next/page'])->json(['data' => [], 'next_cursor' => null]);
+        $orders = self::api($site)->me()->orders()->list('created_at', 'desc', 10, status: 'paid');
+
+        $orders->page();
+        $orders->page('next/page');
+
+        self::assertSame('sort=created_at&order=desc&status=paid&limit=10', $site->request()->getUri()->getQuery());
+        self::assertSame('sort=created_at&order=desc&status=paid&limit=10&cursor=next%2Fpage', $site->request(1)->getUri()->getQuery());
+    }
+
     public function testAnOrderIsReadWithMoneyInMinorUnits(): void
     {
         $site = (new SiteRecorder())->json(self::order('ord-2'));

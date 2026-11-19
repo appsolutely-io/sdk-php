@@ -5,10 +5,17 @@ declare(strict_types=1);
 namespace Appsolutely\Sdk\Tests\Contract;
 
 use Appsolutely\Sdk\Api\Audience;
+use Appsolutely\Sdk\Api\Caller;
 use Appsolutely\Sdk\Api\Operation;
 use Appsolutely\Sdk\Exception\InvalidArgumentValueException;
+use Appsolutely\Sdk\Http\Header;
+use Appsolutely\Sdk\Model\Member;
+use Appsolutely\Sdk\Tests\Support\FakeProvider;
+use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * Operation names every operation of the pinned document with what the
@@ -49,6 +56,41 @@ final class OperationCatalogueTest extends TestCase
         self::assertSame(self::takesIdempotencyKey($documented['parameters']), $operation->takesIdempotencyKey(), $id);
         self::assertSame(self::isCursorList($documented), $operation->isCursorList(), $id);
         self::assertSame(self::audience($documented), $operation->audience(), $id);
+    }
+
+    /** @return iterable<string, array{Operation, bool}> */
+    public static function memberConditionalOperations(): iterable
+    {
+        foreach (Document::operations() as $id => $documented) {
+            $operation = Operation::from($id);
+            if ($operation->audience() !== Audience::Member) {
+                continue;
+            }
+            $conditional = false;
+            foreach ($documented['parameters'] as $parameter) {
+                $conditional = $conditional || (($parameter['in'] ?? null) === 'header' && ($parameter['name'] ?? null) === Header::IF_NONE_MATCH);
+            }
+            yield $id => [$operation, $conditional];
+        }
+    }
+
+    #[DataProvider('memberConditionalOperations')]
+    public function testConditionalMemberReadsMatchTheDocumentedValidators(Operation $operation, bool $conditional): void
+    {
+        $provider = new FakeProvider();
+        $provider->site = static fn(RequestInterface $request): ResponseInterface => $provider->factory->createResponse(304);
+        $caller = new Caller($provider->client()->forMember('member-access-token')->api()->raw(), Audience::Member);
+
+        if (!$conditional) {
+            $this->expectException(LogicException::class);
+            $this->expectExceptionMessage($operation->value . ' does not document conditional reads.');
+        }
+
+        $answer = $caller->conditionalRead($operation, Member::class, '"cached"');
+
+        self::assertTrue($answer->notModified());
+        self::assertNull($answer->value);
+        self::assertSame('"cached"', $provider->siteRequests()[0]->getHeaderLine(Header::IF_NONE_MATCH));
     }
 
     public function testEveryCaseIsADocumentedOperation(): void

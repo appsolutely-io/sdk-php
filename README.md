@@ -39,7 +39,7 @@ $result = $me->deletion()->create($idempotencyKey);
 
 An account deletion request can require interactive proof or be blocked; use the returned status/blockers and site URLs rather than inventing a cancellation call. A backend with `messages:write` can use `backend()->memberMessages()->create($subject, $category, $title, $body, idempotencyKey: $key)`. `me()->orders()->switchPaymentMethod($id, $paymentMethod, $fromPayment, $key)` switches using the selected method id and current payment reference from the individual order read.
 
-Conditional reads follow [RFC 9110 conditional requests](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.2). Pass the validator of a cached representation to `me()->getConditional($etag)`, `entitlements()->listConditional($etag)`, `organisations()->listConditional($etag, $limit, $cursor)`, `messages()->listConditional($etag, $limit, $cursor)` or `realtime()->digestConditional($etag)`. Keep the same filters/page when revalidating it.
+Conditional reads follow [RFC 9110 conditional requests](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.2). Pass the validator of a cached representation to `me()->getConditional($etag)`, `entitlements()->listConditional($etag)`, `organisations()->listConditional($etag, $limit, $cursor)`, `messages()->listConditional($etag, $limit, $cursor)` or `realtime()->digestConditional($etag)`. Keep the same filters/page when revalidating it. A changed entitlement or organisation list has a `Page` value whose `items` holds its records; a changed inbox list has an `InboxMessagePage` value whose `data` holds messages and whose `sequence` tracks the inbox boundary. Each result's `value` is null on `304`, regardless of its representation type.
 
 ```php
 $result = $me->getConditional($etag);
